@@ -8,7 +8,15 @@ export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
 
   const library = await prisma.library.findUnique({
     where: { inviteCode: code },
-    select: { id: true, name: true },
+    select: {
+      id: true,
+      name: true,
+      memberships: {
+        where: { role: "OWNER" },
+        take: 1,
+        select: { user: { select: { name: true, email: true } } },
+      },
+    },
   });
 
   if (!library) {
@@ -22,13 +30,16 @@ export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
     );
   }
 
+  const owner = library.memberships[0]?.user;
+  const inviterName = owner?.name || owner?.email || "Someone";
+
   const user = await getCurrentUser();
 
   if (!user) {
     return (
-      <Card title={`Join ${library.name}`}>
+      <Card title={`${inviterName} invited you to ${library.name}`}>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          You&apos;ve been invited to a shared library on Stacks. Sign in or create an account to join.
+          Sign in or create an account to join this shared library on Stacks.
         </p>
         <div className="flex flex-col gap-2">
           <Link
@@ -51,7 +62,7 @@ export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
   const alreadyMember = user.memberships.some((m) => m.libraryId === library.id);
 
   return (
-    <Card title={alreadyMember ? `You're already in ${library.name}` : `Join ${library.name}`}>
+    <Card title={alreadyMember ? `You're already in ${library.name}` : `${inviterName} invited you to ${library.name}`}>
       <p className="text-sm text-gray-600 dark:text-gray-400">
         {alreadyMember
           ? "Switch to this library to work in it now."

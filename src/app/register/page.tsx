@@ -17,13 +17,17 @@ export default function RegisterPage(props: PageProps<"/register">) {
   const [submitting, setSubmitting] = useState(false);
 
   const [inviteLibraryName, setInviteLibraryName] = useState<string | null>(null);
+  const [inviterName, setInviterName] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!inviteCode) return;
     fetch(`/api/invite/${inviteCode}`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setInviteLibraryName(data.libraryName))
+      .then((data) => {
+        setInviteLibraryName(data.libraryName);
+        setInviterName(data.inviterName);
+      })
       .catch(() => setInviteError("This invite link isn't valid or has been replaced with a new one."));
   }, [inviteCode]);
 
@@ -56,7 +60,9 @@ export default function RegisterPage(props: PageProps<"/register">) {
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5">
         <div>
           <h1 className="text-2xl font-bold">
-            {inviteLibraryName ? `Join ${inviteLibraryName}` : "Create your library"}
+            {inviteLibraryName
+              ? `${inviterName || "Someone"} invited you to ${inviteLibraryName}`
+              : "Create your library"}
           </h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             {inviteCode

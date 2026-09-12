@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionCookie } from "@/lib/auth";
-import { slugify } from "@/lib/slug";
+import { uniqueSlug } from "@/lib/library";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -69,15 +69,4 @@ export async function POST(request: Request) {
   await createSessionCookie(user.id);
 
   return NextResponse.json({ ok: true });
-}
-
-async function uniqueSlug(libraryName: string) {
-  const baseSlug = slugify(libraryName) || "library";
-  let slug = baseSlug;
-  let suffix = 1;
-  while (await prisma.library.findUnique({ where: { slug } })) {
-    suffix += 1;
-    slug = `${baseSlug}-${suffix}`;
-  }
-  return slug;
 }
