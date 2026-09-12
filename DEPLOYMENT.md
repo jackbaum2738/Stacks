@@ -8,11 +8,11 @@ suitable for this.
 
 1. Sign up at [neon.tech](https://neon.tech) (GitHub login is fine).
 2. Create a new project (any name/region).
-3. From the project dashboard, copy the **connection string** — it looks like
-   `postgresql://user:password@ep-something.region.aws.neon.tech/dbname?sslmode=require`.
-   Use the **pooled** connection string if Neon offers both (labeled "Pooled
-   connection"), since Vercel's serverless functions open many short-lived
-   connections.
+3. From the project dashboard, copy **both** connection strings Neon gives
+   you — a direct one and a pooled one (usually with `-pooler` in the
+   hostname). You need both: Prisma Migrate needs the direct, unpooled
+   connection (it uses session-level locking that pooled connections don't
+   support), while the app's normal queries go through the pooler.
 
 ## 2. Create a Vercel project
 
@@ -25,7 +25,8 @@ suitable for this.
 
 | Variable | Value |
 | --- | --- |
-| `DATABASE_URL` | The Neon connection string from step 1 |
+| `DATABASE_URL` | Neon's **pooled** connection string (hostname contains `-pooler`) |
+| `DIRECT_URL` | Neon's **direct** (unpooled) connection string — used only by `prisma migrate deploy` |
 | `AUTH_SECRET` | A long random string (e.g. generate with `openssl rand -base64 32`) — **must be different from any value used locally** |
 | `GOOGLE_BOOKS_API_KEY` | Optional — raises the Google Books rate limit |
 | `OPEN_LIBRARY_CONTACT` | Optional — an email address for Open Library's API etiquette header |
