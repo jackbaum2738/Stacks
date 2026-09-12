@@ -19,7 +19,7 @@ const OPEN_LIBRARY_HEADERS = {
 
 async function fetchJson(url: string, init?: RequestInit) {
   try {
-    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(6000) });
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(5000) });
     if (!res.ok) return null;
     return await res.json();
   } catch {

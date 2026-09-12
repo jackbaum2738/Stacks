@@ -5,6 +5,10 @@ import { requireLibraryContext } from "@/lib/api-context";
 import { lookupBookByIsbn } from "@/lib/books";
 import { cleanIsbn, isValidIsbn, toIsbn13 } from "@/lib/isbn";
 
+// Book lookup can chain up to four sequential external API calls; give it
+// more headroom than the platform default serverless function timeout.
+export const maxDuration = 25;
+
 const schema = z.object({
   isbn: z.string().trim().min(1),
   shelfId: z.string().trim().min(1),
@@ -48,6 +52,15 @@ export async function POST(request: Request) {
           source: "manual-unresolved",
         },
       });
+    }
+  } else if (book.source === "manual-unresolved") {
+    // A previous scan couldn't resolve this ISBN (e.g. a transient API
+    // failure) — retry now instead of permanently reusing the placeholder.
+    const looked = await lookupBookByIsbn(isbn13);
+    if (looked) {
+      book = await prisma.book.update({ where: { id: book.id }, data: looked });
+    } else {
+      lookupFailed = true;
     }
   }
 
