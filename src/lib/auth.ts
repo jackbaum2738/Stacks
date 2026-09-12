@@ -4,6 +4,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "stacks_session";
+const ACTIVE_LIBRARY_COOKIE = "stacks_active_library";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 function getSecretKey() {
@@ -72,9 +73,27 @@ export async function getCurrentUser() {
   });
 }
 
-/** The library a signed-in user is currently working in (their first membership, for now). */
+/** Marks which library a user with multiple memberships is currently working in. */
+export async function setActiveLibraryCookie(libraryId: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(ACTIVE_LIBRARY_COOKIE, libraryId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_TTL_SECONDS,
+  });
+}
+
+/** The library a signed-in user is currently working in: their chosen active one, or their first membership. */
 export async function getCurrentLibrary() {
   const user = await getCurrentUser();
   if (!user || user.memberships.length === 0) return null;
-  return { user, membership: user.memberships[0], library: user.memberships[0].library };
+
+  const cookieStore = await cookies();
+  const activeLibraryId = cookieStore.get(ACTIVE_LIBRARY_COOKIE)?.value;
+  const active = activeLibraryId ? user.memberships.find((m) => m.libraryId === activeLibraryId) : undefined;
+  const membership = active ?? user.memberships[0];
+
+  return { user, membership, library: membership.library };
 }

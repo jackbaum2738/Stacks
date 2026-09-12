@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentLibrary } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
+import { LibrarySwitcher } from "@/components/library-switcher";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Overview" },
@@ -9,6 +10,7 @@ const NAV_LINKS = [
   { href: "/dashboard/shelves", label: "Shelves" },
   { href: "/dashboard/search", label: "Library" },
   { href: "/dashboard/reservations", label: "Reservations" },
+  { href: "/dashboard/members", label: "Members" },
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -23,7 +25,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Link href="/dashboard" className="font-bold">
               Stacks
             </Link>
-            <span className="hidden text-sm text-gray-500 sm:inline">{context.library.name}</span>
+            <LibrarySwitcher
+              libraries={context.user.memberships.map((m) => m.library)}
+              activeId={context.library.id}
+            />
           </div>
           <LogoutButton />
         </div>

@@ -35,6 +35,7 @@ model Library {
   id          String       @id @default(cuid())
   name        String
   slug        String       @unique
+  inviteCode  String?      @unique
   createdAt   DateTime     @default(now())
   memberships Membership[]
   shelves     Shelf[]
