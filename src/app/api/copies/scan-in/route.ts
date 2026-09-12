@@ -5,9 +5,9 @@ import { requireLibraryContext } from "@/lib/api-context";
 import { lookupBookByIsbn } from "@/lib/books";
 import { cleanIsbn, isValidIsbn, toIsbn13 } from "@/lib/isbn";
 
-// Book lookup can chain up to four sequential external API calls; give it
-// more headroom than the platform default serverless function timeout.
-export const maxDuration = 25;
+// Book lookup can chain up to four sequential external API calls (up to 10s
+// each); give it more headroom than the platform default function timeout.
+export const maxDuration = 45;
 
 const schema = z.object({
   isbn: z.string().trim().min(1),

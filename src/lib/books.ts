@@ -19,10 +19,14 @@ const OPEN_LIBRARY_HEADERS = {
 
 async function fetchJson(url: string, init?: RequestInit) {
   try {
-    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return null;
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(10000) });
+    if (!res.ok) {
+      console.error(`[books] ${url} responded ${res.status}`);
+      return null;
+    }
     return await res.json();
-  } catch {
+  } catch (err) {
+    console.error(`[books] fetch failed for ${url}:`, err);
     return null;
   }
 }
