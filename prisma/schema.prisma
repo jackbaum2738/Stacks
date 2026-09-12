@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum CopyStatus {
+  AVAILABLE
+  RESERVED
+  REMOVED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime      @default(now())
+  memberships  Membership[]
+  reservations Reservation[] @relation("ReservationCreatedBy")
+}
+
+/// A single household/network member's library of physical books.
+model Library {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  shelves     Shelf[]
+  copies      Copy[]
+}
+
+/// Links a user to a library with a role, so a library can eventually be shared/co-managed.
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  libraryId String
+  role      Role     @default(MEMBER)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  library   Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, libraryId])
+}
+
+model Shelf {
+  id        String   @id @default(cuid())
+  libraryId String
+  name      String
+  code      String?
+  createdAt DateTime @default(now())
+  library   Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  copies    Copy[]
+
+  @@unique([libraryId, name])
+}
+
+/// Catalog metadata for a title, shared across every library so a lookup is only ever done once.
+model Book {
+  id            String   @id @default(cuid())
+  isbn13        String   @unique
+  isbn10        String?
+  title         String
+  authors       String[]
+  publisher     String?
+  publishedDate String?
+  pageCount     Int?
+  description   String?
+  coverUrl      String?
+  source        String?
+  createdAt     DateTime @default(now())
+  copies        Copy[]
+}
+
+/// One physical copy of a Book sitting in a specific Library (and Shelf).
+model Copy {
+  id          String       @id @default(cuid())
+  libraryId   String
+  bookId      String
+  shelfId     String?
+  status      CopyStatus   @default(AVAILABLE)
+  addedAt     DateTime     @default(now())
+  removedAt   DateTime?
+  notes       String?
+  library     Library      @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  book        Book         @relation(fields: [bookId], references: [id])
+  shelf       Shelf?       @relation(fields: [shelfId], references: [id])
+  reservation Reservation?
+
+  @@index([libraryId, status])
+  @@index([bookId])
+}
+
+/// Holds a copy for a specific person until enough books have piled up to make sending worthwhile.
+model Reservation {
+  id          String    @id @default(cuid())
+  copyId      String    @unique
+  reservedFor String
+  contact     String?
+  note        String?
+  createdAt   DateTime  @default(now())
+  releasedAt  DateTime?
+  createdById String?
+  copy        Copy      @relation(fields: [copyId], references: [id], onDelete: Cascade)
+  createdBy   User?     @relation("ReservationCreatedBy", fields: [createdById], references: [id])
+}
