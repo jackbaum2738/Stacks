@@ -7,7 +7,7 @@ const NAV_LINKS = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/scan", label: "Scan" },
   { href: "/dashboard/shelves", label: "Shelves" },
-  { href: "/dashboard/search", label: "Search" },
+  { href: "/dashboard/search", label: "Library" },
   { href: "/dashboard/reservations", label: "Reservations" },
 ];
 

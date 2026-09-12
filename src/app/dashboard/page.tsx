@@ -42,7 +42,7 @@ export default async function DashboardPage() {
           Scan a book
         </Link>
         <Link href="/dashboard/search" className="rounded-lg border border-gray-300 px-4 py-2 font-medium dark:border-gray-700">
-          Search library
+          Browse library
         </Link>
       </div>
 

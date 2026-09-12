@@ -8,18 +8,20 @@ export async function GET(request: Request) {
   if (!context) return response;
 
   const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
-  if (!q) return NextResponse.json({ books: [] });
-
   const isbnCandidate = cleanIsbn(q);
 
   const books = await prisma.book.findMany({
     where: {
       copies: { some: { libraryId: context.library.id, status: { not: "REMOVED" } } },
-      OR: [
-        { title: { contains: q, mode: "insensitive" } },
-        { authors: { has: q } },
-        ...(isbnCandidate.length >= 8 ? [{ isbn13: isbnCandidate }, { isbn10: isbnCandidate }] : []),
-      ],
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { authors: { has: q } },
+              ...(isbnCandidate.length >= 8 ? [{ isbn13: isbnCandidate }, { isbn10: isbnCandidate }] : []),
+            ],
+          }
+        : {}),
     },
     include: {
       copies: {
@@ -27,7 +29,8 @@ export async function GET(request: Request) {
         include: { shelf: true, reservation: true },
       },
     },
-    take: 50,
+    orderBy: { title: "asc" },
+    take: q ? 50 : 300,
   });
 
   return NextResponse.json({ books });

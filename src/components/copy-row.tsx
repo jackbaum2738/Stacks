@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
+import { PersonCombobox } from "@/components/person-combobox";
 
 interface CopyRowData {
   id: string;
@@ -12,7 +13,16 @@ interface CopyRowData {
   reservation: { id: string; reservedFor: string; contact: string | null; note: string | null } | null;
 }
 
-export function CopyRow({ copy, showShelf = true }: { copy: CopyRowData; showShelf?: boolean }) {
+export function CopyRow({
+  copy,
+  showShelf = true,
+  onUpdated,
+}: {
+  copy: CopyRowData;
+  showShelf?: boolean;
+  /** Called after a successful reserve/release/remove, for pages whose data isn't server-rendered (router.refresh() alone won't update those). */
+  onUpdated?: () => void;
+}) {
   const router = useRouter();
   const [showReserveForm, setShowReserveForm] = useState(false);
   const [reservedFor, setReservedFor] = useState("");
@@ -39,6 +49,7 @@ export function CopyRow({ copy, showShelf = true }: { copy: CopyRowData; showShe
     setReservedFor("");
     setContact("");
     router.refresh();
+    onUpdated?.();
   }
 
   async function release() {
@@ -51,6 +62,7 @@ export function CopyRow({ copy, showShelf = true }: { copy: CopyRowData; showShe
     });
     setBusy(false);
     router.refresh();
+    onUpdated?.();
   }
 
   async function remove() {
@@ -59,6 +71,7 @@ export function CopyRow({ copy, showShelf = true }: { copy: CopyRowData; showShe
     await fetch(`/api/copies/${copy.id}`, { method: "DELETE" });
     setBusy(false);
     router.refresh();
+    onUpdated?.();
   }
 
   return (
@@ -109,13 +122,7 @@ export function CopyRow({ copy, showShelf = true }: { copy: CopyRowData; showShe
 
       {showReserveForm && (
         <form onSubmit={reserve} className="flex flex-wrap items-center gap-2 rounded-md bg-gray-50 p-3 dark:bg-gray-900">
-          <input
-            value={reservedFor}
-            onChange={(e) => setReservedFor(e.target.value)}
-            placeholder="Reserved for (name)"
-            required
-            className="min-w-0 flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-950"
-          />
+          <PersonCombobox value={reservedFor} onChange={setReservedFor} required />
           <input
             value={contact}
             onChange={(e) => setContact(e.target.value)}
