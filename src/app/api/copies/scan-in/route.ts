@@ -1,0 +1,67 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { requireLibraryContext } from "@/lib/api-context";
+import { lookupBookByIsbn } from "@/lib/books";
+import { cleanIsbn, isValidIsbn, toIsbn13 } from "@/lib/isbn";
+
+const schema = z.object({
+  isbn: z.string().trim().min(1),
+  shelfId: z.string().trim().min(1),
+});
+
+export async function POST(request: Request) {
+  const { context, response } = await requireLibraryContext();
+  if (!context) return response;
+
+  const parsed = schema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+  }
+
+  const isbn = cleanIsbn(parsed.data.isbn);
+  if (!isValidIsbn(isbn)) {
+    return NextResponse.json({ error: `"${parsed.data.isbn}" isn't a valid 10 or 13 digit ISBN` }, { status: 400 });
+  }
+  const isbn13 = toIsbn13(isbn);
+
+  const shelf = await prisma.shelf.findFirst({
+    where: { id: parsed.data.shelfId, libraryId: context.library.id },
+  });
+  if (!shelf) return NextResponse.json({ error: "Shelf not found" }, { status: 404 });
+
+  let book = await prisma.book.findUnique({ where: { isbn13 } });
+  let lookupFailed = false;
+
+  if (!book) {
+    const looked = await lookupBookByIsbn(isbn13);
+    if (looked) {
+      book = await prisma.book.create({ data: looked });
+    } else {
+      lookupFailed = true;
+      book = await prisma.book.create({
+        data: {
+          isbn13,
+          isbn10: isbn.length === 10 ? isbn : null,
+          title: `Unknown title (ISBN ${isbn13})`,
+          authors: [],
+          source: "manual-unresolved",
+        },
+      });
+    }
+  }
+
+  const existingAvailable = await prisma.copy.count({
+    where: { libraryId: context.library.id, bookId: book.id, status: { not: "REMOVED" } },
+  });
+
+  const copy = await prisma.copy.create({
+    data: { libraryId: context.library.id, bookId: book.id, shelfId: shelf.id, status: "AVAILABLE" },
+    include: { book: true, shelf: true },
+  });
+
+  return NextResponse.json(
+    { copy, lookupFailed, otherCopiesOfThisBook: existingAvailable },
+    { status: 201 }
+  );
+}
