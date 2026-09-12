@@ -1,0 +1,42 @@
+STACKS CHANGELOG
+================
+
+Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
+
+
+3.0.0 -- 2026-09-12
+--------------------
+- Added a Settings page that consolidates shelf management (rename/delete), member management (view roles, remove someone from the library), the invite link, and library deletion in one place, replacing the standalone Members page.
+- Owners can now delete a library outright, from a danger-zone section that requires typing the library's exact name to confirm -- it permanently removes every shelf, book, and reservation in it for everyone with access.
+- Owners/admins can remove a member from a library. The only safeguard: you can't remove a library's last remaining owner, so a library can never end up ownerless.
+- Removing someone from a library, or deleting it outright, no longer strands their account -- if it leaves them with no library at all, the next time they sign in they see a screen inviting them to create their own, instead of being redirected to a confusing "please sign in" loop even though they're already signed in.
+
+
+2.1.0 -- 2026-09-12
+--------------------
+- The library switcher in the nav now always shows, even when someone only has one library, with a "+ New library..." option that creates another one and switches to it -- previously the only way to get a second library was a fresh account.
+- Invite links and the invite-flow registration page now say who sent them (e.g. "Russell invited you to Dad's Library") instead of a generic "Join Dad's Library", by looking up the library's owner.
+- Fixed the create-library form inside the switcher getting stuck open after a successful creation instead of reverting to the dropdown -- its local state wasn't reset by router.refresh(), since the component doesn't remount when navigating within the same dashboard layout.
+
+
+2.0.0 -- 2026-09-12
+--------------------
+- Libraries can now be shared between accounts. An owner or admin generates a shareable invite link from the Members page; anyone who opens it can join by creating a new account or signing into an existing one, without needing an email invite system.
+- Since a person can now belong to more than one library, added a switcher in the nav so it's always clear which one is currently active.
+- Went with link-based invites rather than emailed ones for now, to avoid standing up a transactional email provider.
+
+
+1.1.0 -- 2026-09-12
+--------------------
+- The reservation form now suggests previously-used names as you type (still lets you enter a new one), so the same person doesn't end up on the books under several slightly different spellings.
+- The Library page shows every book in the collection, with shelf and reservation status, when the search box is left empty -- there was previously no way to see the whole collection at a glance, only shelf-by-shelf or via a matching search.
+- A book whose ISBN lookup failed (e.g. a transient API hiccup) is now retried on the next scan instead of being stuck forever as "Unknown title" -- the first version cached any lookup result, success or failure, permanently.
+- Widened the ISBN lookup's per-request timeout after finding a real title lookup was timing out in production specifically for books with unusually large catalog records (a full table of contents can be tens of KB), which a smaller local/dev timeout budget didn't surface.
+
+
+1.0.0 -- 2026-09-12
+--------------------
+- Initial release: scan a book in or out of a library by ISBN, using a USB/Bluetooth barcode scanner (or typing the code) on desktop, or a phone's camera on mobile. Book details are looked up automatically from Google Books, with Open Library as a fallback for anything Google Books can't resolve.
+- Organize books onto shelves, browse a shelf's contents, and search the whole library by title, author, or ISBN.
+- Reserve a copy for a specific person and release the reservation later; scanning a reserved copy back out automatically marks the reservation fulfilled.
+- Deployed on Vercel with a Postgres database on Neon.

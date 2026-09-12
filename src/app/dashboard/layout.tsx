@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentLibrary } from "@/lib/auth";
+import { getCurrentUser, getCurrentLibrary } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
 import { LibrarySwitcher } from "@/components/library-switcher";
+import { CreateFirstLibraryForm } from "@/components/create-first-library-form";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Overview" },
@@ -10,10 +11,36 @@ const NAV_LINKS = [
   { href: "/dashboard/shelves", label: "Shelves" },
   { href: "/dashboard/search", label: "Library" },
   { href: "/dashboard/reservations", label: "Reservations" },
-  { href: "/dashboard/members", label: "Members" },
+  { href: "/dashboard/settings", label: "Settings" },
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  if (user.memberships.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <header className="border-b border-gray-200 dark:border-gray-800">
+          <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3">
+            <span className="font-bold">Stacks</span>
+            <LogoutButton />
+          </div>
+        </header>
+        <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+          <div>
+            <h1 className="text-2xl font-bold">You&apos;re not in a library right now</h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              Someone may have removed you from a shared library. Create your own to get started, or ask
+              for a new invite link if you meant to be part of one.
+            </p>
+          </div>
+          <CreateFirstLibraryForm />
+        </main>
+      </div>
+    );
+  }
+
   const context = await getCurrentLibrary();
   if (!context) redirect("/login");
 
