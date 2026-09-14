@@ -63,35 +63,40 @@ export function LibrarySwitcher({
           onChange={(e) => setNewName(e.target.value)}
           placeholder="New library name"
           required
-          className="w-40 rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="w-40 border-b border-line-strong bg-transparent px-0.5 py-1 font-sans text-sm text-ink focus-visible:border-accent focus-visible:outline-none"
         />
         <button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-gray-900 px-2 py-1 text-sm font-medium text-white dark:bg-white dark:text-gray-900"
+          className="rounded-[2px] bg-ink px-2 py-1 font-sans text-sm font-medium text-surface hover:brightness-95 disabled:opacity-50"
         >
           Create
         </button>
-        <button type="button" onClick={() => setCreating(false)} className="text-sm text-gray-500">
+        <button type="button" onClick={() => setCreating(false)} className="font-sans text-sm text-ink-soft">
           Cancel
         </button>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="font-sans text-sm text-accent">{error}</p>}
       </form>
     );
   }
 
   return (
-    <select
-      value={activeId}
-      onChange={(e) => onSelect(e.target.value)}
-      className="max-w-[10rem] truncate rounded-md border border-gray-300 bg-transparent px-2 py-1 text-sm sm:max-w-none dark:border-gray-700"
-    >
-      {libraries.map((lib) => (
-        <option key={lib.id} value={lib.id}>
-          {lib.name}
-        </option>
-      ))}
-      <option value={NEW_LIBRARY_VALUE}>+ New library…</option>
-    </select>
+    <div className="relative">
+      <select
+        value={activeId}
+        onChange={(e) => onSelect(e.target.value)}
+        className="max-w-[10rem] appearance-none truncate border border-line-strong bg-transparent py-1 pr-6 pl-[9px] font-mono text-[13px] text-ink uppercase sm:max-w-none"
+      >
+        {libraries.map((lib) => (
+          <option key={lib.id} value={lib.id}>
+            {lib.name}
+          </option>
+        ))}
+        <option value={NEW_LIBRARY_VALUE}>+ New library…</option>
+      </select>
+      <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[9px] text-ink-faint">
+        ▾
+      </span>
+    </div>
   );
 }

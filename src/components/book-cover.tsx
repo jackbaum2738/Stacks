@@ -16,7 +16,7 @@ export function BookCover({
   if (!src || failed) {
     return (
       <div
-        className={`flex items-center justify-center rounded bg-gray-200 text-lg dark:bg-gray-800 ${className}`}
+        className={`flex items-center justify-center rounded-none border border-line bg-bg text-lg dark:border-line-strong dark:bg-surface-raised ${className}`}
         aria-hidden
       >
         📖
@@ -29,7 +29,7 @@ export function BookCover({
     <img
       src={src}
       alt={alt}
-      className={`rounded object-cover ${className}`}
+      className={`rounded-none border border-line object-cover dark:border-line-strong ${className}`}
       onError={() => setFailed(true)}
     />
   );

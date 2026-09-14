@@ -29,10 +29,10 @@ export function DeleteLibraryForm({ libraryName }: { libraryName: string }) {
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-red-300 p-4 dark:border-red-900">
+    <div className="space-y-3 border border-line-strong bg-surface p-4">
       <div>
-        <h2 className="font-semibold text-red-700 dark:text-red-400">Delete this library</h2>
-        <p className="text-sm text-gray-500">
+        <h2 className="font-mono text-[11px] tracking-[.16em] text-accent uppercase">Delete this library</h2>
+        <p className="mt-1 font-sans text-sm text-ink-soft">
           Permanently deletes {libraryName}, every shelf, book, and reservation in it, for everyone with
           access. This can&apos;t be undone.
         </p>
@@ -42,17 +42,17 @@ export function DeleteLibraryForm({ libraryName }: { libraryName: string }) {
           value={confirmName}
           onChange={(e) => setConfirmName(e.target.value)}
           placeholder={`Type "${libraryName}" to confirm`}
-          className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="min-w-0 flex-1 border-b border-line-strong bg-transparent px-0.5 py-2 font-sans text-sm text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
         />
         <button
           type="submit"
           disabled={busy || confirmName !== libraryName}
-          className="rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="rounded-[2px] bg-accent px-4 py-2 font-sans text-sm font-medium text-on-accent hover:brightness-95 disabled:opacity-40"
         >
           Delete library
         </button>
       </form>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="font-mono text-xs text-accent">{error}</p>}
     </div>
   );
 }

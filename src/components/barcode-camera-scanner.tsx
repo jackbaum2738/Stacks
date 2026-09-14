@@ -55,13 +55,13 @@ export function BarcodeCameraScanner({
         <video ref={videoRef} className="w-full" muted playsInline />
       </div>
       {error ? (
-        <p className="max-w-sm text-center text-sm text-red-300">{error}</p>
+        <p className="max-w-sm text-center font-sans text-sm text-[#E2897E]">{error}</p>
       ) : (
-        <p className="text-sm text-gray-300">Point the camera at the book&apos;s barcode.</p>
+        <p className="font-sans text-sm text-gray-300">Point the camera at the book&apos;s barcode.</p>
       )}
       <button
         onClick={onClose}
-        className="rounded-lg bg-white px-4 py-2 font-medium text-gray-900"
+        className="rounded-[2px] bg-[#FBF6EA] px-4 py-2 font-sans font-medium text-[#2B2620]"
       >
         Cancel
       </button>

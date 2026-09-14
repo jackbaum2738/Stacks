@@ -51,20 +51,20 @@ export function ShelfManageRow({ shelf }: { shelf: { id: string; name: string; c
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900"
+            className="flex-1 border-b border-line-strong bg-transparent px-0.5 py-1.5 font-sans text-sm text-ink focus-visible:border-accent focus-visible:outline-none"
           />
           <button
             type="submit"
             disabled={busy}
-            className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-gray-900"
+            className="rounded-[2px] bg-ink px-3 py-1.5 font-sans text-sm font-medium text-surface hover:brightness-95"
           >
             Save
           </button>
-          <button type="button" onClick={() => setEditing(false)} className="text-sm text-gray-500">
+          <button type="button" onClick={() => setEditing(false)} className="font-sans text-sm text-ink-soft">
             Cancel
           </button>
         </form>
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-1 font-mono text-xs text-accent">{error}</p>}
       </li>
     );
   }
@@ -73,8 +73,8 @@ export function ShelfManageRow({ shelf }: { shelf: { id: string; name: string; c
     <li className="py-2">
       <div className="flex items-center justify-between">
         <div>
-          <span className="font-medium">{shelf.name}</span>
-          <span className="ml-2 text-sm text-gray-500">
+          <span className="font-display font-medium text-ink">{shelf.name}</span>
+          <span className="ml-2 font-mono text-sm text-ink-soft">
             {shelf.copyCount} {shelf.copyCount === 1 ? "book" : "books"}
           </span>
         </div>
@@ -82,20 +82,20 @@ export function ShelfManageRow({ shelf }: { shelf: { id: string; name: string; c
           <button
             onClick={() => setEditing(true)}
             disabled={busy}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium dark:border-gray-700"
+            className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
           >
             Rename
           </button>
           <button
             onClick={remove}
             disabled={busy}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-red-700 dark:border-gray-700 dark:text-red-400"
+            className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-accent hover:bg-chip-hover"
           >
             Delete
           </button>
         </div>
       </div>
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-1 font-mono text-xs text-accent">{error}</p>}
     </li>
   );
 }

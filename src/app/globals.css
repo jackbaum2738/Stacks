@@ -1,26 +1,104 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #efe7d6;
+  --surface: #fbf6ea;
+  --surface-raised: #fbf6ea;
+  --ink: #2b2620;
+  --ink-muted: #4a4238;
+  --ink-soft: #756a58;
+  --ink-faint: #8b8071;
+  --line: #d8c9ae;
+  --line-strong: #bfae8d;
+  --line-inner: #e4d9c0;
+  --accent: #9e3b2f;
+  --accent-2: #2c5a5b;
+  --ok: #2f5738;
+  --on-accent: #fbf6ea;
+  --pill-available-bg: #dee7dc;
+  --pill-available-fg: #2f5738;
+  --pill-reserved-bg: #ebd9c4;
+  --pill-reserved-fg: #8a4b1e;
+  --reserved-text: #8a4b1e;
+  --row-hover: #f6efe0;
+  --chip-hover: #f1e7d4;
+  --shadow-tint: #e4d9c0;
+  --shadow-tint-2: #dccfb2;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-line-inner: var(--line-inner);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-ok: var(--ok);
+  --color-on-accent: var(--on-accent);
+  --color-pill-available-bg: var(--pill-available-bg);
+  --color-pill-available-fg: var(--pill-available-fg);
+  --color-pill-reserved-bg: var(--pill-reserved-bg);
+  --color-pill-reserved-fg: var(--pill-reserved-fg);
+  --color-reserved-text: var(--reserved-text);
+  --color-row-hover: var(--row-hover);
+  --color-chip-hover: var(--chip-hover);
+  --font-display: var(--font-newsreader);
+  --font-sans: var(--font-karla);
+  --font-mono: var(--font-plex-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #1b1813;
+    --surface: #23201a;
+    --surface-raised: #2b2620;
+    --ink: #efe6d3;
+    --ink-muted: #efe6d3;
+    --ink-soft: #a79b84;
+    --ink-faint: #8d8270;
+    --line: #3a342a;
+    --line-strong: #4b4335;
+    --line-inner: #3a342a;
+    --accent: #d4665a;
+    --accent-2: #6fa3a4;
+    --ok: #6fa3a4;
+    --on-accent: #fbf6ea;
+    --pill-available-bg: #2b3a2e;
+    --pill-available-fg: #8fc79a;
+    --pill-reserved-bg: #3a2c1f;
+    --pill-reserved-fg: #e2b483;
+    --reserved-text: #e2897e;
+    --row-hover: #211e18;
+    --chip-hover: #2b2620;
+    --shadow-tint: #3a342a;
+    --shadow-tint-2: #3a342a;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-karla), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* "Stacked paper" depth — cards and stat tiles only, no blur */
+.paper-shadow-sm {
+  box-shadow: 0 6px 0 -3px var(--shadow-tint);
+}
+.paper-shadow-md {
+  box-shadow: 0 8px 0 -4px var(--shadow-tint);
+}
+.paper-shadow-lg {
+  box-shadow: 0 10px 0 -5px var(--shadow-tint);
+}
+.paper-shadow-hero {
+  box-shadow:
+    0 10px 0 -5px var(--shadow-tint),
+    0 20px 0 -10px var(--shadow-tint-2);
 }

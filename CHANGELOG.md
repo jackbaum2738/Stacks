@@ -4,6 +4,15 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+5.0.0 -- 2026-09-14
+--------------------
+- Replaced the unmodified Next.js starter look (flat white/black, Geist-falling-back-to-Arial, default favicon, no logo) with a full visual identity, direction "Ex Libris": an archival/manila palette (paper surfaces, ink text, a stamp-red accent, a teal secondary) with first-class light and dark variants -- neither is a mechanical inversion of the other, since Stacks' dark mode is driven purely by `prefers-color-scheme` with no in-app toggle yet. Typography is a three-way pairing: Newsreader (display/titles, book titles, stat numbers), Karla (interface/body), and IBM Plex Mono (labels, dates, ISBNs, shelf codes, status pills), all self-hosted via `next/font/google`. Sharp corners everywhere (2px radius) and a flat "stacked paper" box-shadow (no blur) on cards and stat tiles are the direction's signature.
+- Added a mark (three offset rounded bars reading as a leaning stack of spines) as the app's logo, used in the landing/dashboard headers, and regenerated the favicon (`favicon.ico`, `icon.svg`, `apple-icon.png`) from it -- previously the default Next.js/Vercel icon. Removed the unused Next.js starter SVGs (`next.svg`, `vercel.svg`, `globe.svg`, `file.svg`, `window.svg`) from `/public`.
+- Restyled every page and component to the new tokens/typography: landing, sign in, register/invite, dashboard chrome (header, library switcher, nav tabs), overview stats, the Library list and grid views, book detail, the reservation and delete-confirmation modals, shelves, reservations, settings, and scan. No behavior changed -- same routes, same fetches, same `localStorage`-backed view-mode persistence, same bulk-select/right-click/reservation flows throughout.
+- The landing page's footer stats ("N books / N shelves / N reserved") are now wired to real counts across all libraries via a server-side query, instead of being static/absent.
+- Added `src/lib/form-styles.ts` to share the underline-input/mono-label treatment used by every form across the app (auth, reservation, shelves, settings) instead of repeating the same Tailwind classes in each one.
+
+
 4.0.0 -- 2026-09-14
 --------------------
 - The Library page now has a list/grid view toggle (remembered per browser). List view is a sortable table -- click any column header (Title, Author, Shelf, Date added, Status) to sort by it, click again to reverse. Grid view shows cover-forward cards with a checkbox that appears on hover.

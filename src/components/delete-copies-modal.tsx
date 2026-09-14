@@ -51,18 +51,20 @@ export function DeleteCopiesModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,38,32,.45)] p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="mb-2 text-base font-semibold">Remove {copies.length > 1 ? "books" : "book"}?</h2>
-        <p className="mb-5 text-sm text-gray-600 dark:text-gray-400">{message}</p>
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <div className="w-full max-w-[400px] rounded-[2px] border border-line-strong bg-surface p-[26px] shadow-[0_24px_44px_rgba(43,38,32,.3)]">
+        <h2 className="mb-2 font-display text-2xl font-semibold text-ink">
+          Remove {copies.length > 1 ? "books" : "book"}?
+        </h2>
+        <p className="mb-5 font-sans text-sm leading-[1.55] text-ink-soft">{message}</p>
+        {error && <p className="mb-3 font-mono text-xs text-accent">{error}</p>}
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium dark:border-gray-700"
+            className="rounded-[2px] border border-line-strong px-3 py-2 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
           >
             Cancel
           </button>
@@ -70,7 +72,7 @@ export function DeleteCopiesModal({
             type="button"
             onClick={confirm}
             disabled={busy}
-            className="rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-[2px] bg-accent px-3 py-2 font-sans text-sm font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
           >
             Remove
           </button>

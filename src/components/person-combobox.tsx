@@ -47,10 +47,10 @@ export function PersonCombobox({
         placeholder={placeholder}
         required={required}
         autoComplete="off"
-        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-950"
+        className="w-full border-b border-line-strong bg-transparent px-0.5 py-1.5 font-sans text-[15px] text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
       />
       {open && visibleSuggestions.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-gray-300 bg-white text-sm shadow-lg dark:border-gray-700 dark:bg-gray-900">
+        <ul className="paper-shadow-sm absolute z-10 mt-1 w-full overflow-hidden rounded-[2px] border border-line-strong bg-surface text-sm">
           {visibleSuggestions.map((person) => (
             <li key={person}>
               <button
@@ -60,7 +60,7 @@ export function PersonCombobox({
                   setOpen(false);
                   inputRef.current?.focus();
                 }}
-                className="block w-full px-3 py-1.5 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="block w-full px-3 py-1.5 text-left font-sans text-[14px] text-ink hover:bg-[#f1e7d4]"
               >
                 {person}
               </button>

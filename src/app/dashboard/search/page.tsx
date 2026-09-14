@@ -182,23 +182,23 @@ export default function LibraryBrowsePage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Library</h1>
+          <h1 className="font-display text-[32px] font-semibold text-ink">Library</h1>
           {!loading && (
-            <p className="text-sm text-gray-500">
-              {rows.length} {rows.length === 1 ? "book" : "books"}
+            <p className="font-mono text-[11px] tracking-[.10em] text-ink-soft uppercase">
+              {rows.length} {rows.length === 1 ? "book" : "books"} · sorted by {sortKey}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-1 rounded-md border border-gray-300 p-0.5 dark:border-gray-700">
+        <div className="flex items-center border border-line-strong">
           <button
             type="button"
             aria-pressed={viewMode === "list"}
             aria-label="List view"
             title="List view"
             onClick={() => changeViewMode("list")}
-            className={`rounded p-1.5 ${viewMode === "list" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-500"}`}
+            className={`p-[7px] ${viewMode === "list" ? "bg-ink text-surface" : "text-ink-faint"}`}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-6 w-6">
               <line x1="4" y1="6" x2="20" y2="6" />
               <line x1="4" y1="12" x2="20" y2="12" />
               <line x1="4" y1="18" x2="20" y2="18" />
@@ -210,9 +210,9 @@ export default function LibraryBrowsePage() {
             aria-label="Grid view"
             title="Grid view"
             onClick={() => changeViewMode("grid")}
-            className={`rounded p-1.5 ${viewMode === "grid" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-gray-500"}`}
+            className={`p-[7px] ${viewMode === "grid" ? "bg-ink text-surface" : "text-ink-faint"}`}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-6 w-6">
               <rect x="3" y="3" width="7" height="7" rx="1" />
               <rect x="14" y="3" width="7" height="7" rx="1" />
               <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -222,13 +222,19 @@ export default function LibraryBrowsePage() {
         </div>
       </div>
 
-      <input
-        autoFocus
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
-        placeholder="Search by title, author, or ISBN — or leave blank to browse everything"
-        className="w-full rounded-md border border-gray-300 px-3 py-3 text-lg dark:border-gray-700 dark:bg-gray-900"
-      />
+      <div className="flex items-center gap-[10px] border border-line-strong bg-surface px-[15px] py-[13px]">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[17px] w-[17px] flex-shrink-0 text-ink-faint">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          placeholder="Search by title, author, or ISBN — or leave blank to browse everything"
+          className="w-full bg-transparent font-mono text-sm text-ink placeholder:text-ink-faint focus-visible:outline-none"
+        />
+      </div>
 
       {selected.size > 0 && (
         <LibrarySelectionBar
@@ -241,38 +247,38 @@ export default function LibraryBrowsePage() {
         />
       )}
 
-      {loading && <p className="text-sm text-gray-500">Loading…</p>}
+      {loading && <p className="font-sans text-sm text-ink-soft">Loading…</p>}
 
       {!loading && rows.length === 0 && (
-        <p className="text-sm text-gray-500">
+        <p className="font-sans text-sm text-ink-soft">
           {trimmedQuery ? "No books found." : "No books in your library yet."}
         </p>
       )}
 
       {!loading && rows.length > 0 && viewMode === "list" && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto border border-line bg-surface">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-left text-xs text-gray-500 dark:border-gray-800">
-                <th className="w-8 py-2"></th>
-                <th className="w-12 py-2"></th>
+              <tr className="border-b-2 border-ink text-left">
+                <th className="w-[34px] py-2"></th>
+                <th className="w-11 py-2"></th>
                 {headers.map((h) => (
                   <th
                     key={h.key}
-                    className={h.className}
+                    className={`${h.className ?? ""} pr-3`}
                     aria-sort={sortKey === h.key ? (sortDir === 1 ? "ascending" : "descending") : "none"}
                   >
                     <button
                       type="button"
                       onClick={() => toggleSort(h.key)}
-                      className="inline-flex items-center gap-1 py-2 font-medium hover:text-gray-900 dark:hover:text-gray-100"
+                      className="inline-flex items-center gap-1 py-2 font-mono text-[10px] font-medium tracking-[.14em] text-ink-muted uppercase hover:text-ink"
                     >
                       {h.label}
-                      {sortKey === h.key && <span className="text-[10px]">{sortDir === 1 ? "▲" : "▼"}</span>}
+                      {sortKey === h.key && <span className="text-[9px]">{sortDir === 1 ? "▲" : "▼"}</span>}
                     </button>
                   </th>
                 ))}
-                <th className="w-20 py-2"></th>
+                <th className="w-[74px] py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -280,43 +286,50 @@ export default function LibraryBrowsePage() {
                 <tr
                   key={row.id}
                   onClick={() => router.push(`/dashboard/copies/${row.id}`)}
-                  className={`cursor-pointer border-b border-gray-100 hover:bg-gray-50 dark:border-gray-900 dark:hover:bg-gray-900/50 ${
-                    selected.has(row.id) ? "bg-gray-50 dark:bg-gray-900/50" : ""
+                  className={`cursor-pointer border-b border-line-inner hover:bg-row-hover ${
+                    selected.has(row.id) ? "bg-row-hover" : ""
                   }`}
                 >
-                  <td onClick={(e) => e.stopPropagation()} className="py-2">
+                  <td onClick={(e) => e.stopPropagation()} className="py-2.5">
                     <input
                       type="checkbox"
                       checked={selected.has(row.id)}
                       onChange={(e) => toggleSelect(row.id, e.target.checked)}
                       aria-label={`Select ${row.book.title}`}
+                      className="accent-accent"
                     />
                   </td>
-                  <td className="py-2">
-                    <BookCover src={row.book.coverUrl} alt={row.book.title} className="h-14 w-10" />
+                  <td className="py-2.5">
+                    <BookCover src={row.book.coverUrl} alt={row.book.title} className="h-[50px] w-[34px]" />
                   </td>
-                  <td className="max-w-[240px] truncate py-2 font-medium">{row.book.title}</td>
-                  <td className="max-w-[180px] truncate py-2 text-gray-500">
+                  <td className="max-w-[240px] truncate py-2.5 font-display text-[16px] font-medium text-ink">
+                    {row.book.title}
+                  </td>
+                  <td className="max-w-[170px] truncate py-2.5 font-sans text-ink-soft">
                     {row.book.authors.join(", ") || "Unknown author"}
                   </td>
-                  <td className="hidden truncate py-2 text-gray-500 sm:table-cell">{row.shelf?.name ?? "—"}</td>
-                  <td className="hidden py-2 text-gray-500 md:table-cell">{formatDate(row.addedAt)}</td>
-                  <td className="py-2">
+                  <td className="hidden truncate py-2.5 font-mono text-[13px] text-ink sm:table-cell">
+                    {row.shelf?.name ?? "—"}
+                  </td>
+                  <td className="hidden py-2.5 font-mono text-[12px] text-ink-soft md:table-cell">
+                    {formatDate(row.addedAt)}
+                  </td>
+                  <td className="py-2.5">
                     <StatusPill status={row.status} />
                     {row.reservation && (
-                      <span className="ml-1 block text-xs text-amber-700 dark:text-amber-400">
+                      <span className="mt-1 block font-sans text-xs text-reserved-text">
                         {row.reservation.reservedFor}
                       </span>
                     )}
                   </td>
-                  <td onClick={(e) => e.stopPropagation()} className="py-2">
+                  <td onClick={(e) => e.stopPropagation()} className="py-2.5">
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => openRowReserve(row)}
                         title={row.reservation ? "Edit reservation" : "Reserve"}
                         aria-label={`${row.reservation ? "Edit reservation for" : "Reserve"} ${row.book.title}`}
-                        className={`rounded p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 ${row.reservation ? "text-amber-700 dark:text-amber-400" : "text-gray-500"}`}
+                        className={`rounded-[2px] p-1.5 hover:bg-chip-hover ${row.reservation ? "text-pill-reserved-fg" : "text-ink-faint"}`}
                       >
                         <svg viewBox="0 0 24 24" fill={row.reservation ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="h-4 w-4">
                           <path d="M7 4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16l-5-3.2L7 20V4z" />
@@ -327,7 +340,7 @@ export default function LibraryBrowsePage() {
                         onClick={() => setDeleteModal([row])}
                         title="Remove from library"
                         aria-label={`Remove ${row.book.title}`}
-                        className="rounded p-1.5 text-gray-500 hover:bg-gray-200 hover:text-red-700 dark:hover:bg-gray-800 dark:hover:text-red-400"
+                        className="rounded-[2px] p-1.5 text-ink-faint hover:bg-chip-hover hover:text-accent"
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
                           <path d="M6 6l12 12M18 6L6 18" />
@@ -343,9 +356,9 @@ export default function LibraryBrowsePage() {
       )}
 
       {!loading && rows.length > 0 && viewMode === "grid" && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-x-[26px] gap-y-[30px] sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {sortedRows.map((row) => (
-            <div key={row.id} className="space-y-1.5">
+            <div key={row.id} className="space-y-[7px]">
               <div
                 className="group relative cursor-pointer"
                 onClick={() => router.push(`/dashboard/copies/${row.id}`)}
@@ -355,15 +368,9 @@ export default function LibraryBrowsePage() {
                 }}
               >
                 <BookCover src={row.book.coverUrl} alt={row.book.title} className="aspect-[2/3] w-full" />
-                {row.reservation && (
-                  <span
-                    className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-gray-950"
-                    title={`Reserved — ${row.reservation.reservedFor}`}
-                  />
-                )}
                 <label
                   onClick={(e) => e.stopPropagation()}
-                  className={`absolute left-1.5 top-1.5 rounded bg-white/90 p-0.5 shadow dark:bg-gray-950/90 ${
+                  className={`absolute top-1.5 left-1.5 rounded-[2px] bg-surface/90 p-0.5 shadow ${
                     selected.has(row.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
@@ -372,24 +379,29 @@ export default function LibraryBrowsePage() {
                     checked={selected.has(row.id)}
                     onChange={(e) => toggleSelect(row.id, e.target.checked)}
                     aria-label={`Select ${row.book.title}`}
+                    className="accent-accent"
                   />
                 </label>
               </div>
               <button
                 type="button"
                 onClick={() => router.push(`/dashboard/copies/${row.id}`)}
-                className="block w-full truncate text-left text-sm font-medium hover:underline"
+                className="block w-full truncate text-left font-display text-[15px] font-medium text-ink hover:underline"
               >
                 {row.book.title}
               </button>
-              <p className="truncate text-xs text-gray-500">{row.book.authors.join(", ") || "Unknown author"}</p>
-              {row.reservation && (
-                <p className="truncate text-xs text-amber-700 dark:text-amber-400">Reserved — {row.reservation.reservedFor}</p>
-              )}
-              <div className="flex items-center justify-between text-xs text-gray-400">
+              <p className="truncate font-sans text-xs text-ink-soft">
+                {row.book.authors.join(", ") || "Unknown author"}
+              </p>
+              <div className="flex items-center justify-between font-mono text-[11px] text-ink-faint">
                 <span className="truncate">{row.shelf?.name ?? "No shelf"}</span>
                 <span className="flex-shrink-0">{formatDate(row.addedAt)}</span>
               </div>
+              {row.reservation && (
+                <p className="truncate font-sans text-xs text-reserved-text">
+                  Reserved — {row.reservation.reservedFor}
+                </p>
+              )}
             </div>
           ))}
         </div>
