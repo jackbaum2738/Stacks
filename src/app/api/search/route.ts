@@ -18,6 +18,7 @@ export async function GET(request: Request) {
             OR: [
               { title: { contains: q, mode: "insensitive" } },
               { authors: { has: q } },
+              { bookCrossingId: { contains: q, mode: "insensitive" } },
               ...(isbnCandidate.length >= 8 ? [{ isbn13: isbnCandidate }, { isbn10: isbnCandidate }] : []),
             ],
           }

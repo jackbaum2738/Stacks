@@ -4,6 +4,14 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+5.1.0 -- 2026-09-14
+--------------------
+- Added a "BookCrossing ID" (BCID) field to a book's catalog metadata, shown under the ISBN below the cover on the book detail page, and searchable -- the Library search bar now reads "Search by title, author, ISBN, or BCID" and the underlying /api/search query matches it with a case-insensitive contains, same as title.
+- Added an editable version of the book detail page (/dashboard/copies/[id]/edit) reachable via a new "Edit details" button both on the book detail page itself and directly from the scan-in success banner. Lets you correct title, authors, publisher, page count, cover URL, description, and BCID. Backed by a new `PATCH /api/books/[id]` route; any signed-in member of a library that actually holds a copy of the book can edit it (not owner/admin-gated), matching the low-stakes, crowd-correctable nature of shared catalog metadata.
+- Important behavior to understand: `Book` rows are a shared catalog keyed by ISBN (see the data model note in CLAUDE.md) and are reused, not re-fetched, on every future scan-in of the same ISBN. So an edit made here isn't scoped to one copy or one library -- it permanently corrects the record for that ISBN everywhere, including for copies added before the edit and any added after. There's currently no way to revert to the original ISBN-lookup data once edited.
+- Replaced the old "Added, but couldn't find book details -- edit the title later." scan-in message, which had no actual path to editing, with "Added, but couldn't find book details." plus a real "Edit details" button that goes straight to the new edit form.
+
+
 5.0.1 -- 2026-09-14
 --------------------
 - Renamed this file from `CHANGELOG.md` to `CHANGELOG.txt` at the user's request -- no content change, just plain text going forward instead of markdown.

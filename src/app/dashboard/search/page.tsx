@@ -231,7 +231,7 @@ export default function LibraryBrowsePage() {
           autoFocus
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Search by title, author, or ISBN — or leave blank to browse everything"
+          placeholder="Search by title, author, ISBN, or BCID — or leave blank to browse everything"
           className="w-full bg-transparent font-mono text-sm text-ink placeholder:text-ink-faint focus-visible:outline-none"
         />
       </div>

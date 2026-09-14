@@ -69,19 +69,20 @@ model Shelf {
 
 /// Catalog metadata for a title, shared across every library so a lookup is only ever done once.
 model Book {
-  id            String   @id @default(cuid())
-  isbn13        String   @unique
-  isbn10        String?
-  title         String
-  authors       String[]
-  publisher     String?
-  publishedDate String?
-  pageCount     Int?
-  description   String?
-  coverUrl      String?
-  source        String?
-  createdAt     DateTime @default(now())
-  copies        Copy[]
+  id             String   @id @default(cuid())
+  isbn13         String   @unique
+  isbn10         String?
+  title          String
+  authors        String[]
+  publisher      String?
+  publishedDate  String?
+  pageCount      Int?
+  description    String?
+  coverUrl       String?
+  bookCrossingId String?
+  source         String?
+  createdAt      DateTime @default(now())
+  copies         Copy[]
 }
 
 /// One physical copy of a Book sitting in a specific Library (and Shelf).

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
 import { StatusPill } from "@/components/status-pill";
 import { ReservationModal } from "@/components/reservation-modal";
@@ -21,6 +22,7 @@ interface CopyDetailData {
     publisher: string | null;
     pageCount: number | null;
     description: string | null;
+    bookCrossingId: string | null;
   };
   reservation: { id: string; reservedFor: string; contact: string | null; createdAt: Date } | null;
 }
@@ -41,6 +43,12 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
           Shelf {shelfLabel}
           <br />
           ISBN {copy.book.isbn13}
+          {copy.book.bookCrossingId && (
+            <>
+              <br />
+              BookCrossing ID {copy.book.bookCrossingId}
+            </>
+          )}
         </p>
       </div>
 
@@ -125,6 +133,16 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
             </svg>
             Remove from library
           </button>
+          <Link
+            href={`/dashboard/copies/${copy.id}/edit`}
+            className="inline-flex items-center gap-1.5 rounded-[2px] border border-line-strong px-[18px] py-[11px] font-sans text-sm font-medium text-ink hover:bg-chip-hover"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+            Edit details
+          </Link>
         </div>
       </div>
 
