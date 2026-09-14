@@ -4,6 +4,11 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+5.0.1 -- 2026-09-14
+--------------------
+- Renamed this file from `CHANGELOG.md` to `CHANGELOG.txt` at the user's request -- no content change, just plain text going forward instead of markdown.
+
+
 5.0.0 -- 2026-09-14
 --------------------
 - Replaced the unmodified Next.js starter look (flat white/black, Geist-falling-back-to-Arial, default favicon, no logo) with a full visual identity, direction "Ex Libris": an archival/manila palette (paper surfaces, ink text, a stamp-red accent, a teal secondary) with first-class light and dark variants -- neither is a mechanical inversion of the other, since Stacks' dark mode is driven purely by `prefers-color-scheme` with no in-app toggle yet. Typography is a three-way pairing: Newsreader (display/titles, book titles, stat numbers), Karla (interface/body), and IBM Plex Mono (labels, dates, ISBNs, shelf codes, status pills), all self-hosted via `next/font/google`. Sharp corners everywhere (2px radius) and a flat "stacked paper" box-shadow (no blur) on cards and stat tiles are the direction's signature.

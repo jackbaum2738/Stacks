@@ -19,6 +19,19 @@ This would likely mean promoting "reserved for" from a plain string on
 `Reservation` into a real `Person` model scoped to a library, with
 `Reservation` pointing at it by id.
 
+## Transactional email
+
+There's currently no email provider set up (see CLAUDE.md) — invites are link-only,
+not emailed, and there's no email verification on signup. If that's ever wanted:
+
+- **Resend** is the best fit for this app's scale — built for Next.js/Vercel, simple
+  API, and its free tier (3,000 emails/month, 100/day) is far more than a personal
+  family library app would ever need. Requires a verified sending domain for
+  anything beyond their shared test domain.
+- Alternatives if Resend doesn't fit: **Brevo** (300/day free, no Next.js-specific
+  tooling) or **AWS SES** (near-free per email, but more setup friction — sandbox
+  mode and domain verification before it can send to arbitrary addresses).
+
 ## Light / dark / system theme setting
 
 The app already fully supports light and dark mode (it follows the
