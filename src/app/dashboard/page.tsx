@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentLibrary } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { BookCover } from "@/components/book-cover";
+import { StatusPill } from "@/components/status-pill";
 
 export default async function DashboardPage() {
   const context = await getCurrentLibrary();
@@ -23,53 +24,68 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-[26px]">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-[11px] tracking-[.14em] text-ink-soft uppercase">Library</p>
+          <h1 className="font-display text-[36px] font-semibold text-ink">{context.library.name}</h1>
+          <p className="mt-1 font-sans text-[15px] text-ink-soft">
+            {availableCount + reservedCount} books on {shelfCount} shelves.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Link
+            href="/dashboard/scan"
+            className="rounded-[2px] bg-accent px-5 py-[11px] font-sans text-[15px] font-medium text-on-accent hover:brightness-95"
+          >
+            Scan a book
+          </Link>
+          <Link
+            href="/dashboard/search"
+            className="rounded-[2px] border border-ink px-5 py-[11px] font-sans text-[15px] font-medium text-ink hover:bg-chip-hover"
+          >
+            Browse library
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-[14px]">
+        <Stat label="Available" value={availableCount} valueClassName="text-ok" />
+        <Stat label="Reserved" value={reservedCount} valueClassName="text-accent" />
+        <Stat label="Shelves" value={shelfCount} valueClassName="text-accent-2" />
+      </div>
+
       <div>
-        <h1 className="text-2xl font-bold">{context.library.name}</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {availableCount + reservedCount} books on {shelfCount} shelves.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <Stat label="Available" value={availableCount} />
-        <Stat label="Reserved" value={reservedCount} />
-        <Stat label="Shelves" value={shelfCount} />
-      </div>
-
-      <div className="flex gap-3">
-        <Link href="/dashboard/scan" className="rounded-lg bg-gray-900 px-4 py-2 font-medium text-white dark:bg-white dark:text-gray-900">
-          Scan a book
-        </Link>
-        <Link href="/dashboard/search" className="rounded-lg border border-gray-300 px-4 py-2 font-medium dark:border-gray-700">
-          Browse library
-        </Link>
-      </div>
-
-      <div>
-        <h2 className="mb-3 font-semibold">Recently added</h2>
+        <h2 className="mb-3 font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">
+          Recently added
+        </h2>
         {recentCopies.length === 0 ? (
-          <p className="text-sm text-gray-500">No books yet — scan your first one to get started.</p>
+          <p className="font-sans text-sm text-ink-soft">
+            No books yet — scan your first one to get started.
+          </p>
         ) : (
-          <ul className="divide-y divide-gray-200 dark:divide-gray-800">
-            {recentCopies.map((copy) => (
-              <li key={copy.id} className="flex items-center gap-3 py-3">
-                <BookCover src={copy.book.coverUrl} alt={copy.book.title} className="h-14 w-10 flex-shrink-0" />
+          <ul className="border border-line bg-surface">
+            {recentCopies.map((copy, i) => (
+              <li
+                key={copy.id}
+                className={`flex items-center gap-[14px] px-4 py-3 ${
+                  i > 0 ? "border-t border-line-inner" : ""
+                }`}
+              >
+                <BookCover
+                  src={copy.book.coverUrl}
+                  alt={copy.book.title}
+                  className="h-[54px] w-[37px] flex-shrink-0"
+                />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{copy.book.title}</p>
-                  <p className="truncate text-sm text-gray-500">
+                  <p className="truncate font-display text-[17px] font-medium text-ink">
+                    {copy.book.title}
+                  </p>
+                  <p className="truncate font-sans text-[13px] text-ink-soft">
                     {copy.book.authors.join(", ") || "Unknown author"} · {copy.shelf?.name ?? "No shelf"}
                   </p>
                 </div>
-                <span
-                  className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${
-                    copy.status === "AVAILABLE"
-                      ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
-                      : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                  }`}
-                >
-                  {copy.status === "AVAILABLE" ? "Available" : "Reserved"}
-                </span>
+                <StatusPill status={copy.status} />
               </li>
             ))}
           </ul>
@@ -79,11 +95,19 @@ export default async function DashboardPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: number;
+  valueClassName: string;
+}) {
   return (
-    <div className="rounded-lg border border-gray-200 p-4 text-center dark:border-gray-800">
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-sm text-gray-500">{label}</p>
+    <div className="paper-shadow-sm border border-line bg-surface px-[18px] py-4">
+      <p className="font-mono text-[10px] tracking-[.14em] text-ink-soft uppercase">{label}</p>
+      <p className={`font-display text-[34px] font-semibold ${valueClassName}`}>{value}</p>
     </div>
   );
 }

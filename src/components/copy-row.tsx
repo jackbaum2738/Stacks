@@ -79,13 +79,13 @@ export function CopyRow({
       <div className="flex items-center gap-3">
         <BookCover src={copy.book.coverUrl} alt={copy.book.title} className="h-16 w-12 flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{copy.book.title}</p>
-          <p className="truncate text-sm text-gray-500">
+          <p className="truncate font-display font-medium text-ink">{copy.book.title}</p>
+          <p className="truncate font-sans text-sm text-ink-soft">
             {copy.book.authors.join(", ") || "Unknown author"}
             {showShelf && copy.shelf ? ` · ${copy.shelf.name}` : ""}
           </p>
           {copy.reservation && (
-            <p className="text-sm text-amber-700 dark:text-amber-400">
+            <p className="font-sans text-sm text-reserved-text">
               Reserved for {copy.reservation.reservedFor}
               {copy.reservation.contact ? ` (${copy.reservation.contact})` : ""}
             </p>
@@ -96,7 +96,7 @@ export function CopyRow({
             <button
               onClick={() => setShowReserveForm(true)}
               disabled={busy}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium dark:border-gray-700"
+              className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
             >
               Reserve
             </button>
@@ -105,7 +105,7 @@ export function CopyRow({
             <button
               onClick={release}
               disabled={busy}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium dark:border-gray-700"
+              className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
             >
               Release
             </button>
@@ -113,7 +113,7 @@ export function CopyRow({
           <button
             onClick={remove}
             disabled={busy}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-red-700 dark:border-gray-700 dark:text-red-400"
+            className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-accent hover:bg-chip-hover"
           >
             Remove
           </button>
@@ -121,25 +121,25 @@ export function CopyRow({
       </div>
 
       {showReserveForm && (
-        <form onSubmit={reserve} className="flex flex-wrap items-center gap-2 rounded-md bg-gray-50 p-3 dark:bg-gray-900">
+        <form onSubmit={reserve} className="flex flex-wrap items-center gap-2 border border-line bg-bg p-3">
           <PersonCombobox value={reservedFor} onChange={setReservedFor} required />
           <input
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             placeholder="Contact (optional)"
-            className="min-w-0 flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-950"
+            className="min-w-0 flex-1 border-b border-line-strong bg-transparent px-0.5 py-1.5 font-sans text-sm text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
           />
           <button
             type="submit"
             disabled={busy}
-            className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-gray-900"
+            className="rounded-[2px] bg-ink px-3 py-1.5 font-sans text-sm font-medium text-surface hover:brightness-95"
           >
             Save
           </button>
-          <button type="button" onClick={() => setShowReserveForm(false)} className="text-sm text-gray-500">
+          <button type="button" onClick={() => setShowReserveForm(false)} className="font-sans text-sm text-ink-soft">
             Cancel
           </button>
-          {error && <p className="w-full text-sm text-red-600">{error}</p>}
+          {error && <p className="w-full font-mono text-xs text-accent">{error}</p>}
         </form>
       )}
     </li>

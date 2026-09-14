@@ -24,19 +24,19 @@ export default async function ShelfDetailPage(props: PageProps<"/dashboard/shelv
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/dashboard/shelves" className="text-sm text-gray-500 hover:underline">
+        <Link href="/dashboard/shelves" className="font-mono text-[12px] tracking-[.10em] text-accent uppercase hover:underline">
           ← All shelves
         </Link>
-        <h1 className="text-2xl font-bold">{shelf.name}</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="font-display text-[32px] font-semibold text-ink">{shelf.name}</h1>
+        <p className="font-mono text-[11px] tracking-[.10em] text-ink-soft uppercase">
           {shelf.copies.length} {shelf.copies.length === 1 ? "book" : "books"}
         </p>
       </div>
 
       {shelf.copies.length === 0 ? (
-        <p className="text-sm text-gray-500">No books on this shelf yet.</p>
+        <p className="font-sans text-sm text-ink-soft">No books on this shelf yet.</p>
       ) : (
-        <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+        <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
           {shelf.copies.map((copy) => (
             <CopyRow key={copy.id} copy={copy} showShelf={false} />
           ))}

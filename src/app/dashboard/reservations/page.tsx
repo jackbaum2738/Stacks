@@ -21,17 +21,18 @@ export default async function ReservationsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Reservations</h1>
+      <h1 className="font-display text-[32px] font-semibold text-ink">Reservations</h1>
 
       {reservations.length === 0 ? (
-        <p className="text-sm text-gray-500">No active reservations.</p>
+        <p className="font-sans text-sm text-ink-soft">No active reservations.</p>
       ) : (
         Array.from(grouped.entries()).map(([reservedFor, group]) => (
           <div key={reservedFor}>
-            <h2 className="mb-2 font-semibold">
-              {reservedFor} <span className="text-sm font-normal text-gray-500">({group.length})</span>
+            <h2 className="mb-2 font-display font-semibold text-ink">
+              {reservedFor}{" "}
+              <span className="font-sans text-sm font-normal text-ink-soft">({group.length})</span>
             </h2>
-            <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+            <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
               {group.map((reservation) => (
                 <CopyRow key={reservation.copy.id} copy={reservation.copy} />
               ))}

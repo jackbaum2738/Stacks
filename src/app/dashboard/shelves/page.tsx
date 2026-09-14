@@ -16,26 +16,30 @@ export default async function ShelvesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Shelves</h1>
-        <Link href="/dashboard/settings" className="text-sm font-medium underline">
+        <h1 className="font-display text-[32px] font-semibold text-ink">Shelves</h1>
+        <Link href="/dashboard/settings" className="font-sans text-sm font-medium text-accent">
           Manage shelves
         </Link>
       </div>
 
       {shelves.length === 0 ? (
-        <p className="text-sm text-gray-500">
-          No shelves yet. <Link href="/dashboard/settings" className="underline">Add one</Link> to get started.
+        <p className="font-sans text-sm text-ink-soft">
+          No shelves yet.{" "}
+          <Link href="/dashboard/settings" className="text-accent">
+            Add one
+          </Link>{" "}
+          to get started.
         </p>
       ) : (
-        <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+        <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
           {shelves.map((shelf) => (
             <li key={shelf.id}>
               <Link
                 href={`/dashboard/shelves/${shelf.id}`}
-                className="flex items-center justify-between py-3 hover:text-gray-600 dark:hover:text-gray-300"
+                className="flex items-center justify-between py-3 font-sans text-ink hover:text-accent"
               >
-                <span className="font-medium">{shelf.name}</span>
-                <span className="text-sm text-gray-500">
+                <span className="font-display font-medium">{shelf.name}</span>
+                <span className="font-mono text-sm text-ink-soft">
                   {shelf._count.copies} {shelf._count.copies === 1 ? "book" : "books"}
                 </span>
               </Link>

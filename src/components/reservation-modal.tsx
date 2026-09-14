@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PersonCombobox } from "@/components/person-combobox";
+import { formLabelClass, formInputClass } from "@/lib/form-styles";
 
 interface ModalCopy {
   id: string;
@@ -118,16 +119,22 @@ export function ReservationModal({
       : `Hold ${bulk ? "these books" : "this book"} for a specific person until you're ready to send ${bulk ? "them" : "it"}.`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,38,32,.45)] p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
       <form
         onSubmit={submit}
-        className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
+        className="w-full max-w-[400px] rounded-[2px] border border-line-strong bg-surface p-[26px] shadow-[0_24px_44px_rgba(43,38,32,.3)]"
       >
-        <h2 className="mb-1 text-base font-semibold">{heading}</h2>
-        <p className="mb-4 text-sm text-gray-500">{subheading}</p>
+        <div className="mb-4 border-b border-line pb-[10px] font-mono text-[10px] tracking-[.14em] text-ink-soft uppercase">
+          Reservation
+        </div>
+        <h2 className="mb-1 font-display text-2xl leading-[1.2] font-semibold text-ink">{heading}</h2>
+        <p className="mb-4 font-sans text-sm leading-[1.55] text-ink-soft">{subheading}</p>
 
         <div className="mb-3 space-y-1">
-          <label htmlFor="reservationModalName" className="text-sm font-medium">
+          <label htmlFor="reservationModalName" className={formLabelClass}>
             Reserved for
           </label>
           <PersonCombobox
@@ -140,7 +147,7 @@ export function ReservationModal({
         </div>
 
         <div className="mb-4 space-y-1">
-          <label htmlFor="reservationModalContact" className="text-sm font-medium">
+          <label htmlFor="reservationModalContact" className={formLabelClass}>
             Contact (optional)
           </label>
           <input
@@ -148,11 +155,11 @@ export function ReservationModal({
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             placeholder="Email or note"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950"
+            className={formInputClass}
           />
         </div>
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 font-mono text-xs text-accent">{error}</p>}
 
         <div className={`flex items-center ${mode === "edit" ? "justify-between" : "justify-end"} gap-2`}>
           {mode === "edit" && (
@@ -160,7 +167,7 @@ export function ReservationModal({
               type="button"
               onClick={removeReservations}
               disabled={busy}
-              className="text-sm font-medium text-red-700 hover:underline dark:text-red-400"
+              className="font-sans text-sm font-medium text-accent hover:underline"
             >
               Remove reservation{bulk ? "s" : ""}
             </button>
@@ -169,14 +176,14 @@ export function ReservationModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium dark:border-gray-700"
+              className="rounded-[2px] border border-line-strong px-3 py-2 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={busy}
-              className="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-gray-900"
+              className="rounded-[2px] bg-accent px-3 py-2 font-sans text-sm font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
             >
               {mode === "edit" ? "Save changes" : "Reserve"}
             </button>

@@ -25,23 +25,23 @@ export function InviteLinkManager() {
   const link = inviteCode && typeof window !== "undefined" ? `${window.location.origin}/join/${inviteCode}` : "";
 
   return (
-    <div className="space-y-3 rounded-lg border border-gray-200 p-4 dark:border-gray-800">
+    <div className="space-y-3 border border-line bg-surface p-4">
       <div>
-        <h2 className="font-semibold">Invite link</h2>
-        <p className="text-sm text-gray-500">
+        <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Invite link</h2>
+        <p className="mt-1 font-sans text-sm text-ink-soft">
           Anyone with this link can create an account (or sign in) and join this library.
         </p>
       </div>
 
       {inviteCode === undefined ? (
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="font-sans text-sm text-ink-soft">Loading…</p>
       ) : inviteCode ? (
         <div className="flex flex-wrap items-center gap-2">
           <input
             readOnly
             value={link}
             onFocus={(e) => e.target.select()}
-            className="min-w-0 flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+            className="min-w-0 flex-1 border-b border-line-strong bg-transparent px-0.5 py-2 font-mono text-sm text-ink"
           />
           <button
             onClick={() => {
@@ -50,14 +50,14 @@ export function InviteLinkManager() {
                 setTimeout(() => setCopied(false), 2000);
               });
             }}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium dark:border-gray-700"
+            className="rounded-[2px] border border-line-strong px-3 py-2 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
           >
             {copied ? "Copied!" : "Copy"}
           </button>
           <button
             onClick={generate}
             disabled={busy}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-red-700 dark:border-gray-700 dark:text-red-400"
+            className="rounded-[2px] border border-line-strong px-3 py-2 font-sans text-sm font-medium text-accent hover:bg-chip-hover"
           >
             Regenerate (invalidates old link)
           </button>
@@ -66,7 +66,7 @@ export function InviteLinkManager() {
         <button
           onClick={generate}
           disabled={busy}
-          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-gray-900"
+          className="rounded-[2px] bg-ink px-4 py-2 font-sans text-sm font-medium text-surface hover:brightness-95"
         >
           {busy ? "Generating…" : "Generate invite link"}
         </button>

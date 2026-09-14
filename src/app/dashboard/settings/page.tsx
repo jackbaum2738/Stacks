@@ -30,14 +30,14 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-sm text-gray-500">{context.library.name}</p>
+        <h1 className="font-display text-[32px] font-semibold text-ink">Settings</h1>
+        <p className="font-mono text-[11px] tracking-[.10em] text-ink-soft uppercase">{context.library.name}</p>
       </div>
 
       <section className="space-y-3">
-        <h2 className="font-semibold">Shelves</h2>
+        <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Shelves</h2>
         <CreateShelfForm />
-        <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+        <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
           {shelves.map((shelf) => (
             <ShelfManageRow
               key={shelf.id}
@@ -48,8 +48,8 @@ export default async function SettingsPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-semibold">Members</h2>
-        <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+        <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Members</h2>
+        <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
           {members.map((m) => (
             <MemberRow
               key={m.id}

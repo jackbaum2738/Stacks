@@ -39,16 +39,16 @@ export function CreateShelfForm() {
         onChange={(e) => setName(e.target.value)}
         placeholder="New shelf name"
         required
-        className="flex-1 rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+        className="flex-1 border-b border-line-strong bg-transparent px-0.5 py-2 font-sans text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
       />
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md bg-gray-900 px-4 py-2 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-gray-900"
+        className="rounded-[2px] bg-ink px-4 py-2 font-sans font-medium text-surface hover:brightness-95 disabled:opacity-50"
       >
         Add shelf
       </button>
-      {error && <p className="self-center text-sm text-red-600">{error}</p>}
+      {error && <p className="self-center font-mono text-xs text-accent">{error}</p>}
     </form>
   );
 }

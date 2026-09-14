@@ -1,10 +1,10 @@
 export function StatusPill({ status }: { status: "AVAILABLE" | "RESERVED" | "REMOVED" }) {
   return (
     <span
-      className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${
+      className={`inline-flex whitespace-nowrap rounded-[2px] px-[9px] py-1 font-mono text-[11px] font-medium tracking-[.10em] uppercase ${
         status === "AVAILABLE"
-          ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
-          : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+          ? "bg-pill-available-bg text-pill-available-fg"
+          : "bg-pill-reserved-bg text-pill-reserved-fg"
       }`}
     >
       {status === "AVAILABLE" ? "Available" : "Reserved"}

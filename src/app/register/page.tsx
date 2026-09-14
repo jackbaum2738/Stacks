@@ -3,6 +3,8 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Wordmark } from "@/components/wordmark";
+import { formLabelClass, formInputClass } from "@/lib/form-styles";
 
 export default function RegisterPage(props: PageProps<"/register">) {
   const router = useRouter();
@@ -56,15 +58,29 @@ export default function RegisterPage(props: PageProps<"/register">) {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-5">
+    <main className="flex flex-1 flex-col items-center justify-center gap-6 bg-bg px-6 py-16">
+      <Wordmark />
+      <form
+        onSubmit={onSubmit}
+        className="paper-shadow-md w-full max-w-[360px] space-y-4 border border-line bg-surface p-7"
+      >
+        <div className="border-b border-line pb-[10px] font-mono text-[10px] tracking-[.16em] text-ink-soft uppercase">
+          {inviteCode ? "Invitation" : "Create a library"}
+        </div>
+
+        {inviteCode && (
+          <span className="inline-block self-start border border-dashed border-[#C89A92] px-2 py-[5px] font-mono text-[10px] tracking-[.16em] text-accent uppercase">
+            Invitation
+          </span>
+        )}
+
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="font-display text-2xl leading-tight font-semibold text-ink">
             {inviteLibraryName
               ? `${inviterName || "Someone"} invited you to ${inviteLibraryName}`
               : "Create your library"}
           </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-1 font-sans text-sm text-ink-soft">
             {inviteCode
               ? "Set up your own account to join this shared library."
               : "Set up an account and a library to start scanning books into."}
@@ -72,19 +88,17 @@ export default function RegisterPage(props: PageProps<"/register">) {
         </div>
 
         {inviteError && (
-          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <p className="rounded-[2px] bg-[#F3E8D2] px-3 py-2 font-mono text-xs text-[#8A4B1E]">
             {inviteError}
           </p>
         )}
 
         {error && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-            {error}
-          </p>
+          <p className="rounded-[2px] bg-[#F5E2DE] px-3 py-2 font-mono text-xs text-accent">{error}</p>
         )}
 
         <div className="space-y-1">
-          <label htmlFor="name" className="text-sm font-medium">
+          <label htmlFor="name" className={formLabelClass}>
             Your name
           </label>
           <input
@@ -92,12 +106,12 @@ export default function RegisterPage(props: PageProps<"/register">) {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+            className={formInputClass}
           />
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="email" className="text-sm font-medium">
+          <label htmlFor="email" className={formLabelClass}>
             Email
           </label>
           <input
@@ -106,12 +120,12 @@ export default function RegisterPage(props: PageProps<"/register">) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+            className={formInputClass}
           />
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="password" className="text-sm font-medium">
+          <label htmlFor="password" className={formLabelClass}>
             Password
           </label>
           <input
@@ -121,14 +135,14 @@ export default function RegisterPage(props: PageProps<"/register">) {
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+            className={formInputClass}
           />
-          <p className="text-xs text-gray-500">At least 8 characters.</p>
+          <p className="font-sans text-xs text-ink-faint">At least 8 characters.</p>
         </div>
 
         {!inviteCode && (
           <div className="space-y-1">
-            <label htmlFor="libraryName" className="text-sm font-medium">
+            <label htmlFor="libraryName" className={formLabelClass}>
               Library name
             </label>
             <input
@@ -137,7 +151,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
               placeholder="e.g. Dad's Library"
               value={libraryName}
               onChange={(e) => setLibraryName(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+              className={formInputClass}
             />
           </div>
         )}
@@ -145,14 +159,17 @@ export default function RegisterPage(props: PageProps<"/register">) {
         <button
           type="submit"
           disabled={submitting || Boolean(inviteError)}
-          className="w-full rounded-lg bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-700 disabled:opacity-50 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+          className="w-full rounded-[2px] bg-accent py-3 font-sans text-[15px] font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
         >
           {submitting ? "Creating…" : inviteLibraryName ? `Join ${inviteLibraryName}` : "Create library"}
         </button>
 
-        <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-center font-sans text-sm text-ink-soft">
           Already have an account?{" "}
-          <Link href={inviteCode ? `/login?next=${encodeURIComponent(`/join/${inviteCode}`)}` : "/login"} className="font-medium underline">
+          <Link
+            href={inviteCode ? `/login?next=${encodeURIComponent(`/join/${inviteCode}`)}` : "/login"}
+            className="font-medium text-accent"
+          >
             Sign in
           </Link>
         </p>

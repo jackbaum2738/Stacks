@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { BarcodeCameraScanner } from "@/components/barcode-camera-scanner";
 import { BookCover } from "@/components/book-cover";
 import { playErrorSound, playSuccessSound } from "@/lib/feedback-sound";
+import { formLabelClass } from "@/lib/form-styles";
 
 interface Shelf {
   id: string;
@@ -98,7 +99,7 @@ export default function ScanStationPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2">
+      <div className="flex border border-line-strong">
         {(["add", "remove"] as const).map((m) => (
           <button
             key={m}
@@ -106,10 +107,8 @@ export default function ScanStationPage() {
               setMode(m);
               setResult(null);
             }}
-            className={`flex-1 rounded-lg px-4 py-2 font-medium ${
-              mode === m
-                ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
-                : "border border-gray-300 dark:border-gray-700"
+            className={`flex-1 px-4 py-2 font-sans font-medium ${
+              mode === m ? "bg-ink text-surface" : "text-ink-muted hover:bg-chip-hover"
             }`}
           >
             {m === "add" ? "Add a book" : "Remove a book"}
@@ -119,14 +118,14 @@ export default function ScanStationPage() {
 
       {mode === "add" && (
         <div className="space-y-1">
-          <label htmlFor="shelf" className="text-sm font-medium">
+          <label htmlFor="shelf" className={formLabelClass}>
             Shelf
           </label>
           <select
             id="shelf"
             value={shelfId}
             onChange={(e) => setShelfId(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+            className="w-full border border-line-strong bg-surface px-3 py-2 font-sans text-ink"
           >
             {shelves.map((shelf) => (
               <option key={shelf.id} value={shelf.id}>
@@ -151,12 +150,12 @@ export default function ScanStationPage() {
           placeholder="Scan or type an ISBN"
           autoComplete="off"
           disabled={busy}
-          className="flex-1 rounded-md border border-gray-300 px-3 py-3 text-lg dark:border-gray-700 dark:bg-gray-900"
+          className="flex-1 border border-line-strong bg-surface px-3 py-3 font-mono text-lg text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
         />
         <button
           type="button"
           onClick={() => setShowCamera(true)}
-          className="rounded-md border border-gray-300 px-3 py-3 dark:border-gray-700"
+          className="rounded-[2px] border border-line-strong px-3 py-3 hover:bg-chip-hover"
           aria-label="Scan with camera"
         >
           📷
@@ -164,7 +163,7 @@ export default function ScanStationPage() {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-md bg-gray-900 px-4 py-3 font-medium text-white disabled:opacity-50 dark:bg-white dark:text-gray-900"
+          className="rounded-[2px] bg-accent px-4 py-3 font-sans font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
         >
           Go
         </button>
@@ -183,21 +182,19 @@ export default function ScanStationPage() {
 
       {result && (
         <div
-          className={`flex items-center gap-3 rounded-lg border p-4 ${
-            result.ok
-              ? "border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950"
-              : "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950"
+          className={`flex items-center gap-3 rounded-[2px] border p-4 ${
+            result.ok ? "border-line bg-pill-available-bg" : "border-line bg-[#F5E2DE]"
           }`}
         >
           {result.ok && result.coverUrl !== undefined && (
             <BookCover src={result.coverUrl} alt={result.title ?? ""} className="h-16 w-12 flex-shrink-0" />
           )}
           <div>
-            {result.title && <p className="font-medium">{result.title}</p>}
+            {result.title && <p className="font-display font-medium text-ink">{result.title}</p>}
             {result.authors && result.authors.length > 0 && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">{result.authors.join(", ")}</p>
+              <p className="font-sans text-sm text-ink-soft">{result.authors.join(", ")}</p>
             )}
-            <p className={`text-sm ${result.ok ? "text-green-800 dark:text-green-300" : "text-red-800 dark:text-red-300"}`}>
+            <p className={`font-sans text-sm ${result.ok ? "text-pill-available-fg" : "text-accent"}`}>
               {result.message}
             </p>
           </div>
