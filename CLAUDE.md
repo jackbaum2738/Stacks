@@ -101,7 +101,9 @@ not just the PR they were stated in:
    pick reservees from instead of free-text (with the ability to add a new person
    from the reservation form), and a light/dark/system theme setting on the
    Settings page.
-4. **CHANGELOG.md in a specific style**, matching the user's other app ("Freezr").
+4. **CHANGELOG.txt in a specific style**, matching the user's other app ("Freezr"). Was
+   `CHANGELOG.md` through 5.0.0; renamed to `.txt` per explicit request — plain text, no
+   markdown rendering assumed.
    Title `STACKS CHANGELOG`, a one-line versioning key
    (`x.0.0 = major | 1.x.0 = minor | 1.0.x = patch`), then reverse-chronological
    entries as `X.Y.Z -- YYYY-MM-DD` with a dashed underline, and bullets that
