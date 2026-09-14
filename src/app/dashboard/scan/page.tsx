@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { BarcodeCameraScanner } from "@/components/barcode-camera-scanner";
 import { BookCover } from "@/components/book-cover";
 import { playErrorSound, playSuccessSound } from "@/lib/feedback-sound";
@@ -17,6 +18,7 @@ interface ScanResult {
   title?: string;
   authors?: string[];
   coverUrl?: string | null;
+  copyId?: string;
 }
 
 export default function ScanStationPage() {
@@ -67,12 +69,11 @@ export default function ScanStationPage() {
       } else if (mode === "add") {
         setResult({
           ok: true,
-          message: data.lookupFailed
-            ? "Added, but couldn't find book details — edit the title later."
-            : "Added to your library.",
+          message: data.lookupFailed ? "Added, but couldn't find book details." : "Added to your library.",
           title: data.copy.book.title,
           authors: data.copy.book.authors,
           coverUrl: data.copy.book.coverUrl,
+          copyId: data.copy.id,
         });
         playSuccessSound();
       } else {
@@ -189,7 +190,7 @@ export default function ScanStationPage() {
           {result.ok && result.coverUrl !== undefined && (
             <BookCover src={result.coverUrl} alt={result.title ?? ""} className="h-16 w-12 flex-shrink-0" />
           )}
-          <div>
+          <div className="min-w-0 flex-1">
             {result.title && <p className="font-display font-medium text-ink">{result.title}</p>}
             {result.authors && result.authors.length > 0 && (
               <p className="font-sans text-sm text-ink-soft">{result.authors.join(", ")}</p>
@@ -198,6 +199,14 @@ export default function ScanStationPage() {
               {result.message}
             </p>
           </div>
+          {result.copyId && (
+            <Link
+              href={`/dashboard/copies/${result.copyId}/edit`}
+              className="flex-shrink-0 rounded-[2px] border border-line-strong bg-surface px-3 py-2 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
+            >
+              Edit details
+            </Link>
+          )}
         </div>
       )}
     </div>

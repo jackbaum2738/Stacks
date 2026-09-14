@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireLibraryContext } from "@/lib/api-context";
 import { lookupBookByIsbn } from "@/lib/books";
 import { cleanIsbn, isValidIsbn, toIsbn13 } from "@/lib/isbn";
+import { applyBookOverride } from "@/lib/book-view";
 
 // Book lookup can chain up to four sequential external API calls (up to 10s
 // each); give it more headroom than the platform default function timeout.
@@ -68,10 +69,14 @@ export async function POST(request: Request) {
     where: { libraryId: context.library.id, bookId: book.id, status: { not: "REMOVED" } },
   });
 
-  const copy = await prisma.copy.create({
+  const created = await prisma.copy.create({
     data: { libraryId: context.library.id, bookId: book.id, shelfId: shelf.id, status: "AVAILABLE" },
-    include: { book: true, shelf: true },
+    include: {
+      book: { include: { overrides: { where: { libraryId: context.library.id } } } },
+      shelf: true,
+    },
   });
+  const copy = { ...created, book: applyBookOverride(created.book, created.book.overrides[0]) };
 
   return NextResponse.json(
     { copy, lookupFailed, otherCopiesOfThisBook: existingAvailable },

@@ -57,13 +57,30 @@ it didn't, for a while).
 
 ### Data model
 
-Multi-tenant: `Library` ↔ `User` via `Membership` (role: OWNER/ADMIN/MEMBER).
+Multi-tenant: `Library` ↔ `User` via `Membership` (role: OWNER/ADMIN/MEMBER). Anyone
+can register and create their own brand-new `Library` (no invite needed for that path
+— invites are only for *joining* an existing one), so different libraries are
+genuinely unrelated strangers to each other, not just internal household divisions.
 `Book` is a **shared global catalog** keyed by `isbn13` (unique) — the same ISBN
-scanned into two different libraries reuses one `Book` row; each library gets its
-own `Copy` row pointing at it. `Copy` has a `status` (AVAILABLE/RESERVED/REMOVED)
-and an optional `Reservation` (1:1 via `Reservation.copyId @unique`). Sharing a
-library between people uses a random `Library.inviteCode` link, not email (no
-transactional email provider is set up — see CHANGELOG 2.0.0).
+scanned into two different libraries reuses one `Book` row (the trusted, ISBN-lookup-
+sourced data) rather than re-doing the lookup; each library gets its own `Copy` row
+pointing at it. `Copy` has a `status` (AVAILABLE/RESERVED/REMOVED), an optional
+`Reservation` (1:1 via `Reservation.copyId @unique`), and its own `bookCrossingId`
+(a BookCrossing.com release ID identifies one physical copy, not a title/edition, so
+it's per-`Copy`, never per-`Book`). Sharing a library between people uses a random
+`Library.inviteCode` link, not email (no transactional email provider is set up —
+see CHANGELOG 2.0.0).
+
+**Book edits are library-scoped, never written to the shared `Book` row.** A
+`BookOverride` row (unique per `bookId`+`libraryId`) holds one library's corrections
+to title/authors/publisher/pageCount/description/coverUrl; display code merges it
+over the canonical `Book` fields (`src/lib/book-view.ts`'s `applyBookOverride`),
+falling back to canonical wherever a field is null (empty `authors` counts as
+"not overridden" too, since Prisma list fields can't be nullable). **Don't ever
+`prisma.book.update()` from user-facing edit code** — since `Book` is genuinely
+global (reused by every library sharing that ISBN), writing there directly means
+one library's bad edit corrupts what every other, unrelated library sees. This was
+the actual bug in the first cut of book-editing (PR #6) — caught before merge.
 
 **Important constraint to know about:** `Reservation.copyId` is `@unique`, so a
 `Copy` can only ever have **one** `Reservation` row across its whole history

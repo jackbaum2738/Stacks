@@ -4,6 +4,14 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+5.1.0 -- 2026-09-14
+--------------------
+- Added a "BookCrossing ID" (BCID) field, shown under the ISBN below the cover on the book detail page, and searchable -- the Library search bar now reads "Search by title, author, ISBN, or BCID". It lives on `Copy`, not `Book`: a BCID identifies one physical released copy, not a title/edition, so two copies of the same ISBN (even within the same library) can have different BCIDs.
+- Added an editable version of the book detail page (/dashboard/copies/[id]/edit) reachable via a new "Edit details" button both on the book detail page itself and directly from the scan-in success banner. Lets you correct title, authors, publisher, page count, cover URL, description, and BCID.
+- These corrections are library-scoped, not global: `Book` rows are a shared catalog keyed by ISBN (see CLAUDE.md) so every library reuses the same row and the same ISBN-lookup data, but edits are stored separately as a `BookOverride` per (book, library) pair and merged over the canonical fields only for the library that made them. One library's bad edit is invisible to every other library sharing that ISBN -- important given anyone can register and create their own library here, so "shared catalog" originally meant user edits would have been shared with total strangers too. Backed by `PATCH /api/copies/[id]/book`, open to any signed-in member of a library holding a copy (not owner/admin-gated) since a correction now only affects that member's own library.
+- Replaced the old "Added, but couldn't find book details -- edit the title later." scan-in message, which had no actual path to editing, with "Added, but couldn't find book details." plus a real "Edit details" button that goes straight to the new edit form.
+
+
 5.0.1 -- 2026-09-14
 --------------------
 - Renamed this file from `CHANGELOG.md` to `CHANGELOG.txt` at the user's request -- no content change, just plain text going forward instead of markdown.

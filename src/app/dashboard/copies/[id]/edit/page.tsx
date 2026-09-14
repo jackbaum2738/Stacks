@@ -2,38 +2,35 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentLibrary } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { CopyDetail } from "@/components/copy-detail";
+import { EditBookForm } from "@/components/edit-book-form";
 import { applyBookOverride } from "@/lib/book-view";
 
-export default async function CopyDetailPage(props: PageProps<"/dashboard/copies/[id]">) {
+export default async function EditBookPage(props: PageProps<"/dashboard/copies/[id]/edit">) {
   const context = await getCurrentLibrary();
   if (!context) redirect("/login");
   const { id } = await props.params;
+  const libraryId = context.library.id;
 
-  const found = await prisma.copy.findFirst({
-    where: { id, libraryId: context.library.id, status: { not: "REMOVED" } },
-    include: {
-      book: { include: { overrides: { where: { libraryId: context.library.id } } } },
-      shelf: true,
-      reservation: true,
-    },
+  const copy = await prisma.copy.findFirst({
+    where: { id, libraryId, status: { not: "REMOVED" } },
+    include: { book: { include: { overrides: { where: { libraryId } } } } },
   });
-  if (!found) notFound();
+  if (!copy) notFound();
 
-  const copy = { ...found, book: applyBookOverride(found.book, found.book.overrides[0]) };
+  const book = applyBookOverride(copy.book, copy.book.overrides[0]);
 
   return (
     <div className="space-y-6">
       <Link
-        href="/dashboard/search"
+        href={`/dashboard/copies/${copy.id}`}
         className="inline-flex items-center gap-1 font-mono text-[12px] tracking-[.10em] text-accent uppercase hover:underline"
       >
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-[14px] w-[14px]">
           <path d="M12.5 15.5 7 10l5.5-5.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        Library
+        {book.title}
       </Link>
-      <CopyDetail copy={copy} libraryName={context.library.name} />
+      <EditBookForm copyId={copy.id} book={book} bookCrossingId={copy.bookCrossingId} />
     </div>
   );
 }

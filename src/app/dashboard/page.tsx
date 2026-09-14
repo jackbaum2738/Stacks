@@ -4,6 +4,7 @@ import { getCurrentLibrary } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { BookCover } from "@/components/book-cover";
 import { StatusPill } from "@/components/status-pill";
+import { applyBookOverride } from "@/lib/book-view";
 
 export default async function DashboardPage() {
   const context = await getCurrentLibrary();
@@ -17,11 +18,16 @@ export default async function DashboardPage() {
     prisma.shelf.count({ where: { libraryId } }),
     prisma.copy.findMany({
       where: { libraryId, status: { not: "REMOVED" } },
-      include: { book: true, shelf: true },
+      include: { book: { include: { overrides: { where: { libraryId } } } }, shelf: true },
       orderBy: { addedAt: "desc" },
       take: 8,
     }),
   ]);
+
+  const recent = recentCopies.map((copy) => ({
+    ...copy,
+    book: applyBookOverride(copy.book, copy.book.overrides[0]),
+  }));
 
   return (
     <div className="space-y-[26px]">
@@ -59,13 +65,13 @@ export default async function DashboardPage() {
         <h2 className="mb-3 font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">
           Recently added
         </h2>
-        {recentCopies.length === 0 ? (
+        {recent.length === 0 ? (
           <p className="font-sans text-sm text-ink-soft">
             No books yet — scan your first one to get started.
           </p>
         ) : (
           <ul className="border border-line bg-surface">
-            {recentCopies.map((copy, i) => (
+            {recent.map((copy, i) => (
               <li
                 key={copy.id}
                 className={`flex items-center gap-[14px] px-4 py-3 ${
