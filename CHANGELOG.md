@@ -4,6 +4,15 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+4.0.0 -- 2026-09-14
+--------------------
+- The Library page now has a list/grid view toggle (remembered per browser). List view is a sortable table -- click any column header (Title, Author, Shelf, Date added, Status) to sort by it, click again to reverse. Grid view shows cover-forward cards with a checkbox that appears on hover.
+- Clicking a book (a row, or a cover in grid view) now opens a full detail page with a larger cover, publisher/page-count facts, the description, and Reserve/Remove actions, instead of nothing -- there was previously no way to see a single book's full information.
+- Each row/card now has its own reserve and delete icon buttons, plus checkboxes for multi-select with a bulk action bar (Reserve, Edit reservations, Delete) once anything's selected, so clearing out or reserving several books at once no longer means repeating the same action one at a time.
+- Reworked "unreserve" into "edit reservation" everywhere a reservation can be changed (row icon, grid right-click menu, detail page, bulk bar): it now opens the existing reservation's details for editing (change who it's for, or remove it) instead of only offering a one-click release. Editing a bulk selection with mixed reservees prefills the name field blank rather than guessing.
+- Fixed a bug where releasing a reservation only flagged it released instead of removing it, which left it permanently attached to its copy (via a one-reservation-per-copy database constraint) -- so the book's reservation banner never actually cleared, and reserving that same copy again for someone else always failed. Releasing now removes the reservation outright.
+
+
 3.0.0 -- 2026-09-12
 --------------------
 - Added a Settings page that consolidates shelf management (rename/delete), member management (view roles, remove someone from the library), the invite link, and library deletion in one place, replacing the standalone Members page.

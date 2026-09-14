@@ -7,11 +7,13 @@ export function PersonCombobox({
   onChange,
   placeholder = "Reserved for (name)",
   required = false,
+  id,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
+  id?: string;
 }) {
   const [people, setPeople] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -34,6 +36,7 @@ export function PersonCombobox({
     <div className="relative min-w-0 flex-1">
       <input
         ref={inputRef}
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setOpen(true)}

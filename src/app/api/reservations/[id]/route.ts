@@ -27,15 +27,20 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/reserv
 
   const { release, ...fields } = parsed.data;
 
-  const updated = await prisma.$transaction(async (tx) => {
-    if (release && !reservation.releasedAt) {
-      await tx.copy.update({ where: { id: reservation.copyId }, data: { status: "AVAILABLE" } });
-    }
-    return tx.reservation.update({
-      where: { id },
-      data: { ...fields, ...(release ? { releasedAt: new Date() } : {}) },
-      include: { copy: { include: { book: true, shelf: true } } },
-    });
+  if (release) {
+    // Deletes the row (rather than only flagging it released) so the copy's unique
+    // copyId slot is freed up and it can be reserved again later without a conflict.
+    await prisma.$transaction([
+      prisma.copy.update({ where: { id: reservation.copyId }, data: { status: "AVAILABLE" } }),
+      prisma.reservation.delete({ where: { id } }),
+    ]);
+    return NextResponse.json({ released: true });
+  }
+
+  const updated = await prisma.reservation.update({
+    where: { id },
+    data: fields,
+    include: { copy: { include: { book: true, shelf: true } } },
   });
 
   return NextResponse.json({ reservation: updated });
