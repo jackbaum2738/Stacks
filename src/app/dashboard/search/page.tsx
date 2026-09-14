@@ -260,7 +260,7 @@ export default function LibraryBrowsePage() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink text-left">
-                <th className="w-[34px] py-2"></th>
+                <th className="w-[42px] py-2 pl-4"></th>
                 <th className="w-11 py-2"></th>
                 {headers.map((h) => (
                   <th
@@ -290,7 +290,7 @@ export default function LibraryBrowsePage() {
                     selected.has(row.id) ? "bg-row-hover" : ""
                   }`}
                 >
-                  <td onClick={(e) => e.stopPropagation()} className="py-2.5">
+                  <td onClick={(e) => e.stopPropagation()} className="py-2.5 pl-4">
                     <input
                       type="checkbox"
                       checked={selected.has(row.id)}
@@ -370,7 +370,7 @@ export default function LibraryBrowsePage() {
                 <BookCover src={row.book.coverUrl} alt={row.book.title} className="aspect-[2/3] w-full" />
                 <label
                   onClick={(e) => e.stopPropagation()}
-                  className={`absolute top-1.5 left-1.5 rounded-[2px] bg-surface/90 p-0.5 shadow ${
+                  className={`absolute top-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded-[2px] bg-surface/90 shadow ${
                     selected.has(row.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 >

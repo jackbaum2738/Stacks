@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { JoinButton } from "@/components/join-button";
+import { Wordmark } from "@/components/wordmark";
 
 export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
   const { code } = await props.params;
@@ -75,7 +76,8 @@ export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <main className="flex flex-1 items-center justify-center bg-bg px-6 py-16">
+    <main className="flex flex-1 flex-col items-center justify-center gap-6 bg-bg px-6 py-16">
+      <Wordmark />
       <div className="paper-shadow-md w-full max-w-[360px] space-y-4 border border-line bg-surface p-7">
         <h1 className="font-display text-2xl font-semibold text-ink">{title}</h1>
         {children}

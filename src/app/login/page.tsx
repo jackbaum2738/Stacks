@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mark } from "@/components/mark";
+import { Wordmark } from "@/components/wordmark";
 import { formLabelClass, formInputClass } from "@/lib/form-styles";
 
 export default function LoginPage() {
@@ -38,7 +38,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 bg-bg px-6 py-16">
-      <Mark size={24} />
+      <Wordmark />
       <form
         onSubmit={onSubmit}
         className="paper-shadow-md w-full max-w-[360px] space-y-[18px] border border-line bg-surface p-7"
