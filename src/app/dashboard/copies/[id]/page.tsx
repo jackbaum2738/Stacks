@@ -3,17 +3,24 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentLibrary } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CopyDetail } from "@/components/copy-detail";
+import { applyBookOverride } from "@/lib/book-view";
 
 export default async function CopyDetailPage(props: PageProps<"/dashboard/copies/[id]">) {
   const context = await getCurrentLibrary();
   if (!context) redirect("/login");
   const { id } = await props.params;
 
-  const copy = await prisma.copy.findFirst({
+  const found = await prisma.copy.findFirst({
     where: { id, libraryId: context.library.id, status: { not: "REMOVED" } },
-    include: { book: true, shelf: true, reservation: true },
+    include: {
+      book: { include: { overrides: { where: { libraryId: context.library.id } } } },
+      shelf: true,
+      reservation: true,
+    },
   });
-  if (!copy) notFound();
+  if (!found) notFound();
+
+  const copy = { ...found, book: applyBookOverride(found.book, found.book.overrides[0]) };
 
   return (
     <div className="space-y-6">

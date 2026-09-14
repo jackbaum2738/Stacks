@@ -6,7 +6,6 @@ import Link from "next/link";
 import { formLabelClass, formInputClass } from "@/lib/form-styles";
 
 interface EditableBook {
-  id: string;
   isbn13: string;
   title: string;
   authors: string[];
@@ -14,17 +13,24 @@ interface EditableBook {
   pageCount: number | null;
   description: string | null;
   coverUrl: string | null;
-  bookCrossingId: string | null;
 }
 
-export function EditBookForm({ copyId, book }: { copyId: string; book: EditableBook }) {
+export function EditBookForm({
+  copyId,
+  book,
+  bookCrossingId: initialBookCrossingId,
+}: {
+  copyId: string;
+  book: EditableBook;
+  bookCrossingId: string | null;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState(book.title);
   const [authors, setAuthors] = useState(book.authors.join(", "));
   const [publisher, setPublisher] = useState(book.publisher ?? "");
   const [pageCount, setPageCount] = useState(book.pageCount?.toString() ?? "");
   const [coverUrl, setCoverUrl] = useState(book.coverUrl ?? "");
-  const [bookCrossingId, setBookCrossingId] = useState(book.bookCrossingId ?? "");
+  const [bookCrossingId, setBookCrossingId] = useState(initialBookCrossingId ?? "");
   const [description, setDescription] = useState(book.description ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +40,7 @@ export function EditBookForm({ copyId, book }: { copyId: string; book: EditableB
     setBusy(true);
     setError(null);
 
-    const res = await fetch(`/api/books/${book.id}`, {
+    const res = await fetch(`/api/copies/${copyId}/book`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -68,13 +74,14 @@ export function EditBookForm({ copyId, book }: { copyId: string; book: EditableB
       className="paper-shadow-lg space-y-5 border border-line bg-surface p-8"
     >
       <div className="border-b border-line pb-[10px] font-mono text-[11px] tracking-[.14em] text-ink-soft uppercase">
-        Editing shared catalog details · ISBN {book.isbn13}
+        Editing your library&apos;s view · ISBN {book.isbn13}
       </div>
 
       <h1 className="font-display text-2xl font-semibold text-ink">Edit book details</h1>
       <p className="-mt-3 font-sans text-sm text-ink-soft">
-        These details are shared across every copy of this book, in every library — editing them
-        corrects the record for this ISBN going forward, not just this copy.
+        These corrections apply everywhere this book appears in your library, but stay private to
+        it — other libraries with a copy of this ISBN won&apos;t see your changes. BookCrossing
+        ID applies to this physical copy only.
       </p>
 
       {error && <p className="rounded-[2px] bg-[#F5E2DE] px-3 py-2 font-mono text-xs text-accent">{error}</p>}

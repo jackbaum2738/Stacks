@@ -13,6 +13,7 @@ interface CopyDetailData {
   id: string;
   status: "AVAILABLE" | "RESERVED" | "REMOVED";
   addedAt: Date;
+  bookCrossingId: string | null;
   shelf: { id: string; name: string; code: string | null } | null;
   book: {
     isbn13: string;
@@ -22,7 +23,6 @@ interface CopyDetailData {
     publisher: string | null;
     pageCount: number | null;
     description: string | null;
-    bookCrossingId: string | null;
   };
   reservation: { id: string; reservedFor: string; contact: string | null; createdAt: Date } | null;
 }
@@ -43,10 +43,10 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
           Shelf {shelfLabel}
           <br />
           ISBN {copy.book.isbn13}
-          {copy.book.bookCrossingId && (
+          {copy.bookCrossingId && (
             <>
               <br />
-              BookCrossing ID {copy.book.bookCrossingId}
+              BookCrossing ID {copy.bookCrossingId}
             </>
           )}
         </p>

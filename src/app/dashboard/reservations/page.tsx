@@ -2,16 +2,31 @@ import { redirect } from "next/navigation";
 import { getCurrentLibrary } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CopyRow } from "@/components/copy-row";
+import { applyBookOverride } from "@/lib/book-view";
 
 export default async function ReservationsPage() {
   const context = await getCurrentLibrary();
   if (!context) redirect("/login");
 
-  const reservations = await prisma.reservation.findMany({
-    where: { releasedAt: null, copy: { libraryId: context.library.id } },
-    include: { copy: { include: { book: true, shelf: true, reservation: true } } },
+  const libraryId = context.library.id;
+  const found = await prisma.reservation.findMany({
+    where: { releasedAt: null, copy: { libraryId } },
+    include: {
+      copy: {
+        include: {
+          book: { include: { overrides: { where: { libraryId } } } },
+          shelf: true,
+          reservation: true,
+        },
+      },
+    },
     orderBy: { reservedFor: "asc" },
   });
+
+  const reservations = found.map((reservation) => ({
+    ...reservation,
+    copy: { ...reservation.copy, book: applyBookOverride(reservation.copy.book, reservation.copy.book.overrides[0]) },
+  }));
 
   const grouped = new Map<string, typeof reservations>();
   for (const reservation of reservations) {

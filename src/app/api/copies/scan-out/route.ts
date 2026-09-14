@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireLibraryContext } from "@/lib/api-context";
 import { cleanIsbn, isValidIsbn, toIsbn13 } from "@/lib/isbn";
+import { applyBookOverride } from "@/lib/book-view";
 
 const schema = z.object({ isbn: z.string().trim().min(1) });
 
@@ -49,16 +50,21 @@ export async function POST(request: Request) {
 
   const hadReservation = "reservation" in target && target.reservation !== null;
 
-  const updatedCopy = await prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     if (hadReservation) {
       await tx.reservation.update({ where: { copyId: target.id }, data: { releasedAt: new Date() } });
     }
     return tx.copy.update({
       where: { id: target.id },
       data: { status: "REMOVED", removedAt: new Date() },
-      include: { book: true, shelf: true, reservation: true },
+      include: {
+        book: { include: { overrides: { where: { libraryId: context.library.id } } } },
+        shelf: true,
+        reservation: true,
+      },
     });
   });
+  const updatedCopy = { ...updated, book: applyBookOverride(updated.book, updated.book.overrides[0]) };
 
   return NextResponse.json({ copy: updatedCopy });
 }
