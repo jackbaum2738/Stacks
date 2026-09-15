@@ -52,6 +52,19 @@ it didn't, for a while).
 - **Tailwind CSS v4**, dark mode via `dark:` variants driven by OS preference only
   — there is no in-app light/dark/system toggle yet (recorded as a future idea,
   see `IDEAS.md`).
+- **Visual identity: "Ex Libris"** (PR #4/#5, replacing the unmodified Next.js
+  starter look). Archival/manila palette — paper surfaces, ink text, a stamp-red
+  `accent` and teal `accent-2` — as CSS custom properties + Tailwind `@theme`
+  tokens in `src/app/globals.css` (`bg`, `surface`, `ink`, `ink-soft`, `line`,
+  etc.). Light and dark are both first-class, defined separately, never a
+  mechanical inversion of each other. Typography: Newsreader (display/titles),
+  Karla (interface/body), IBM Plex Mono (labels, dates, ISBNs, status pills),
+  self-hosted via `next/font/google`. 2px radius everywhere and a flat "stacked
+  paper" box-shadow (`.paper-shadow-*` classes, no blur) on cards/stat tiles are
+  the signature. Shared form-field styling lives in `src/lib/form-styles.ts`
+  (`formLabelClass`/`formInputClass`) — reuse it for any new form rather than
+  redefining the underline-input look inline. Logo mark + favicon are generated
+  SVG/PNG (see `src/components/mark.tsx`, `src/app/icon.svg`), not hand-drawn.
 - **Deployment**: Vercel + Postgres on Neon. `package.json`'s `build` script runs
   `prisma migrate deploy && next build`; `postinstall` runs `prisma generate`.
 
@@ -103,21 +116,27 @@ not just the PR they were stated in:
    top of the current `main`, not a stale local branch.
 2. **Mockup first for any non-trivial UI/UX change**, before touching the real
    app. Build a standalone interactive HTML/CSS/JS artifact (via the `Artifact`
-   tool and the `artifact-design` skill), iterate on it with the user through
-   several rounds of feedback, and only start real implementation once they say
-   something like "happy with the mockup." The mockup becomes the functional/UX
-   spec — port its interaction logic faithfully rather than re-deriving it. This
-   was the process for the list/grid Library view (PR #2): several rounds of
-   detailed mockup feedback (full-page detail view not a modal, per-row
+   tool and the `artifact-design` skill) — or, for a full branding/identity
+   pass, a multi-artboard Claude Design canvas (the `design` skill) is the
+   better tool, as used for PR #4 — iterate with the user through several
+   rounds of feedback, and only start real implementation once they approve
+   it. The mockup becomes the functional/UX spec — port its interaction logic
+   faithfully rather than re-deriving it. Examples: the list/grid Library view
+   (PR #2, several rounds — full-page detail view not a modal, per-row
    reserve/delete icons, Gmail-inbox-style bulk selection bar, grid view with a
    hover checkbox and a Google-Drive-style right-click context menu, "edit
-   reservation" instead of "unreserve") before any production code was written.
+   reservation" instead of "unreserve"); the "Ex Libris" branding (PR #4, a
+   Claude Design canvas showing several directions applied to real screens);
+   the cover-preview/copy-to-clipboard features (PR #7, an Artifact, two
+   rounds — layout and toast-vs-inline feedback style both changed before any
+   code was written).
 3. **Record out-of-scope ideas instead of building them.** When something useful
    comes up mid-conversation but isn't what was asked for, add it to `IDEAS.md`
    rather than expanding the current task. Currently recorded: a "People" tab to
    pick reservees from instead of free-text (with the ability to add a new person
-   from the reservation form), and a light/dark/system theme setting on the
-   Settings page.
+   from the reservation form), a light/dark/system theme setting on the Settings
+   page, transactional email (Resend recommended if/when it's wanted), and CSV
+   import/export (see "Scope notes" below for why that one came up).
 4. **CHANGELOG.txt in a specific style**, matching the user's other app ("Freezr"). Was
    `CHANGELOG.md` through 5.0.0; renamed to `.txt` per explicit request — plain text, no
    markdown rendering assumed.
@@ -143,9 +162,28 @@ not just the PR they were stated in:
 ## Local dev environment notes (this sandbox)
 
 - Local Postgres: `pg_ctlcluster 16 main start` (cluster already exists at
-  `/var/lib/postgresql/16/main`; role `stacks` / db `stacks` already provisioned,
-  matching `.env`'s `DATABASE_URL`). Run `npx prisma migrate deploy` after
-  starting it, before `npm run dev`.
+  `/var/lib/postgresql/16/main`). The `stacks` role/db and `.env` itself are
+  **not** guaranteed to persist across sandbox containers — a fresh container
+  may have neither. If `.env` is missing, create one matching `.env.example`
+  with `postgresql://stacks:stacks@localhost:5432/stacks` for both
+  `DATABASE_URL`/`DIRECT_URL`; if the role/db don't exist yet:
+  `sudo -u postgres psql -c "CREATE ROLE stacks WITH LOGIN PASSWORD 'stacks';"`
+  then `sudo -u postgres psql -c "CREATE DATABASE stacks OWNER stacks;"`. Run
+  `npx prisma migrate deploy` after, before `npm run dev`.
+- **Creating a new migration** (`prisma migrate dev`) needs a shadow database,
+  which needs `CREATEDB` on the role: if you hit `P3014: permission denied to
+  create database`, run
+  `sudo -u postgres psql -c "ALTER ROLE stacks CREATEDB;"` first.
+- **Prisma refuses destructive commands from an AI agent outright** (`migrate
+  reset`, etc.) — it detects the agent invocation and errors asking for
+  explicit user consent before it'll run, even with `--force`. Ask the user,
+  then re-run with `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` set to their
+  exact consenting message text (no newlines/quotes). Never work around this
+  guard (e.g. by hand-editing the `_prisma_migrations` table) instead of
+  asking. If you generate a migration you want to squash/redo before it's ever
+  merged (still local-only, nothing shipped), this is the command you need —
+  see PR #6 for a worked example (two migrations squashed into one with the
+  user's consent, since both were part of the same still-unmerged feature).
 - Playwright/Chromium: not in this project's `node_modules` — use the globally
   installed copy: `require('/opt/node22/lib/node_modules/playwright')`, with
   `executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` (the
@@ -206,6 +244,16 @@ not just the PR they were stated in:
 - A live Neon database connection string was pasted into chat once, early in the
   project. It was flagged once as a mild exposure risk; no rotation was
   confirmed. Worth a quiet check-in if credentials/security ever come up.
+- **No production database access from this sandbox, by design — don't ask for
+  it.** A fresh session's `.env` only ever has local dev values (see "Local dev
+  environment notes"); there's no Vercel/Neon URL documented anywhere in this
+  repo either. When the user asked for a seeded test library (~50 books, 5
+  shelves, some reserved) to click around on the real deployed app, the answer
+  wasn't to request prod credentials again — it was to record CSV import/export
+  as a future feature (`IDEAS.md`) so test data (or any bulk data) can go in
+  through a real, user-triggered feature instead of Claude touching the
+  database directly. That's the intended pattern for this kind of request going
+  forward, not a one-off.
 
 ## PR history
 
@@ -216,6 +264,37 @@ not just the PR they were stated in:
   book detail page, unified reservation-edit modal, bulk actions, the
   reservation-release bug fix above. Full mockup-first process as described
   under "Working agreements."
+- **PR #3** (`claude/project-history-doc`, merged) — created this file.
+- **PR #4** (`claude/brave-shannon-frydwl`, merged) — the "Ex Libris" visual
+  redesign (see "Tech stack" above): logo/favicon, full color + type system,
+  every page/component restyled, no behavioral changes. Design was pitched via
+  a Claude Design canvas handoff (not a from-scratch Artifact mockup) — the
+  user picked direction `2a` after seeing several branding options applied to
+  real screens. One follow-up commit on the same PR fixed review feedback
+  (identity lockup size, favicon background color, list-view checkbox padding,
+  a mis-sized grid-view selection chip).
+- **PR #5** (`claude/brave-shannon-frydwl`, merged) — renamed `CHANGELOG.md` →
+  `.txt` per explicit request; recorded transactional email as an idea.
+- **PR #6** (`claude/brave-shannon-frydwl`, merged) — added BookCrossing ID,
+  editable book details (`/dashboard/copies/[id]/edit`), and BCID search. A
+  follow-up commit on the same PR fixed a real design flaw caught before
+  merge: the first cut wrote user edits straight to the shared `Book` row,
+  which would have let one library's bad edit corrupt what every other,
+  unrelated library sees (see "Data model" above for the `BookOverride` fix).
+  Verified with a Playwright test simulating two unrelated libraries sharing
+  an ISBN. Also squashed two local migrations into one before merge (see
+  "Local dev environment notes").
+- **PR #7** (`claude/brave-shannon-frydwl`, merged) — cover-image preview on
+  the edit form (refresh-on-demand, not per-keystroke) and a copy-to-clipboard
+  icon for ISBN/BCID on the book detail page. Mockup-first via an Artifact,
+  two rounds of feedback (preview layout moved to the right of the URL field
+  with the caption text dropped; toast notification considered and dropped in
+  favor of the inline checkmark/"Copied" style, matching the existing
+  invite-link "Copy" button pattern). BCID format validation was proposed
+  and explicitly declined — the real-world format needs confirming first,
+  don't add it without asking.
+- **PR #8** (`claude/brave-shannon-frydwl`) — recorded CSV import/export as an
+  idea (see "Scope notes" above for why).
 
 ## Keeping this file current
 
