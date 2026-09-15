@@ -62,3 +62,36 @@ system/browser preference throughout), but there's no in-app control to
 override that. Add a theme preference to Settings — Light / Dark / Match
 system — stored per user (or per library?) so it persists across visits
 regardless of what the OS is set to.
+
+## "Wipe library" as an alternative to deleting it
+
+The Settings page's "delete this library" only offers full deletion today.
+Add a second, less destructive option: keep the `Library` row (and its
+membership/invite code) but remove every `Copy`/`Shelf`/`Reservation` in it,
+i.e. blank the collection without losing the library itself, its members, or
+its invite link. Useful for someone who wants to start their catalog over
+without re-inviting everyone.
+
+## Profile screen (own-account management)
+
+There's currently no page for managing your own account — only the library-
+level Settings page (shelves, members, delete library). Add one covering:
+
+- Change email and password.
+- Edit other personal details (whatever we end up tracking on `User`).
+- Delete your own account.
+
+Deleting your own profile needs a safety check: if you're the only member of
+a library (checked per library you belong to), deleting your account would
+orphan it, so the confirmation must say the library will be deleted too, and
+only on confirming does it delete the user and that library together. If you
+belong to a library with other members, your account can just be removed
+from it (existing membership-removal semantics) without touching the library.
+
+## Better error for a dead invite link
+
+Using an invite link whose library was deleted, or whose invite code was
+regenerated (so it no longer matches any library), currently isn't handled
+with a friendly message. It should say the library doesn't exist/can't be
+found, and suggest contacting the library owner for a new invite link,
+instead of a generic error or a confusing state.
