@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Wordmark } from "@/components/wordmark";
 import { formLabelClass, formInputClass } from "@/lib/form-styles";
 
-export default function LoginPage() {
+export default function LoginPage(props: PageProps<"/login">) {
   const router = useRouter();
+  const searchParams = use(props.searchParams);
+  const next = typeof searchParams.next === "string" ? searchParams.next : null;
+  // The only "next" this app ever sends here is /join/{code}, from the invite
+  // flow's "Sign in" link — recover the code so switching to sign-up doesn't
+  // lose it.
+  const inviteCode = next?.match(/^\/join\/([^/]+)$/)?.[1] ?? null;
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +38,7 @@ export default function LoginPage() {
       return;
     }
 
-    const next = new URLSearchParams(window.location.search).get("next") ?? "/dashboard";
-    router.push(next);
+    router.push(next ?? "/dashboard");
     router.refresh();
   }
 
@@ -93,8 +99,11 @@ export default function LoginPage() {
 
         <p className="text-center font-sans text-sm text-ink-soft">
           No account yet?{" "}
-          <Link href="/register" className="font-medium text-accent">
-            Create a library
+          <Link
+            href={inviteCode ? `/register?invite=${inviteCode}` : "/register"}
+            className="font-medium text-accent"
+          >
+            Sign up
           </Link>
         </p>
       </form>
