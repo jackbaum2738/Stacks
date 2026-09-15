@@ -95,3 +95,18 @@ regenerated (so it no longer matches any library), currently isn't handled
 with a friendly message. It should say the library doesn't exist/can't be
 found, and suggest contacting the library owner for a new invite link,
 instead of a generic error or a confusing state.
+
+## Animated loading screen for slow operations (CSV import, etc.)
+
+A plain spinner isn't enough for an operation that can take a real, visible
+amount of time — bulk CSV import being the first case, but potentially other
+slow operations later. Wanted: a proper loading state built around the Ex
+Libris logo mark, animated (an animated GIF or equivalent), rather than a
+generic spinner.
+
+This needs the `design` skill (a Claude Design canvas) rather than a plain
+Artifact mockup, since it's an animated brand asset, not just a UI layout —
+flagged explicitly for that when this idea was recorded. Not scoped yet;
+worth revisiting once the import feature's real-world timing is known, which
+should decide whether a determinate progress bar or an ambient/indeterminate
+loop is the right shape.
