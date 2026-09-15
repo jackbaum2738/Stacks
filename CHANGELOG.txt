@@ -4,6 +4,13 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+5.2.0 -- 2026-09-15
+--------------------
+- The book-edit form now previews the cover image next to the URL field before you save: it shows the currently-saved cover on load, and a "Refresh" button re-attempts loading whatever's currently typed in the field, without saving anything. Built by reusing the existing BookCover component (same fallback plate as everywhere else in the app) keyed on the URL-plus-attempt-count, so each click forces a real remount and a fresh load attempt rather than getting stuck on a stale failure state. Mocked up first as an interactive Artifact and iterated on before building.
+- Added a copy-to-clipboard icon next to ISBN and BookCrossing ID on the book detail page. Copies the value exactly as stored -- no hyphens or formatting added -- and swaps to a checkmark with "Copied" for ~1.6s (new shared `CopyButton` component). Considered a toast notification too during the mockup round and went with this inline style instead, matching the pattern the invite-link "Copy" button already used.
+- Explicitly did not add format validation to BookCrossing ID (digit-count/no-letters rules were proposed and dropped) -- the real-world format needs confirming first.
+
+
 5.1.0 -- 2026-09-14
 --------------------
 - Added a "BookCrossing ID" (BCID) field, shown under the ISBN below the cover on the book detail page, and searchable -- the Library search bar now reads "Search by title, author, ISBN, or BCID". It lives on `Copy`, not `Book`: a BCID identifies one physical released copy, not a title/edition, so two copies of the same ISBN (even within the same library) can have different BCIDs.

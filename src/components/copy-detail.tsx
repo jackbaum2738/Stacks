@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
 import { StatusPill } from "@/components/status-pill";
+import { CopyButton } from "@/components/copy-button";
 import { ReservationModal } from "@/components/reservation-modal";
 import { DeleteCopiesModal } from "@/components/delete-copies-modal";
 import { formatDate } from "@/lib/format-date";
@@ -39,17 +40,19 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
     <div className="paper-shadow-lg grid gap-[56px] border border-line bg-surface p-8 sm:grid-cols-[200px_1fr]">
       <div>
         <BookCover src={copy.book.coverUrl} alt={copy.book.title} className="aspect-[2/3] w-full max-w-[200px]" />
-        <p className="mt-[11px] font-mono text-[11px] leading-[1.6] tracking-[.08em] text-ink-soft uppercase">
-          Shelf {shelfLabel}
-          <br />
-          ISBN {copy.book.isbn13}
+        <div className="mt-[11px] space-y-1.5 font-mono text-[11px] tracking-[.08em] text-ink-soft uppercase">
+          <p>Shelf {shelfLabel}</p>
+          <p className="flex items-center">
+            ISBN {copy.book.isbn13}
+            <CopyButton value={copy.book.isbn13} label="ISBN" />
+          </p>
           {copy.bookCrossingId && (
-            <>
-              <br />
+            <p className="flex items-center">
               BookCrossing ID {copy.bookCrossingId}
-            </>
+              <CopyButton value={copy.bookCrossingId} label="BookCrossing ID" />
+            </p>
           )}
-        </p>
+        </div>
       </div>
 
       <div className="min-w-0">
