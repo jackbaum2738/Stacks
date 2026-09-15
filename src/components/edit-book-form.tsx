@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formLabelClass, formInputClass } from "@/lib/form-styles";
+import { BookCover } from "@/components/book-cover";
 
 interface EditableBook {
   isbn13: string;
@@ -34,6 +35,14 @@ export function EditBookForm({
   const [description, setDescription] = useState(book.description ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [previewUrl, setPreviewUrl] = useState(book.coverUrl ?? "");
+  const [previewAttempt, setPreviewAttempt] = useState(0);
+
+  function refreshPreview() {
+    setPreviewUrl(coverUrl.trim());
+    setPreviewAttempt((n) => n + 1);
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,11 +144,31 @@ export function EditBookForm({
         />
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="coverUrl" className={formLabelClass}>
-          Cover image URL
-        </label>
-        <input id="coverUrl" value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} className={formInputClass} />
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_120px]">
+        <div className="space-y-1">
+          <label htmlFor="coverUrl" className={formLabelClass}>
+            Cover image URL
+          </label>
+          <input id="coverUrl" value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} className={formInputClass} />
+        </div>
+        <div className="flex flex-col gap-2">
+          <BookCover
+            key={`${previewUrl}-${previewAttempt}`}
+            src={previewUrl || null}
+            alt="Cover preview"
+            className="aspect-[2/3] w-[120px]"
+          />
+          <button
+            type="button"
+            onClick={refreshPreview}
+            className="inline-flex items-center justify-center gap-1.5 rounded-[2px] border border-line-strong px-2 py-2 font-sans text-xs font-medium text-ink hover:bg-chip-hover"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-[13px] w-[13px]">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v6h-6" />
+            </svg>
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="space-y-1">
