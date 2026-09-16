@@ -1,5 +1,14 @@
 import { cleanIsbn, toIsbn13 } from "@/lib/isbn";
 
+/**
+ * How many times someone can click "look up this ISBN" on a still-unresolved book before
+ * the button stops being offered. Deliberately separate from (and doesn't limit) the
+ * automatic retry scan-in already does on every future scan of an unresolved ISBN, since
+ * that only ever fires once per real physical scan and can't be spammed the way a button
+ * click can.
+ */
+export const MAX_MANUAL_LOOKUP_ATTEMPTS = 1;
+
 export interface BookLookupResult {
   isbn13: string;
   isbn10: string | null;

@@ -4,6 +4,60 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.0.0 -- 2026-09-15
+--------------------
+- Added CSV backup and import to Settings, in a new "Backup & Import" block. Mocked up first
+  as an interactive Artifact over several rounds before any code was written -- see that
+  session's design decisions below, since most of this feature's behavior was worked out
+  there rather than while building.
+- Backup: a "Download CSV backup" button exports every non-removed copy (Copy ID, ISBN,
+  effective title/authors/publisher, shelf, status, reservation, notes, BookCrossing ID,
+  date added) using the library's override-merged view (applyBookOverride), so a backup
+  reflects what the library actually sees, not just the shared Book row. Records who took
+  the backup and when (Library.lastBackupAt/lastBackupByUserId) and shows it above the
+  button. A separate "Download import template" link produces the same file shape with zero
+  data rows -- literally what a real export produces for an empty library.
+- Import: drag-and-drop or file-picker CSV upload, parsed and column-mapped entirely in the
+  browser (src/lib/csv.ts's isomorphic parseCsv) before anything reaches the server. The
+  mapping screen auto-matches columns by name, lets any column be manually remapped or
+  ignored via a dropdown in its header, and disables a target field in every other column's
+  dropdown once one column claims it -- so the same field can never be mapped twice, a bug
+  caught during the mockup round rather than in production.
+- Import matches rows to existing copies by Copy ID (from a prior export), not ISBN --
+  ISBN alone can't tell two physical copies of the same book apart. A row with no Copy ID,
+  or one this library doesn't recognize, always creates a new copy rather than merging into
+  an existing one; a matched row only touches the fields it actually supplies, leaving
+  everything else on that copy untouched (real upsert semantics, not a blind overwrite).
+  Every ISBN is validated with the same cleanIsbn/isValidIsbn rules scan-in already uses;
+  rows with a missing or malformed ISBN are skipped and reported as separate counts on the
+  confirm screen, which now runs a real dry-run against the database (a `dryRun` mode on
+  POST /api/library/import that does the same Copy ID/ISBN checks with zero writes) so the
+  new/updated/skipped counts shown before committing are exactly what the real import will
+  do, not an estimate.
+- A brand-new ISBN encountered during import never triggers a live Google Books/Open
+  Library lookup -- that's the same external-call path that already caused a production
+  timeout once for a single scan-in, and an import can easily contain dozens of new ISBNs.
+  Instead it gets a bare Book placeholder marked "manual-unresolved" (reusing scan-in's own
+  failed-lookup marker), which scan-in already retries automatically the next time that
+  ISBN is scanned in anywhere. Any book-content fields (title/authors/publisher) a row
+  supplies are written as this library's BookOverride, never onto the shared Book row --
+  so importing bad or guessed data into one library can't corrupt what another library
+  sharing that ISBN sees, the same protection the manual book-edit form already has.
+- Added a "Look up this ISBN" button to the book-edit page for any book still marked
+  manual-unresolved, capped at one manual attempt per copy (Book.manualLookupAttempts) so
+  it can't be spammed on a book that genuinely isn't in either catalog -- but this cap is
+  completely separate from, and doesn't limit, scan-in's own automatic retry, since that
+  only ever fires once per real physical scan and the catalogs it checks keep growing. A
+  successful lookup -- whether a real catalog hit or one already resolved a moment earlier
+  by a different copy of the same book, which skips the network call entirely -- always
+  wins over whatever was on the page and is written straight to the database immediately,
+  with no separate save step, so nothing is lost if the page is closed without saving. It
+  also deletes this library's existing BookOverride for that book rather than leaving it in
+  place: an override otherwise always wins over the canonical Book in the merged view, which
+  would make the button look like it does nothing if a library had already saved its own
+  correction for a still-unidentified book.
+
+
 5.2.1 -- 2026-09-15
 --------------------
 - Fixed the invite flow losing the invite code when switching from sign-in to sign-up. The invite page's "Sign in" link correctly carries the code via `?next=/join/{code}`, but the sign-in page's "no account yet?" link was a bare `/register` with no invite param, so someone who clicked "Sign in" by mistake and then tried to create an account instead landed on the generic "create a new library" flow rather than joining the library they were actually invited to. Fixed by having the login page read `next` (via the `use()` hook, per the Next 16 searchParams gotcha, not `window.location.search`), recovering the invite code from it, and passing it through to the register link. Also renamed that link's text from "Create a library" to "Sign up," since it no longer always means creating a brand-new library.

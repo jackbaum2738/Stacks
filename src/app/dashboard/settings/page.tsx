@@ -6,12 +6,13 @@ import { ShelfManageRow } from "@/components/shelf-manage-row";
 import { MemberRow } from "@/components/member-row";
 import { InviteLinkManager } from "@/components/invite-link-manager";
 import { DeleteLibraryForm } from "@/components/delete-library-form";
+import { BackupImportSection } from "@/components/backup-import-section";
 
 export default async function SettingsPage() {
   const context = await getCurrentLibrary();
   if (!context) redirect("/login");
 
-  const [shelves, members] = await Promise.all([
+  const [shelves, members, backupInfo] = await Promise.all([
     prisma.shelf.findMany({
       where: { libraryId: context.library.id },
       include: { _count: { select: { copies: { where: { status: { not: "REMOVED" } } } } } },
@@ -22,7 +23,19 @@ export default async function SettingsPage() {
       include: { user: { select: { id: true, name: true, email: true } } },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.library.findUnique({
+      where: { id: context.library.id },
+      select: { lastBackupAt: true, lastBackupBy: { select: { name: true, email: true } } },
+    }),
   ]);
+
+  const lastBackup =
+    backupInfo?.lastBackupAt
+      ? {
+          atLabel: backupInfo.lastBackupAt.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
+          byName: backupInfo.lastBackupBy?.name ?? backupInfo.lastBackupBy?.email ?? "someone no longer in this library",
+        }
+      : null;
 
   const canManage = context.membership.role === "OWNER" || context.membership.role === "ADMIN";
   const isOwner = context.membership.role === "OWNER";
@@ -59,6 +72,11 @@ export default async function SettingsPage() {
           ))}
         </ul>
         {canManage && <InviteLinkManager />}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Backup &amp; Import</h2>
+        <BackupImportSection lastBackup={lastBackup} />
       </section>
 
       {isOwner && (
