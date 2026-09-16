@@ -129,6 +129,14 @@ row, not just flag it, or the copy becomes permanently unreservable.
   stopping and that re-running the same file is safe (Copy-ID-matched rows
   just re-match harmlessly) — don't revert this to a generic "nothing was
   changed, try again" message, since that would now be false.
+- **`IMPORT_BATCH_SIZE` (10) and the reveal-pacing estimate are tuned for an
+  assumed, not yet confirmed, ~2-minute/200-row real-world import.** Every
+  test so far (Playwright against local Postgres) has processed even a few
+  dozen rows near-instantly — much faster than production's pooled Neon
+  connection is likely to be. If the user reports real timing from an actual
+  large import (their planned manual QA pass — see "Scope notes" below),
+  that's the moment to revisit whether 10 is still the right batch size, not
+  before.
 - Import never calls the external ISBN lookup itself. A brand-new ISBN just gets a
   bare `Book` placeholder marked `source: "manual-unresolved"` (the same marker
   scan-in's failed-lookup path already uses), because a multi-row import hitting
@@ -328,6 +336,24 @@ not just the PR they were stated in:
   database directly. That's the intended pattern for this kind of request going
   forward, not a one-off. CSV import now exists (PR #12) — a future version of
   this same request should go through Settings → Import, not around it.
+- **Follow-through on the above**: the user asked for a 30-row test CSV to
+  manually QA the import feature in a real test library before go-live — one
+  of every case the import logic branches on (two books with 2 physical
+  copies each; the same person reserved to multiple different books, and
+  different people each reserved to one; full/partial/no book-content fields;
+  missing and malformed ISBNs). Generated and delivered directly to the user
+  as a file (not committed to the repo — a one-off testing aid, not fixture
+  code), and cross-checked against the app's real `parseCsv`/`isValidIsbn`
+  logic before sending so the counts it'd produce were verified, not guessed.
+  **The user's explicit plan: once manual testing is done, wipe all data
+  before go-live** — don't treat test-data buildup (in the shared `Book`
+  table especially) as something to clean up proactively in the meantime,
+  that's expected for this phase. If a future session is asked to actually
+  run that wipe, it's a previously-agreed, deliberate action, not a surprise
+  request — but it's still a real destructive operation against whatever
+  database is live at the time, so confirm scope (which environment, which
+  librar(ies)) before running anything, same as any other destructive-action
+  case.
 
 ## PR history
 
@@ -378,9 +404,9 @@ not just the PR they were stated in:
   "wipe library" as a less-destructive alternative to deleting it, a profile
   screen for own-account management, and a friendlier error for a dead invite
   link. No code changes.
-- **PR #11** (`claude/serene-goldberg-nd42ye`) — recorded the animated
+- **PR #11** (`claude/serene-goldberg-nd42ye`, merged) — recorded the animated
   loading-screen idea (CSV import's first real use case) for slow operations.
-- **PR #12** (`claude/csv-backup-import`) — built CSV backup/import (see the
+- **PR #12** (`claude/csv-backup-import`, merged) — built CSV backup/import (see the
   "CSV backup/import" note under "Data model" above for the real design
   decisions) and the manual "Look up this ISBN" button on the book-edit page.
   Mockup-first over many rounds as an interactive Artifact — the whole
@@ -394,7 +420,7 @@ not just the PR they were stated in:
   export/template (headers only), a full import with all three skip/match
   outcomes, a Copy-ID-matched re-import proving idempotency (no duplicate
   copy), and the manual-lookup button's real success and failure paths.
-- **PR #13** (`claude/import-loading-animation`) — added the animated Mark
+- **PR #13** (`claude/import-loading-animation`, merged) — added the animated Mark
   loader to the import confirm modal's in-progress state (`src/components/
   mark-loader.tsx`, keyframes in `globals.css`) and fixed the "Last backup
   taken by..." staleness bug (see "Bugs found and fixed" above). Design was a
@@ -407,7 +433,7 @@ not just the PR they were stated in:
   be the canvas editor not animating an unfocused/zoomed-out artboard, not a
   real bug — confirmed by isolating the same CSS in a plain browser and
   watching it run, before touching any code.
-- **PR #14** (`claude/import-progress-tracking`) — added a real progress bar,
+- **PR #14** (`claude/import-progress-tracking`, merged) — added a real progress bar,
   row counter, ticker, and live tally to the import confirm screen, which
   meant rearchitecting the import itself into small sequential batches rather
   than one request for the whole file (see the "CSV backup/import" note under
