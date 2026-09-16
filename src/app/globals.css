@@ -102,3 +102,124 @@ body {
     0 10px 0 -5px var(--shadow-tint),
     0 20px 0 -10px var(--shadow-tint-2);
 }
+
+/* Animated Mark loader for slow operations (CSV import, etc.) -- the three bars
+   drop into place bottom-to-top like books settling onto a shelf, hold, then
+   lift away and repeat. Mocked up in a Claude Design canvas before building. */
+.mark-loader-bar {
+  position: absolute;
+  border-radius: 5px;
+  will-change: transform, opacity;
+}
+.mark-loader-bar-bottom {
+  animation: mark-loader-drop-bottom 3.2s ease-in-out infinite;
+}
+.mark-loader-bar-middle {
+  animation: mark-loader-drop-middle 3.2s ease-in-out infinite;
+}
+.mark-loader-bar-top {
+  animation: mark-loader-drop-top 3.2s ease-in-out infinite;
+}
+@keyframes mark-loader-drop-bottom {
+  0% {
+    transform: translateY(-32px);
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  11% {
+    transform: translateY(3px);
+  }
+  16% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(-32px);
+    opacity: 0;
+  }
+}
+@keyframes mark-loader-drop-middle {
+  0%,
+  7% {
+    transform: translateY(-32px);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  19% {
+    transform: translateY(3px);
+  }
+  24% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(-32px);
+    opacity: 0;
+  }
+}
+@keyframes mark-loader-drop-top {
+  0%,
+  15% {
+    transform: translateY(-32px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  27% {
+    transform: translateY(3px);
+  }
+  32% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(-32px);
+    opacity: 0;
+  }
+}
+.mark-loader-caption {
+  animation: mark-loader-breathe 3.2s ease-in-out infinite;
+}
+@keyframes mark-loader-breathe {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mark-loader-bar,
+  .mark-loader-caption {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

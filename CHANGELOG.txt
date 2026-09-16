@@ -4,6 +4,26 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.1.0 -- 2026-09-16
+--------------------
+- Added an animated loading state to the import confirm modal, shown while the actual
+  import request is in flight: the three bars of the Mark logo drop into place bottom-to-
+  top like books settling onto a shelf, then lift away and repeat (pure CSS keyframes,
+  respects prefers-reduced-motion). Mocked up first in a Claude Design canvas -- two
+  motion directions were drafted (bars dropping in vertically vs. sliding in from
+  alternating sides) before picking the dropping version.
+- Fixed the Settings page's "Last backup taken by..." line not updating until the page
+  was manually refreshed. Root cause: the download button triggered the export via a
+  plain `<a>` click (fire-and-forget, no way to know when the request actually finished)
+  and just guessed an 800ms delay before calling `router.refresh()` -- under real
+  conditions the refresh could fire before the server's `Library.lastBackupAt` write had
+  actually completed, so the page re-rendered with stale data. Fixed by fetching the
+  export directly (so the response is awaited, by which point the write has definitely
+  landed), reading the new date/name back from response headers the export route now
+  sets, and updating the displayed text from that immediately -- no more guessing a
+  timeout, and no dependency on a full router refresh's timing at all.
+
+
 6.0.0 -- 2026-09-15
 --------------------
 - Added CSV backup and import to Settings, in a new "Backup & Import" block. Mocked up first

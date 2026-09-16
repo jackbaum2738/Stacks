@@ -265,6 +265,20 @@ not just the PR they were stated in:
 - **Failed ISBN lookups were cached forever** as `source: "manual-unresolved"`
   books, with no retry. Fixed: scan-in now retries the lookup if the existing
   book row has that source.
+- **"Last backup taken by..." didn't update until a manual page refresh (fixed
+  in PR #13).** The download button triggered the export via a plain `<a>`
+  click, which is fire-and-forget — there's no way to know when that request
+  actually finishes — so it just guessed an 800ms delay before calling
+  `router.refresh()`. Under real conditions the refresh could fire before the
+  server's `Library.lastBackupAt`/`lastBackupByUserId` write had actually
+  landed, so the page re-rendered with the still-stale data. **General
+  lesson**: never pair a fire-and-forget action (an `<a>` click, `window.open`,
+  etc.) with a guessed `setTimeout` to know when its server-side effect has
+  landed — `fetch` it directly instead so there's a real promise to await, then
+  act once it resolves. Fixed here by fetching the export and reading the new
+  date/name back from response headers the route now sets, updating the
+  displayed text from that directly instead of waiting on `router.refresh()`'s
+  timing at all.
 
 ## Scope notes
 
@@ -353,6 +367,19 @@ not just the PR they were stated in:
   export/template (headers only), a full import with all three skip/match
   outcomes, a Copy-ID-matched re-import proving idempotency (no duplicate
   copy), and the manual-lookup button's real success and failure paths.
+- **PR #13** (`claude/import-loading-animation`) — added the animated Mark
+  loader to the import confirm modal's in-progress state (`src/components/
+  mark-loader.tsx`, keyframes in `globals.css`) and fixed the "Last backup
+  taken by..." staleness bug (see "Bugs found and fixed" above). Design was a
+  Claude Design canvas (not a plain Artifact, since it's an animated brand
+  asset — see the now-removed `IDEAS.md` entry this closed out): two motion
+  directions were drafted and placed side by side, plus a third artboard
+  showing the winner inside a mockup of the real modal chrome; the user picked
+  the bars-dropping-in direction after seeing it animate live in that third
+  artboard. One report mid-review ("direction A isn't moving") turned out to
+  be the canvas editor not animating an unfocused/zoomed-out artboard, not a
+  real bug — confirmed by isolating the same CSS in a plain browser and
+  watching it run, before touching any code.
 
 ## Keeping this file current
 

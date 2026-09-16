@@ -47,18 +47,24 @@ export async function GET() {
     ];
   });
 
+  const takenAt = new Date();
   await prisma.library.update({
     where: { id: context.library.id },
-    data: { lastBackupAt: new Date(), lastBackupByUserId: context.user.id },
+    data: { lastBackupAt: takenAt, lastBackupByUserId: context.user.id },
   });
 
   const csv = toCsv([[...EXPORT_COLUMNS], ...rows]);
-  const filename = `${context.library.slug}-backup-${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename = `${context.library.slug}-backup-${takenAt.toISOString().slice(0, 10)}.csv`;
 
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${filename}"`,
+      // Read by the Settings page's download handler so it can show the updated
+      // "last backup" line immediately, without waiting on a router.refresh()
+      // whose timing it can't otherwise be sure has landed.
+      "X-Backup-Taken-At": takenAt.toISOString(),
+      "X-Backup-Taken-By": context.user.name ?? context.user.email,
     },
   });
 }
