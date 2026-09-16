@@ -101,6 +101,38 @@ unless that row is deleted. This bit us once — see "Bugs found and fixed" belo
 so if you're touching reservation code, releasing a reservation must delete the
 row, not just flag it, or the copy becomes permanently unreservable.
 
+**CSV backup/import (PR #12) — key decisions if you touch this again:**
+- Import never calls the external ISBN lookup itself. A brand-new ISBN just gets a
+  bare `Book` placeholder marked `source: "manual-unresolved"` (the same marker
+  scan-in's failed-lookup path already uses), because a multi-row import hitting
+  Google Books/Open Library synchronously is exactly the kind of thing that already
+  caused a production timeout once for a *single* scan-in (see "Bugs found and
+  fixed"). Resolution happens later, either automatically (scan-in already retries
+  any `manual-unresolved` book on its next scan, anywhere) or manually (see below).
+- Import matches rows to existing copies **by Copy ID, not ISBN** — a library can
+  own more than one physical copy of the same ISBN, so ISBN alone can't tell two
+  copies apart. A row with no Copy ID, or one this library doesn't recognize,
+  always creates a new `Copy`; only an exact Copy ID match updates one in place.
+  The export's "Copy ID" column exists specifically to make export → edit →
+  re-import idempotent.
+- The import confirm screen's new/updated/skipped counts come from a real
+  server-side dry run (`POST /api/library/import` with `dryRun: true`, same
+  Copy-ID/ISBN-validation logic, zero writes) rather than a client-side estimate —
+  the client can't know which Copy IDs are real without asking the server.
+- `Book.manualLookupAttempts` caps the "Look up this ISBN" button on the edit page
+  at 1 manual attempt (`MAX_MANUAL_LOOKUP_ATTEMPTS` in `src/lib/books.ts`) so it
+  can't be spammed on a book that just isn't in either catalog. This is deliberately
+  **separate from and doesn't limit** scan-in's own automatic retry — that only
+  ever fires once per real physical scan and can't be spammed the same way, and the
+  external catalogs do keep growing, so it should keep trying forever.
+- That same button, on success, deletes this library's `BookOverride` for the book
+  instead of leaving it in place. An override always wins over the canonical `Book`
+  in the merged view, so if a library had already saved its own correction for a
+  still-unidentified book, a successful lookup would otherwise be invisible and the
+  button would look broken. Chosen deliberately over the alternative (hiding the
+  button once an override exists), which would permanently lose the option after
+  any test/throwaway save.
+
 ## Working agreements (how the user wants sessions to run)
 
 These were established explicitly mid-project and apply to all future work,
@@ -253,7 +285,8 @@ not just the PR they were stated in:
   as a future feature (`IDEAS.md`) so test data (or any bulk data) can go in
   through a real, user-triggered feature instead of Claude touching the
   database directly. That's the intended pattern for this kind of request going
-  forward, not a one-off.
+  forward, not a one-off. CSV import now exists (PR #12) — a future version of
+  this same request should go through Settings → Import, not around it.
 
 ## PR history
 
@@ -293,8 +326,33 @@ not just the PR they were stated in:
   invite-link "Copy" button pattern). BCID format validation was proposed
   and explicitly declined — the real-world format needs confirming first,
   don't add it without asking.
-- **PR #8** (`claude/brave-shannon-frydwl`) — recorded CSV import/export as an
-  idea (see "Scope notes" above for why).
+- **PR #8** (`claude/brave-shannon-frydwl`, merged) — recorded CSV import/export as
+  an idea (see "Scope notes" above for why).
+- **PR #9** (`claude/brave-shannon-frydwl`, merged) — fixed the invite flow losing
+  its invite code when someone clicked "Sign in" by mistake on an invite page and
+  then switched to "Sign up": the register link had no `?invite=` param carried
+  through from `next`. Root-caused via the Next 16 `use(props.searchParams)`
+  pattern (not `window.location.search`) on the login page.
+- **PR #10** (`claude/serene-goldberg-nd42ye`, merged) — recorded three ideas:
+  "wipe library" as a less-destructive alternative to deleting it, a profile
+  screen for own-account management, and a friendlier error for a dead invite
+  link. No code changes.
+- **PR #11** (`claude/serene-goldberg-nd42ye`) — recorded the animated
+  loading-screen idea (CSV import's first real use case) for slow operations.
+- **PR #12** (`claude/csv-backup-import`) — built CSV backup/import (see the
+  "CSV backup/import" note under "Data model" above for the real design
+  decisions) and the manual "Look up this ISBN" button on the book-edit page.
+  Mockup-first over many rounds as an interactive Artifact — the whole
+  Copy-ID-matching, dry-run-confirm-screen, and never-look-up-during-import
+  design was worked out there, in conversation, before any code was written;
+  the mockup evolved live as each new rule came up (non-CSV file rejection,
+  duplicate column mapping, Copy ID as the match key, split missing/invalid
+  ISBN skip counts, the manual-lookup attempt cap, the BookOverride-delete-on
+  -resolve decision, the import-template link) rather than being built once
+  and left alone. Verified with a Playwright run covering: empty-library
+  export/template (headers only), a full import with all three skip/match
+  outcomes, a Copy-ID-matched re-import proving idempotency (no duplicate
+  copy), and the manual-lookup button's real success and failure paths.
 
 ## Keeping this file current
 

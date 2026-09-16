@@ -32,29 +32,6 @@ not emailed, and there's no email verification on signup. If that's ever wanted:
   tooling) or **AWS SES** (near-free per email, but more setup friction — sandbox
   mode and domain verification before it can send to arbitrary addresses).
 
-## CSV import / export
-
-A bulk way to get books into (and out of) a library, instead of scanning one ISBN
-at a time. Two directions:
-
-- **Export**: download a library's current copies as a CSV — title, authors,
-  ISBN, shelf, status, reserved-for/contact, date added, BookCrossing ID, etc.
-  Useful for backups, spreadsheet analysis, or just having an offline copy.
-- **Import**: upload a CSV to bulk-create copies (and shelves/books as needed)
-  instead of scanning each one in. Real use case that prompted this: instead of
-  asking Claude to seed a library directly against the production database
-  (which it can't safely do without real prod credentials, and which the CSV
-  approach avoids entirely) — generate a CSV of realistic test data and import
-  it through this feature instead, using the exact same path a real bulk-load
-  would use.
-
-Would need a defined column schema (probably matching the export format, so
-export → edit in a spreadsheet → re-import round-trips cleanly), validation/error
-reporting for bad rows (invalid ISBN, unknown shelf name, etc.), and a decision
-on whether import matches existing books by ISBN (reusing the shared `Book`
-catalog row, consistent with how scan-in already works) or always looks them up
-fresh.
-
 ## Light / dark / system theme setting
 
 The app already fully supports light and dark mode (it follows the

@@ -28,19 +28,23 @@ model User {
   createdAt    DateTime      @default(now())
   memberships  Membership[]
   reservations Reservation[] @relation("ReservationCreatedBy")
+  backupsTaken Library[]     @relation("LibraryLastBackupBy")
 }
 
 /// A single household/network member's library of physical books.
 model Library {
-  id            String         @id @default(cuid())
-  name          String
-  slug          String         @unique
-  inviteCode    String?        @unique
-  createdAt     DateTime       @default(now())
-  memberships   Membership[]
-  shelves       Shelf[]
-  copies        Copy[]
-  bookOverrides BookOverride[]
+  id                 String         @id @default(cuid())
+  name               String
+  slug               String         @unique
+  inviteCode         String?        @unique
+  createdAt          DateTime       @default(now())
+  lastBackupAt       DateTime?
+  lastBackupByUserId String?
+  memberships        Membership[]
+  shelves            Shelf[]
+  copies             Copy[]
+  bookOverrides      BookOverride[]
+  lastBackupBy       User?          @relation("LibraryLastBackupBy", fields: [lastBackupByUserId], references: [id], onDelete: SetNull)
 }
 
 /// Links a user to a library with a role, so a library can eventually be shared/co-managed.
@@ -72,20 +76,26 @@ model Shelf {
 /// This is the trusted, ISBN-lookup-sourced record — never edited directly by users (see
 /// BookOverride) so one library's bad correction can't corrupt what every other library sees.
 model Book {
-  id            String         @id @default(cuid())
-  isbn13        String         @unique
-  isbn10        String?
-  title         String
-  authors       String[]
-  publisher     String?
-  publishedDate String?
-  pageCount     Int?
-  description   String?
-  coverUrl      String?
-  source        String?
-  createdAt     DateTime       @default(now())
-  copies        Copy[]
-  overrides     BookOverride[]
+  id                   String         @id @default(cuid())
+  isbn13               String         @unique
+  isbn10               String?
+  title                String
+  authors              String[]
+  publisher            String?
+  publishedDate        String?
+  pageCount            Int?
+  description          String?
+  coverUrl             String?
+  source               String?
+  createdAt            DateTime       @default(now())
+  /// How many times someone has clicked "look up this ISBN" on the edit page while this
+  /// book was still unresolved. Capped at 1 in application code to stop the button being
+  /// spammed on a book that genuinely isn't in either catalog -- distinct from (and doesn't
+  /// limit) the automatic retry scan-in already does every time an unresolved ISBN is
+  /// scanned in, since that only ever fires once per real scan.
+  manualLookupAttempts Int            @default(0)
+  copies               Copy[]
+  overrides            BookOverride[]
 }
 
 /// A library's local corrections to a Book's shared catalog metadata, invisible to every

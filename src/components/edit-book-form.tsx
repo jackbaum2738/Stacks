@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formLabelClass, formInputClass } from "@/lib/form-styles";
 import { BookCover } from "@/components/book-cover";
+import { MAX_MANUAL_LOOKUP_ATTEMPTS } from "@/lib/books";
 
 interface EditableBook {
   isbn13: string;
@@ -16,14 +17,25 @@ interface EditableBook {
   coverUrl: string | null;
 }
 
+interface LookupResult {
+  found: boolean;
+  alreadyResolved?: boolean;
+  manualLookupAttempts?: number;
+  book?: EditableBook;
+}
+
 export function EditBookForm({
   copyId,
   book,
   bookCrossingId: initialBookCrossingId,
+  unresolved: initiallyUnresolved,
+  manualLookupAttempts: initialManualLookupAttempts,
 }: {
   copyId: string;
   book: EditableBook;
   bookCrossingId: string | null;
+  unresolved: boolean;
+  manualLookupAttempts: number;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(book.title);
@@ -39,9 +51,47 @@ export function EditBookForm({
   const [previewUrl, setPreviewUrl] = useState(book.coverUrl ?? "");
   const [previewAttempt, setPreviewAttempt] = useState(0);
 
+  const [unresolved, setUnresolved] = useState(initiallyUnresolved);
+  const [manualLookupAttempts, setManualLookupAttempts] = useState(initialManualLookupAttempts);
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupOutcome, setLookupOutcome] = useState<"found" | "already-resolved" | "not-found" | null>(null);
+
   function refreshPreview() {
     setPreviewUrl(coverUrl.trim());
     setPreviewAttempt((n) => n + 1);
+  }
+
+  async function runLookup() {
+    setLookupBusy(true);
+    setLookupOutcome(null);
+    const res = await fetch(`/api/copies/${copyId}/book/lookup`, { method: "POST" });
+    const data: LookupResult = await res.json().catch(() => ({ found: false }));
+    setLookupBusy(false);
+
+    if (!res.ok) {
+      setManualLookupAttempts(MAX_MANUAL_LOOKUP_ATTEMPTS);
+      setLookupOutcome("not-found");
+      return;
+    }
+
+    if (data.found && data.book) {
+      // A successful lookup -- whether a real catalog match or one already resolved by
+      // another copy of the same book -- always wins over whatever was typed here and is
+      // already saved server-side, so the fields just reflect that immediately.
+      setTitle(data.book.title);
+      setAuthors(data.book.authors.join(", "));
+      setPublisher(data.book.publisher ?? "");
+      setPageCount(data.book.pageCount?.toString() ?? "");
+      setDescription(data.book.description ?? "");
+      setCoverUrl(data.book.coverUrl ?? "");
+      setPreviewUrl(data.book.coverUrl ?? "");
+      setPreviewAttempt((n) => n + 1);
+      setUnresolved(false);
+      setLookupOutcome(data.alreadyResolved ? "already-resolved" : "found");
+    } else {
+      setManualLookupAttempts(data.manualLookupAttempts ?? MAX_MANUAL_LOOKUP_ATTEMPTS);
+      setLookupOutcome("not-found");
+    }
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -92,6 +142,56 @@ export function EditBookForm({
         it — other libraries with a copy of this ISBN won&apos;t see your changes. BookCrossing
         ID applies to this physical copy only.
       </p>
+
+      {unresolved && (
+        <div className="space-y-2 border border-line-strong bg-bg p-4">
+          <div className="flex items-center gap-2 font-sans text-[12.5px] font-semibold tracking-[.02em] text-accent-2 uppercase">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-[16px] w-[16px]">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+            </svg>
+            Not yet identified
+          </div>
+          <p className="font-sans text-[13.5px] text-ink-soft">
+            We couldn&apos;t automatically match this ISBN in our own catalog. Fill in the details
+            yourself below, or try an automatic lookup.
+          </p>
+
+          {lookupOutcome === null && manualLookupAttempts < MAX_MANUAL_LOOKUP_ATTEMPTS && (
+            <div className="space-y-1">
+              <button
+                type="button"
+                onClick={runLookup}
+                disabled={lookupBusy}
+                className="rounded-[2px] border border-line-strong px-3 py-2 font-sans text-sm font-medium text-ink hover:bg-chip-hover disabled:opacity-50"
+              >
+                {lookupBusy ? "Looking up…" : "Look up this ISBN"}
+              </button>
+              <p className="font-mono text-[11px] text-ink-faint">
+                1 manual check per copy — Stacks keeps retrying automatically in the background every
+                time this copy is scanned, since the catalogs it checks are always adding new titles.
+              </p>
+            </div>
+          )}
+
+          {lookupOutcome === "not-found" && (
+            <p className="rounded-[2px] bg-[var(--pill-reserved-bg)] px-3 py-2 font-sans text-[13px] text-[var(--pill-reserved-fg)]">
+              We checked Google Books and Open Library and couldn&apos;t find this ISBN. Feel free to
+              fill in the details yourself below — we&apos;ll keep trying automatically in the
+              background every time this copy is scanned, in case it&apos;s added later.
+            </p>
+          )}
+        </div>
+      )}
+
+      {!unresolved && (lookupOutcome === "found" || lookupOutcome === "already-resolved") && (
+        <p className="font-sans text-[13px] font-semibold text-ok">
+          ✓{" "}
+          {lookupOutcome === "already-resolved"
+            ? "Already found by another copy — filled in below and saved, no lookup needed."
+            : "Found it — filled in below and saved automatically."}
+        </p>
+      )}
 
       {error && <p className="rounded-[2px] bg-[#F5E2DE] px-3 py-2 font-mono text-xs text-accent">{error}</p>}
 

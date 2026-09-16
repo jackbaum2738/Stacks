@@ -30,7 +30,13 @@ export default async function EditBookPage(props: PageProps<"/dashboard/copies/[
         </svg>
         {book.title}
       </Link>
-      <EditBookForm copyId={copy.id} book={book} bookCrossingId={copy.bookCrossingId} />
+      <EditBookForm
+        copyId={copy.id}
+        book={book}
+        bookCrossingId={copy.bookCrossingId}
+        unresolved={copy.book.source === "manual-unresolved"}
+        manualLookupAttempts={copy.book.manualLookupAttempts}
+      />
     </div>
   );
 }
