@@ -4,6 +4,33 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.2.0 -- 2026-09-16
+--------------------
+- Added a real progress indicator to the import loading screen: a determinate progress
+  bar, a "Row X of Y" counter with percentage, a ticker naming the book currently being
+  processed, and a live New/Updated/Skipped tally that updates as it goes -- so a large
+  import (hundreds of rows) reads as visibly working the whole way through, not just a
+  static "Importing..." label for however long it takes. Mocked up first as an Artifact
+  over a couple of rounds before building.
+- This required changing how import actually runs, not just the UI: previously the whole
+  file was sent as one request that only replied once every row was done, which had two
+  problems -- no way to show real progress mid-request, and (worse) a real risk of the
+  whole thing rolling back or dying if the connection dropped before that one giant
+  response ever came back. Now the client splits the file into batches of 10 rows and
+  sends them one at a time, each one committing fully before the next is sent, so closing
+  the tab mid-import only loses whatever hasn't been sent yet -- everything already
+  processed stays saved. If a batch request fails outright, the confirm screen reports
+  exactly how many of the file's rows made it in before stopping, since by then some
+  already have -- re-running the same file is safe and picks up the rest (Copy-ID-matched
+  rows just re-match harmlessly).
+- The progress bar/ticker still read as continuously moving even though the batches
+  arrive in chunks: each batch's rows are revealed to the UI one at a time at a pace that
+  adapts to how long that batch actually took, rather than jumping straight to the new
+  totals the instant a batch's response lands. The import endpoint now returns a
+  per-row outcome list (not just aggregate counts) specifically so the client has real
+  data to animate through, rather than faking movement.
+
+
 6.1.0 -- 2026-09-16
 --------------------
 - Added an animated loading state to the import confirm modal, shown while the actual
