@@ -101,7 +101,34 @@ unless that row is deleted. This bit us once — see "Bugs found and fixed" belo
 so if you're touching reservation code, releasing a reservation must delete the
 row, not just flag it, or the copy becomes permanently unreservable.
 
-**CSV backup/import (PR #12) — key decisions if you touch this again:**
+**CSV backup/import (PR #12, #14) — key decisions if you touch this again:**
+- **The real import runs as many small requests, never one big one (PR #14).**
+  `src/components/backup-import-section.tsx` splits the file into batches of
+  `IMPORT_BATCH_SIZE` (10) rows and calls `POST /api/library/import` once per
+  batch, sequentially — each batch is its own `$transaction` that fully commits
+  before the next batch is even sent. This is why closing the tab mid-import is
+  merely incomplete rather than destructive: only the one batch in flight is
+  ever at risk: everything before it already landed. Don't "simplify" this back
+  into one request for the whole file — that was the original design and it had
+  no way to show real progress and a real risk of a giant transaction dying
+  entirely if the connection dropped before Vercel could return the response.
+- **The progress bar/ticker on the confirm screen aren't fed live per-row
+  network events** — they can't be, since progress only actually arrives once
+  per batch. Instead each batch response includes a `rowResults` array (label +
+  outcome per row, in input order — see the route), and the client reveals
+  those rows to the UI one at a time from a queue, paced by
+  `revealMsPerRowRef` — an estimate that adapts after every batch to that
+  batch's own observed `elapsed / rowCount`, biased ~15% faster so the queue
+  rarely empties while waiting on the next batch. This is what makes the UI
+  read as continuously moving even though the underlying data is chunky; if
+  you ever change the batch size or add real server-sent events instead, this
+  reveal-pacing logic is what you'd revisit or remove.
+- A batch request that fails outright (network error or non-2xx) does **not**
+  mean nothing was imported — prior batches already committed. The confirm
+  screen's error message says how many of the file's rows made it in before
+  stopping and that re-running the same file is safe (Copy-ID-matched rows
+  just re-match harmlessly) — don't revert this to a generic "nothing was
+  changed, try again" message, since that would now be false.
 - Import never calls the external ISBN lookup itself. A brand-new ISBN just gets a
   bare `Book` placeholder marked `source: "manual-unresolved"` (the same marker
   scan-in's failed-lookup path already uses), because a multi-row import hitting
@@ -380,6 +407,28 @@ not just the PR they were stated in:
   be the canvas editor not animating an unfocused/zoomed-out artboard, not a
   real bug — confirmed by isolating the same CSS in a plain browser and
   watching it run, before touching any code.
+- **PR #14** (`claude/import-progress-tracking`) — added a real progress bar,
+  row counter, ticker, and live tally to the import confirm screen, which
+  meant rearchitecting the import itself into small sequential batches rather
+  than one request for the whole file (see the "CSV backup/import" note under
+  "Data model" above for why, and the reveal-pacing mechanism that keeps it
+  feeling continuous). Came out of the user asking a plain, good question
+  before any of this was built — "does the import continue if I close the
+  tab?" — which the batch-per-request design answers safely (only the
+  in-flight batch is ever at risk) in a way the original single-big-request
+  design couldn't have. Mocked up first as an Artifact, iterated three times
+  (added the live tally/ticker: switched to batch-aware simulation with a
+  toggle to reveal the batch seams once chunking was decided on: trimmed the
+  "keep this tab open" copy down to one plain sentence) before any of the real
+  code was touched. Verified with a live Playwright run against a real 30-row
+  test CSV: confirmed progress genuinely advances mid-import (not an instant
+  jump), the import was actually sent as multiple batched requests rather than
+  one, and final counts matched. Caught and fixed a real (if minor)
+  accessibility bug in the same pass: two adjacent counters/labels with no
+  space in their rendered text (`Row X of Y` running straight into the `%`
+  figure beside it, and the ticker's "Importing" label running into the title
+  after it) — harmless visually since flex `gap`/margin provided the visual
+  separation, but a screen reader would have read them concatenated.
 
 ## Keeping this file current
 

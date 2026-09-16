@@ -1,9 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseCsv } from "@/lib/csv";
 import { MarkLoader } from "@/components/mark-loader";
+
+// Rows are sent to the import endpoint in small batches rather than all at once, each
+// one committing fully before the next is sent -- see the route's own doc comment for
+// why (closing the tab mid-import only loses what hasn't been sent yet, nothing corrupts).
+const IMPORT_BATCH_SIZE = 10;
 
 type TargetField =
   | "copyId"
@@ -74,6 +79,17 @@ interface Summary {
   skippedInvalidIsbn: number;
 }
 
+type RowOutcome = "new" | "updated" | "skippedMissingIsbn" | "skippedInvalidIsbn";
+
+interface RowResult {
+  label: string | null;
+  outcome: RowOutcome;
+}
+
+interface BatchResponse extends Summary {
+  rowResults: RowResult[];
+}
+
 type Stage = "idle" | "mapping" | "confirm" | "result";
 
 function skippedTotal(s: Summary) {
@@ -122,6 +138,64 @@ export function BackupImportSection({
   const [downloadConfirm, setDownloadConfirm] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Live import progress. Rows are revealed one at a time from a queue fed by whichever
+  // batch just landed, at a pace that adapts to the real observed speed of each batch --
+  // that's what keeps this feeling continuous even though the data actually arrives in
+  // chunks. See onConfirmImport/startReveal below.
+  const [progressDone, setProgressDone] = useState(0);
+  const [progressTotal, setProgressTotal] = useState(0);
+  const [liveTallies, setLiveTallies] = useState<Record<RowOutcome, number>>({
+    new: 0,
+    updated: 0,
+    skippedMissingIsbn: 0,
+    skippedInvalidIsbn: 0,
+  });
+  const [tickerLabel, setTickerLabel] = useState<string | null>(null);
+  const revealQueueRef = useRef<RowResult[]>([]);
+  const revealMsPerRowRef = useRef(300);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      cancelledRef.current = true;
+      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+    };
+  }, []);
+
+  function revealOneRow() {
+    const next = revealQueueRef.current.shift();
+    if (!next) return; // nothing new yet -- hold position rather than guess
+    setProgressDone((n) => n + 1);
+    setTickerLabel(next.label);
+    setLiveTallies((t) => ({ ...t, [next.outcome]: t[next.outcome] + 1 }));
+  }
+
+  function startReveal() {
+    stopReveal();
+    const loop = () => {
+      if (!cancelledRef.current) revealOneRow();
+      revealTimerRef.current = setTimeout(loop, revealMsPerRowRef.current);
+    };
+    revealTimerRef.current = setTimeout(loop, revealMsPerRowRef.current);
+  }
+
+  function stopReveal() {
+    if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    }
+  }
+
+  function waitForQueueDrain(cb: () => void) {
+    const check = () => {
+      if (cancelledRef.current) return;
+      if (revealQueueRef.current.length === 0) cb();
+      else setTimeout(check, 50);
+    };
+    check();
+  }
 
   function downloadBlob(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
@@ -251,25 +325,81 @@ export function BackupImportSection({
 
   async function onConfirmImport() {
     if (!parsed) return;
-    setBusy(true);
     setError(null);
-    const rows = buildImportRows(parsed);
-    const res = await fetch("/api/library/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rows }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setError("Import failed — nothing was changed. Please try again.");
-      return;
+    setBusy(true);
+    setProgressDone(0);
+    setTickerLabel(null);
+    setLiveTallies({ new: 0, updated: 0, skippedMissingIsbn: 0, skippedInvalidIsbn: 0 });
+    revealQueueRef.current = [];
+    revealMsPerRowRef.current = 300;
+    cancelledRef.current = false;
+
+    const allRows = buildImportRows(parsed);
+    setProgressTotal(allRows.length);
+    startReveal();
+
+    const batches: Record<string, string>[][] = [];
+    for (let i = 0; i < allRows.length; i += IMPORT_BATCH_SIZE) {
+      batches.push(allRows.slice(i, i + IMPORT_BATCH_SIZE));
     }
-    const data: Summary = await res.json();
-    setSummary(data);
-    setStage("result");
+
+    const accumulated: Summary = { newCount: 0, updatedCount: 0, skippedMissingIsbn: 0, skippedInvalidIsbn: 0 };
+    let processed = 0;
+
+    function stopWithPartialFailure() {
+      stopReveal();
+      cancelledRef.current = true;
+      setSummary(accumulated);
+      setError(
+        `Import stopped after ${processed} of ${allRows.length} rows — what was already imported is saved. Re-run this file to pick up the rest.`
+      );
+      setBusy(false);
+    }
+
+    for (const batch of batches) {
+      const startedAt = performance.now();
+      let res: Response;
+      try {
+        res = await fetch("/api/library/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rows: batch }),
+        });
+      } catch {
+        stopWithPartialFailure();
+        return;
+      }
+      if (!res.ok) {
+        stopWithPartialFailure();
+        return;
+      }
+
+      const data: BatchResponse = await res.json();
+      accumulated.newCount += data.newCount;
+      accumulated.updatedCount += data.updatedCount;
+      accumulated.skippedMissingIsbn += data.skippedMissingIsbn;
+      accumulated.skippedInvalidIsbn += data.skippedInvalidIsbn;
+      processed += batch.length;
+
+      // Adapt the reveal pace to what this batch actually took, biased a little faster
+      // than the raw average so the queue rarely runs dry waiting on the next one.
+      const observedMsPerRow = (performance.now() - startedAt) / batch.length;
+      revealMsPerRowRef.current = Math.min(900, Math.max(40, observedMsPerRow * 0.85));
+
+      revealQueueRef.current.push(...data.rowResults);
+    }
+
+    waitForQueueDrain(() => {
+      stopReveal();
+      setSummary(accumulated);
+      setBusy(false);
+      setStage("result");
+    });
   }
 
   function reset() {
+    cancelledRef.current = true;
+    stopReveal();
     setStage("idle");
     setParsed(null);
     setSummary(null);
@@ -475,12 +605,51 @@ export function BackupImportSection({
             {busy ? (
               <>
                 <h2 className="mb-5 font-display text-2xl font-semibold text-ink">Importing your books&hellip;</h2>
-                <div className="flex flex-col items-center gap-4 py-2 pb-6">
+                <div className="flex flex-col items-center gap-3 pt-2 pb-5">
                   <MarkLoader />
-                  <p className="mark-loader-caption font-mono text-[11.5px] tracking-[.04em] text-ink-faint">
-                    MATCHING COPIES &middot; UPDATING YOUR CATALOG
-                  </p>
                 </div>
+
+                <div className="mb-1 h-1.5 overflow-hidden rounded-full bg-line-inner">
+                  <div
+                    className="h-full rounded-full bg-accent-2 transition-[width] duration-200 ease-linear"
+                    style={{ width: `${progressTotal ? Math.round((progressDone / progressTotal) * 100) : 0}%` }}
+                  />
+                </div>
+                <div className="mb-4 flex items-center justify-between font-sans text-sm text-ink">
+                  <span>
+                    Row <strong className="tabular-nums">{progressDone}</strong> of{" "}
+                    <strong className="tabular-nums">{progressTotal}</strong>
+                  </span>
+                  <span className="font-mono text-xs tabular-nums text-ink-faint">
+                    &middot; {progressTotal ? Math.round((progressDone / progressTotal) * 100) : 0}%
+                  </span>
+                </div>
+
+                <p className="mb-4 truncate font-mono text-xs text-ink-soft">
+                  <span className="mr-1.5 text-[10px] tracking-[.04em] text-ink-faint uppercase">Importing</span>{" "}
+                  {tickerLabel ?? "—"}
+                </p>
+
+                <div className="mb-4 grid grid-cols-3 gap-2">
+                  <div className="paper-shadow-sm border border-line bg-surface-raised p-2.5 text-center">
+                    <div className="font-mono text-lg tabular-nums text-ok">{liveTallies.new}</div>
+                    <div className="mt-0.5 font-sans text-[10px] text-ink-soft uppercase">New</div>
+                  </div>
+                  <div className="paper-shadow-sm border border-line bg-surface-raised p-2.5 text-center">
+                    <div className="font-mono text-lg tabular-nums text-accent-2">{liveTallies.updated}</div>
+                    <div className="mt-0.5 font-sans text-[10px] text-ink-soft uppercase">Updated</div>
+                  </div>
+                  <div className="paper-shadow-sm border border-line bg-surface-raised p-2.5 text-center">
+                    <div className="font-mono text-lg tabular-nums text-[var(--pill-reserved-fg)]">
+                      {liveTallies.skippedMissingIsbn + liveTallies.skippedInvalidIsbn}
+                    </div>
+                    <div className="mt-0.5 font-sans text-[10px] text-ink-soft uppercase">Skipped</div>
+                  </div>
+                </div>
+
+                <p className="text-center font-sans text-xs text-ink-faint">
+                  Please keep this tab open until the import finishes.
+                </p>
               </>
             ) : (
               <>

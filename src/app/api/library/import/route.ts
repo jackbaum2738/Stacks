@@ -60,6 +60,14 @@ function normalizeStatus(raw: string | undefined): "AVAILABLE" | "RESERVED" | "R
  * Pass `dryRun: true` to get back the same new/updated/skipped counts the real import
  * would produce -- used to populate the confirm screen before anything is written -- with
  * no side effects at all (read-only Copy ID lookups, no Book/Shelf/Reservation writes).
+ *
+ * The real (non-dry-run) import is called once per batch of rows, not once for the whole
+ * file -- the client (src/components/backup-import-section.tsx) splits a large file into
+ * small chunks and calls this endpoint once per chunk, each one committing fully before the
+ * next is sent. That's what makes closing the tab mid-import merely incomplete rather than
+ * corrupting: only the batch actually in flight is ever at risk, everything before it is
+ * already durably saved. `rowResults` (per-row label + outcome, in order) is what lets the
+ * client animate a smooth live progress ticker across however many batches that takes.
  */
 export async function POST(request: Request) {
   const { context, response } = await requireLibraryContext();
@@ -105,6 +113,10 @@ export async function POST(request: Request) {
       let updatedCount = 0;
       let skippedMissingIsbn = 0;
       let skippedInvalidIsbn = 0;
+      // Per-row outcome, in input order -- lets the client drive a live progress ticker
+      // across however many of these batched requests a large import takes, without it
+      // having to guess at pacing from the aggregate counts alone.
+      const rowResults: { label: string | null; outcome: "new" | "updated" | "skippedMissingIsbn" | "skippedInvalidIsbn" }[] = [];
       const shelfCache = new Map<string, string>();
 
       async function resolveShelfId(shelfNameRaw: string): Promise<string | null> {
@@ -123,14 +135,17 @@ export async function POST(request: Request) {
       }
 
       for (const row of parsed.data.rows) {
+        const label = row.title || row.isbn || null;
         const rawIsbn = row.isbn ?? "";
         if (!rawIsbn) {
           skippedMissingIsbn++;
+          rowResults.push({ label, outcome: "skippedMissingIsbn" });
           continue;
         }
         const cleaned = cleanIsbn(rawIsbn);
         if (!isValidIsbn(cleaned)) {
           skippedInvalidIsbn++;
+          rowResults.push({ label, outcome: "skippedInvalidIsbn" });
           continue;
         }
         const isbn13 = toIsbn13(cleaned);
@@ -196,6 +211,7 @@ export async function POST(request: Request) {
           }
 
           updatedCount++;
+          rowResults.push({ label, outcome: "updated" });
         } else {
           const created = await tx.copy.create({
             data: {
@@ -215,10 +231,11 @@ export async function POST(request: Request) {
           }
 
           newCount++;
+          rowResults.push({ label, outcome: "new" });
         }
       }
 
-      return { newCount, updatedCount, skippedMissingIsbn, skippedInvalidIsbn };
+      return { newCount, updatedCount, skippedMissingIsbn, skippedInvalidIsbn, rowResults };
     },
     { timeout: 30000 }
   );
