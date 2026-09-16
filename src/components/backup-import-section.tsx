@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseCsv } from "@/lib/csv";
+import { MarkLoader } from "@/components/mark-loader";
 
 type TargetField =
   | "copyId"
@@ -104,7 +105,7 @@ const btnGhost =
   "rounded-[2px] border border-line-strong px-4 py-2 font-sans text-sm font-medium text-ink hover:bg-chip-hover disabled:opacity-50";
 
 export function BackupImportSection({
-  lastBackup,
+  lastBackup: initialLastBackup,
 }: {
   lastBackup: { atLabel: string; byName: string } | null;
 }) {
@@ -116,28 +117,64 @@ export function BackupImportSection({
   const [summary, setSummary] = useState<Summary | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastBackup, setLastBackup] = useState(initialLastBackup);
+  const [downloadBusy, setDownloadBusy] = useState(false);
   const [downloadConfirm, setDownloadConfirm] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function triggerDownload(url: string) {
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
+    a.download = filename;
     a.rel = "noopener";
     document.body.appendChild(a);
     a.click();
     a.remove();
+    URL.revokeObjectURL(url);
   }
 
-  function handleBackupDownload() {
-    triggerDownload("/api/library/export");
+  function filenameFromDisposition(disposition: string | null, fallback: string) {
+    const match = disposition?.match(/filename="([^"]+)"/);
+    return match?.[1] ?? fallback;
+  }
+
+  async function handleBackupDownload() {
+    setDownloadBusy(true);
+    const res = await fetch("/api/library/export");
+    setDownloadBusy(false);
+    if (!res.ok) {
+      setError("Couldn't create a backup — please try again.");
+      return;
+    }
+    const blob = await res.blob();
+    downloadBlob(blob, filenameFromDisposition(res.headers.get("Content-Disposition"), "library-backup.csv"));
+
+    // The export just updated Library.lastBackupAt/lastBackupByUserId server-side (it's
+    // already awaited by the time this response arrived), so this reflects it immediately
+    // rather than waiting on a timed router.refresh() to maybe have landed by then.
+    const takenAt = res.headers.get("X-Backup-Taken-At");
+    const byName = res.headers.get("X-Backup-Taken-By");
+    if (takenAt && byName) {
+      setLastBackup({
+        atLabel: new Date(takenAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
+        byName,
+      });
+    }
     setDownloadConfirm(true);
     setTimeout(() => setDownloadConfirm(false), 2600);
-    setTimeout(() => router.refresh(), 800);
+    router.refresh();
   }
 
-  function handleTemplateDownload() {
-    triggerDownload("/api/library/import-template");
+  async function handleTemplateDownload() {
+    const res = await fetch("/api/library/import-template");
+    if (!res.ok) {
+      setError("Couldn't create the template — please try again.");
+      return;
+    }
+    const blob = await res.blob();
+    downloadBlob(blob, filenameFromDisposition(res.headers.get("Content-Disposition"), "stacks-import-template.csv"));
     setTemplateConfirm(true);
     setTimeout(() => setTemplateConfirm(false), 2600);
   }
@@ -258,8 +295,8 @@ export function BackupImportSection({
             )}
           </p>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={handleBackupDownload} className={btnPrimary}>
-              Download CSV backup
+            <button type="button" onClick={handleBackupDownload} disabled={downloadBusy} className={btnPrimary}>
+              {downloadBusy ? "Preparing…" : "Download CSV backup"}
             </button>
             {downloadConfirm && (
               <span className="font-sans text-sm font-semibold text-ok">&#10003; Downloaded</span>
@@ -434,42 +471,57 @@ export function BackupImportSection({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,38,32,.45)] p-4">
           <div className="w-full max-w-[480px] rounded-[2px] border border-line-strong bg-surface p-[26px] shadow-[0_24px_44px_rgba(43,38,32,.3)]">
             <div className="mb-2 font-mono text-[11px] tracking-[.14em] text-accent-2 uppercase">Import &middot; step 2 of 2</div>
-            <h2 className="mb-1 font-display text-2xl font-semibold text-ink">Confirm import</h2>
-            <p className="mb-5 font-sans text-sm text-ink-soft">
-              <span className="font-mono">{parsed.fileName}</span> &mdash; rows are matched to your existing
-              copies by Copy ID; anything without a match is added as a new copy.
-            </p>
 
-            <div className="mb-4 grid grid-cols-3 gap-2">
-              <div className="paper-shadow-sm border border-line bg-surface-raised p-3 text-center">
-                <div className="font-mono text-xl text-ok">{summary.newCount}</div>
-                <div className="mt-0.5 font-sans text-[11px] text-ink-soft uppercase">New copies</div>
-              </div>
-              <div className="paper-shadow-sm border border-line bg-surface-raised p-3 text-center">
-                <div className="font-mono text-xl text-accent-2">{summary.updatedCount}</div>
-                <div className="mt-0.5 font-sans text-[11px] text-ink-soft uppercase">Matched &amp; updated</div>
-              </div>
-              <div className="paper-shadow-sm border border-line bg-surface-raised p-3 text-center">
-                <div className="font-mono text-xl text-[var(--pill-reserved-fg)]">{skippedTotal(summary)}</div>
-                <div className="mt-0.5 font-sans text-[11px] text-ink-soft uppercase">Skipped</div>
-              </div>
-            </div>
+            {busy ? (
+              <>
+                <h2 className="mb-5 font-display text-2xl font-semibold text-ink">Importing your books&hellip;</h2>
+                <div className="flex flex-col items-center gap-4 py-2 pb-6">
+                  <MarkLoader />
+                  <p className="mark-loader-caption font-mono text-[11.5px] tracking-[.04em] text-ink-faint">
+                    MATCHING COPIES &middot; UPDATING YOUR CATALOG
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="mb-1 font-display text-2xl font-semibold text-ink">Confirm import</h2>
+                <p className="mb-5 font-sans text-sm text-ink-soft">
+                  <span className="font-mono">{parsed.fileName}</span> &mdash; rows are matched to your existing
+                  copies by Copy ID; anything without a match is added as a new copy.
+                </p>
 
-            {skippedTotal(summary) > 0 && (
-              <p className="mb-3 rounded-[2px] bg-[var(--pill-reserved-bg)] px-3 py-2 font-sans text-sm text-[var(--pill-reserved-fg)]">
-                {skipNoteText(summary)}
-              </p>
+                <div className="mb-4 grid grid-cols-3 gap-2">
+                  <div className="paper-shadow-sm border border-line bg-surface-raised p-3 text-center">
+                    <div className="font-mono text-xl text-ok">{summary.newCount}</div>
+                    <div className="mt-0.5 font-sans text-[11px] text-ink-soft uppercase">New copies</div>
+                  </div>
+                  <div className="paper-shadow-sm border border-line bg-surface-raised p-3 text-center">
+                    <div className="font-mono text-xl text-accent-2">{summary.updatedCount}</div>
+                    <div className="mt-0.5 font-sans text-[11px] text-ink-soft uppercase">Matched &amp; updated</div>
+                  </div>
+                  <div className="paper-shadow-sm border border-line bg-surface-raised p-3 text-center">
+                    <div className="font-mono text-xl text-[var(--pill-reserved-fg)]">{skippedTotal(summary)}</div>
+                    <div className="mt-0.5 font-sans text-[11px] text-ink-soft uppercase">Skipped</div>
+                  </div>
+                </div>
+
+                {skippedTotal(summary) > 0 && (
+                  <p className="mb-3 rounded-[2px] bg-[var(--pill-reserved-bg)] px-3 py-2 font-sans text-sm text-[var(--pill-reserved-fg)]">
+                    {skipNoteText(summary)}
+                  </p>
+                )}
+                {error && <p className="mb-3 font-mono text-xs text-accent">{error}</p>}
+
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setStage("mapping")} className={btnGhost}>
+                    Back
+                  </button>
+                  <button type="button" onClick={onConfirmImport} className={btnPrimary}>
+                    Import books
+                  </button>
+                </div>
+              </>
             )}
-            {error && <p className="mb-3 font-mono text-xs text-accent">{error}</p>}
-
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setStage("mapping")} className={btnGhost}>
-                Back
-              </button>
-              <button type="button" disabled={busy} onClick={onConfirmImport} className={btnPrimary}>
-                {busy ? "Importing…" : "Import books"}
-              </button>
-            </div>
           </div>
         </div>
       )}
