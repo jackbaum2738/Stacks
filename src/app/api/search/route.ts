@@ -39,5 +39,5 @@ export async function GET(request: Request) {
 
   const sorted = filtered.sort((a, b) => a.title.localeCompare(b.title));
 
-  return NextResponse.json({ books: sorted.slice(0, q ? 50 : 300) });
+  return NextResponse.json({ books: sorted });
 }

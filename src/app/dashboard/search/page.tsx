@@ -41,6 +41,8 @@ interface Row {
 type SortKey = "title" | "author" | "shelf" | "added" | "status";
 
 const VIEW_MODE_KEY = "stacks:library-view-mode";
+const PAGE_SIZE_KEY = "stacks:library-page-size";
+const PAGE_SIZES = [25, 50, 100, 200] as const;
 const collator = new Intl.Collator(undefined, { sensitivity: "base" });
 
 function toModalCopy(row: Row) {
@@ -72,6 +74,8 @@ export default function LibraryBrowsePage() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [sortKey, setSortKey] = useState<SortKey>("title");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(25);
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reserveModal, setReserveModal] = useState<{ mode: "create" | "edit"; rows: Row[] } | null>(null);
   const [deleteModal, setDeleteModal] = useState<Row[] | null>(null);
@@ -112,6 +116,26 @@ export default function LibraryBrowsePage() {
   }
 
   useEffect(() => {
+    try {
+      const stored = Number(localStorage.getItem(PAGE_SIZE_KEY));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (PAGE_SIZES.includes(stored as (typeof PAGE_SIZES)[number])) setPageSize(stored as (typeof PAGE_SIZES)[number]);
+    } catch {
+      // localStorage unavailable — fall back to default page size
+    }
+  }, []);
+
+  function changePageSize(size: (typeof PAGE_SIZES)[number]) {
+    setPageSize(size);
+    setPage(1);
+    try {
+      localStorage.setItem(PAGE_SIZE_KEY, String(size));
+    } catch {
+      // ignore — per-viewer convenience only
+    }
+  }
+
+  useEffect(() => {
     if (!contextMenu) return;
     const close = () => setContextMenu(null);
     document.addEventListener("click", close);
@@ -132,6 +156,7 @@ export default function LibraryBrowsePage() {
   function onQueryChange(value: string) {
     setQuery(value);
     setLoading(true);
+    setPage(1);
   }
 
   const rows = useMemo<Row[]>(
@@ -143,6 +168,22 @@ export default function LibraryBrowsePage() {
     () => [...rows].sort((a, b) => compareRows(a, b, sortKey, sortDir)),
     [rows, sortKey, sortDir]
   );
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = useMemo(
+    () => sortedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [sortedRows, currentPage, pageSize]
+  );
+  const pageNumbers = useMemo(() => {
+    const want = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+    const nums = [...want].filter((n) => n >= 1 && n <= totalPages).sort((a, b) => a - b);
+    const withGaps: (number | "…")[] = [];
+    nums.forEach((n, i) => {
+      if (i > 0 && n - nums[i - 1] > 1) withGaps.push("…");
+      withGaps.push(n);
+    });
+    return withGaps;
+  }, [currentPage, totalPages]);
 
   function onFinished() {
     setSelected(new Set());
@@ -158,6 +199,7 @@ export default function LibraryBrowsePage() {
       setSortKey(key);
       setSortDir(1);
     }
+    setPage(1);
   }
 
   function toggleSelect(id: string, checked: boolean) {
@@ -286,6 +328,31 @@ export default function LibraryBrowsePage() {
         </p>
       )}
 
+      {!loading && rows.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center border border-line-strong font-mono text-xs text-ink-soft">
+            {PAGE_SIZES.map((size, i) => (
+              <button
+                key={size}
+                type="button"
+                aria-pressed={pageSize === size}
+                onClick={() => changePageSize(size)}
+                className={`px-3 py-[6px] ${i > 0 ? "border-l border-line-strong" : ""} ${
+                  pageSize === size ? "bg-ink text-surface" : "hover:text-ink"
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+            <span className="border-l border-line-strong px-3 py-[6px] uppercase tracking-[.08em]">per page</span>
+          </div>
+          <p className="font-mono text-xs text-ink-soft">
+            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, sortedRows.length)} of{" "}
+            {sortedRows.length}
+          </p>
+        </div>
+      )}
+
       {!loading && rows.length > 0 && viewMode === "list" && (
         <div className="overflow-x-auto border border-line bg-surface">
           <table className="w-full border-collapse text-sm">
@@ -313,7 +380,7 @@ export default function LibraryBrowsePage() {
               </tr>
             </thead>
             <tbody>
-              {sortedRows.map((row) => (
+              {pagedRows.map((row) => (
                 <tr
                   key={row.id}
                   onClick={() => router.push(`/dashboard/copies/${row.id}`)}
@@ -408,7 +475,7 @@ export default function LibraryBrowsePage() {
 
       {!loading && rows.length > 0 && viewMode === "grid" && (
         <div className="grid grid-cols-2 gap-x-[26px] gap-y-[30px] sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {sortedRows.map((row) => (
+          {pagedRows.map((row) => (
             <div key={row.id} className="space-y-[7px]">
               <div
                 className="group relative cursor-pointer"
@@ -472,6 +539,55 @@ export default function LibraryBrowsePage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+          <p className="font-mono text-xs text-ink-soft">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => setPage(currentPage - 1)}
+              aria-label="Previous page"
+              className="flex h-[30px] min-w-[30px] items-center justify-center rounded-[2px] border border-line-strong bg-surface font-mono text-xs text-ink-muted hover:bg-chip-hover hover:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-surface disabled:hover:text-ink-muted"
+            >
+              ‹
+            </button>
+            {pageNumbers.map((n, i) =>
+              n === "…" ? (
+                <span key={`ellipsis-${i}`} className="flex h-[30px] w-[30px] items-center justify-center font-mono text-xs text-ink-faint">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={n}
+                  type="button"
+                  aria-current={n === currentPage}
+                  onClick={() => setPage(n)}
+                  className={`flex h-[30px] min-w-[30px] items-center justify-center rounded-[2px] border font-mono text-xs ${
+                    n === currentPage
+                      ? "border-ink bg-ink text-surface"
+                      : "border-line-strong bg-surface text-ink-muted hover:bg-chip-hover hover:text-ink"
+                  }`}
+                >
+                  {n}
+                </button>
+              )
+            )}
+            <button
+              type="button"
+              disabled={currentPage === totalPages}
+              onClick={() => setPage(currentPage + 1)}
+              aria-label="Next page"
+              className="flex h-[30px] min-w-[30px] items-center justify-center rounded-[2px] border border-line-strong bg-surface font-mono text-xs text-ink-muted hover:bg-chip-hover hover:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-surface disabled:hover:text-ink-muted"
+            >
+              ›
+            </button>
+          </div>
         </div>
       )}
 

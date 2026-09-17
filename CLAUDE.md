@@ -354,6 +354,25 @@ again:**
   "Confirm & save". The per-field "Editing…" eyebrow label from an early round was cut as
   unnecessary once the tinted panel + left accent bar made the editing state clear on its own.
 
+**Library list pagination — key decisions if you touch this again:** `/api/search` used to
+truncate its response (50 rows for a text query, 300 for browsing everything) before any
+pagination existed; that cap is now removed entirely — the route returns every matching
+row and `src/app/dashboard/search/page.tsx` slices it into pages client-side, the same
+place it already does client-side sorting/filtering over the one fetched result set. A
+picker (25/50/100/200, default 25) sits above the list/grid; a Prev/Next + numbered pager
+(windowed around the current page, not every page number) appears below the results only
+once there's more than one page. State rules, all per Jack's explicit spec: changing page
+size or re-running search/sort resets to page 1 (the result set just changed under you);
+paging with Next/Prev never touches the page size (this was the actual bug reported — with
+no pagination yet, there was no defined behavior for "page forward at 200" at all); List ↔
+Grid keeps both the current page and size, since it's the same results only displayed
+differently. The chosen page size persists across visits via `localStorage`
+(`stacks:library-page-size`, same pattern as the existing `stacks:library-view-mode` key)
+— the current page itself is never persisted and always starts at 1 on a fresh visit, since
+a remembered mid-list page number wouldn't mean anything against a result set that may have
+changed since. Mocked up first as an Artifact (one round of feedback: Jack asked to drop the
+"Show" label next to the page-size numbers) before any code was touched.
+
 ## Working agreements (how the user wants sessions to run)
 
 These were established explicitly mid-project and apply to all future work,
