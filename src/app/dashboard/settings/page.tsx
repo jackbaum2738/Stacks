@@ -8,6 +8,7 @@ import { InviteLinkManager } from "@/components/invite-link-manager";
 import { DeleteLibraryForm } from "@/components/delete-library-form";
 import { BackupImportSection } from "@/components/backup-import-section";
 import { canEditLibrary, canManageLibrarySettings, isOwner } from "@/lib/permissions";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export default async function SettingsPage() {
   const context = await getCurrentLibrary();
@@ -49,6 +50,19 @@ export default async function SettingsPage() {
         <h1 className="font-display text-[32px] font-semibold text-ink">Settings</h1>
         <p className="font-mono text-[11px] tracking-[.10em] text-ink-soft uppercase">{context.library.name}</p>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Appearance</h2>
+        <div className="flex flex-wrap items-center justify-between gap-4 border border-line bg-surface px-4 py-4">
+          <div>
+            <p className="text-[14.5px] font-medium text-ink">Theme</p>
+            <p className="mt-0.5 text-[13px] text-ink-soft">
+              Choose how Stacks looks on this device. System follows this device&apos;s setting.
+            </p>
+          </div>
+          <ThemeSwitcher />
+        </div>
+      </section>
 
       {canManage && (
         <section className="space-y-3">

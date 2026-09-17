@@ -4,7 +4,7 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
-6.3.0 -- 2026-09-17
+6.4.0 -- 2026-09-17
 --------------------
 - Added a real permission system: alongside Owner, a library now has Admin, Member, and
   View Only roles, replacing the old setup where every non-owner had the same access and
@@ -44,6 +44,27 @@ Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/change
   Library browse/grid view, book detail) can hide actions a View Only member can't take
   without each one re-deriving the role from scratch.
 
+
+6.3.0 -- 2026-09-17
+--------------------
+- Added a Light / Dark / System theme switcher to Settings, so the app no longer
+  has to follow the OS preference. Choice is stored per browser (localStorage),
+  not per account -- deliberate, since it's a device-level display preference and
+  keeping it there avoids a schema change and lets a shared device revert with
+  no account switching. A blocking inline script in the root layout applies a
+  stored choice before first paint, so there's no flash of the wrong theme on
+  load.
+- This needed touching how dark mode itself works, not just adding a toggle:
+  the existing `@media (prefers-color-scheme: dark)` block in globals.css only
+  ever reflected the OS, with no way to override it. It's now guarded so an
+  explicit choice wins -- a `data-theme="light"|"dark"` attribute on <html>
+  (absent for "System") -- with the same dark variable set duplicated under a
+  new `:root[data-theme="dark"]` block for the explicit-dark case. Tailwind's
+  own `dark:` variant (used in one place, book-cover.tsx, to swap which token
+  a border/background uses rather than just riding a token's own light/dark
+  value) defaults to OS-only in Tailwind v4 regardless of this, so it's now
+  redefined via `@custom-variant dark` to also honor `data-theme`, or it would
+  have silently ignored an explicit choice.
 
 6.2.0 -- 2026-09-16
 --------------------
