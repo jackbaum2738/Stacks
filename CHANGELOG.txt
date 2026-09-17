@@ -4,179 +4,60 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.5.1 -- 2026-09-17
+--------------------
+- Fixed every entry from 6.0.0 through 6.5.0 reading as hard-wrapped paragraphs -- short
+  lines cutting off well before the margin instead of running the full width like every
+  entry before and since. Root cause: the CSV backup/import PR (6.0.0) wrote its entries
+  pre-wrapped at ~90 characters per line rather than as one line per bullet, and every PR
+  after it through 6.5.0 kept that style; the wrapping even broke one word mid-hyphen
+  ("bottom-to-\ntop" in the 6.1.0 entry). Reflowed those entries back to one line per
+  bullet, matching every entry before 6.0.0 and this entry going forward. Also fixed two
+  missing blank lines found along the way (between the 6.4.0/6.3.0 and 6.3.0/6.2.0
+  entries) -- every other version boundary in the file has two.
+
+
 6.5.0 -- 2026-09-17
 --------------------
-- Replaced the "Copy ID" column in the CSV export/import with a short, human-friendly
-  code ("C-7F3K9Q") instead of the raw internal database ID ("cmg7x1p3k0007ky04q8f2h1z9").
-  The code is random rather than sequential (explicit user choice) and only needs to be
-  unique within its own library, never across libraries, since every lookup that uses it
-  is already scoped by library first. Generated once, when a copy is created (scan-in or
-  a new row during import), via a shared helper (src/lib/copy-code.ts) so both call sites
-  stay consistent; excludes visually-confusing characters (0/O, 1/I/L). A migration
-  backfilled the new column for existing copies. Import's Copy-ID matching now looks up
-  by this code instead of the raw ID -- nothing else in the app displayed or depended on
-  the old raw ID, so the change is contained to export, import, and copy creation.
+- Replaced the "Copy ID" column in the CSV export/import with a short, human-friendly code ("C-7F3K9Q") instead of the raw internal database ID ("cmg7x1p3k0007ky04q8f2h1z9"). The code is random rather than sequential (explicit user choice) and only needs to be unique within its own library, never across libraries, since every lookup that uses it is already scoped by library first. Generated once, when a copy is created (scan-in or a new row during import), via a shared helper (src/lib/copy-code.ts) so both call sites stay consistent; excludes visually-confusing characters (0/O, 1/I/L). A migration backfilled the new column for existing copies. Import's Copy-ID matching now looks up by this code instead of the raw ID -- nothing else in the app displayed or depended on the old raw ID, so the change is contained to export, import, and copy creation.
+
 
 6.4.0 -- 2026-09-17
 --------------------
-- Added a real permission system: alongside Owner, a library now has Admin, Member, and
-  View Only roles, replacing the old setup where every non-owner had the same access and
-  "Admin" existed in the schema but nothing could ever grant it. Admin can do everything a
-  Member can plus manage shelves, invite links, CSV import, and other members' roles.
-  Member can scan/reserve/edit books but not touch settings. View Only is read-only --
-  can't scan, reserve, edit, or add notes at all. Rules worked out and agreed with the user
-  before building: Member is deliberately excluded from CSV import (not just shelf
-  management) because import auto-creates a Shelf row for any unrecognized shelf name in
-  the file, which would otherwise let a Member create shelves indirectly through the back
-  door of a feature they're supposed to be locked out of.
-- The single library-wide invite link is now three separate links -- "Invite as Admin",
-  "Invite as Member", "Invite as View Only" -- each independently generated/regenerated in
-  Settings, since there's still no transactional email to target an invite at one person's
-  role individually. Owner is never a link target; the only way to become Owner is a
-  transfer. `Library.inviteCode` (unique, single column) is replaced by
-  `inviteCodeAdmin`/`inviteCodeMember`/`inviteCodeViewOnly`; the migration copies any
-  already-shared link into `inviteCodeAdmin` so it keeps granting the same access it always
-  did (the old link always granted full read/write access, which is what Admin represents
-  now).
-- Added ownership transfer ("Make owner" on another member's row) -- the only way anyone,
-  including the current Owner, stops being Owner. A Membership row with role OWNER can
-  never be deleted or have its role changed through the regular member-management
-  endpoints (enforced server-side, not just hidden in the UI), so an Owner who wants to
-  leave the library transfers ownership first, then removes their own now-Admin membership
-  like anyone else. This also means an Admin can never remove or demote the Owner, by
-  construction rather than by a member-count check.
-- Every plain "Member" from before this change is promoted to Admin in the migration --
-  that role already had full read/write access (everything short of managing
-  members/invites/deleting the library, none of which the old UI even exposed), so nobody's
-  access shrinks the moment this ships. The new, narrower "Member" tier only applies to
-  accounts created after this point.
-- Centralized the role checks in src/lib/permissions.ts and a `require: "edit" | "manage"`
-  option on requireLibraryContext (src/lib/api-context.ts) rather than repeating role
-  comparisons in every route, and a LibraryRoleProvider React context
-  (src/components/library-role-context.tsx) so client components (the Scan station, the
-  Library browse/grid view, book detail) can hide actions a View Only member can't take
-  without each one re-deriving the role from scratch.
+- Added a real permission system: alongside Owner, a library now has Admin, Member, and View Only roles, replacing the old setup where every non-owner had the same access and "Admin" existed in the schema but nothing could ever grant it. Admin can do everything a Member can plus manage shelves, invite links, CSV import, and other members' roles. Member can scan/reserve/edit books but not touch settings. View Only is read-only -- can't scan, reserve, edit, or add notes at all. Rules worked out and agreed with the user before building: Member is deliberately excluded from CSV import (not just shelf management) because import auto-creates a Shelf row for any unrecognized shelf name in the file, which would otherwise let a Member create shelves indirectly through the back door of a feature they're supposed to be locked out of.
+- The single library-wide invite link is now three separate links -- "Invite as Admin", "Invite as Member", "Invite as View Only" -- each independently generated/regenerated in Settings, since there's still no transactional email to target an invite at one person's role individually. Owner is never a link target; the only way to become Owner is a transfer. `Library.inviteCode` (unique, single column) is replaced by `inviteCodeAdmin`/`inviteCodeMember`/`inviteCodeViewOnly`; the migration copies any already-shared link into `inviteCodeAdmin` so it keeps granting the same access it always did (the old link always granted full read/write access, which is what Admin represents now).
+- Added ownership transfer ("Make owner" on another member's row) -- the only way anyone, including the current Owner, stops being Owner. A Membership row with role OWNER can never be deleted or have its role changed through the regular member-management endpoints (enforced server-side, not just hidden in the UI), so an Owner who wants to leave the library transfers ownership first, then removes their own now-Admin membership like anyone else. This also means an Admin can never remove or demote the Owner, by construction rather than by a member-count check.
+- Every plain "Member" from before this change is promoted to Admin in the migration -- that role already had full read/write access (everything short of managing members/invites/deleting the library, none of which the old UI even exposed), so nobody's access shrinks the moment this ships. The new, narrower "Member" tier only applies to accounts created after this point.
+- Centralized the role checks in src/lib/permissions.ts and a `require: "edit" | "manage"` option on requireLibraryContext (src/lib/api-context.ts) rather than repeating role comparisons in every route, and a LibraryRoleProvider React context (src/components/library-role-context.tsx) so client components (the Scan station, the Library browse/grid view, book detail) can hide actions a View Only member can't take without each one re-deriving the role from scratch.
+
 
 6.3.0 -- 2026-09-17
 --------------------
-- Added a Light / Dark / System theme switcher to Settings, so the app no longer
-  has to follow the OS preference. Choice is stored per browser (localStorage),
-  not per account -- deliberate, since it's a device-level display preference and
-  keeping it there avoids a schema change and lets a shared device revert with
-  no account switching. A blocking inline script in the root layout applies a
-  stored choice before first paint, so there's no flash of the wrong theme on
-  load.
-- This needed touching how dark mode itself works, not just adding a toggle:
-  the existing `@media (prefers-color-scheme: dark)` block in globals.css only
-  ever reflected the OS, with no way to override it. It's now guarded so an
-  explicit choice wins -- a `data-theme="light"|"dark"` attribute on <html>
-  (absent for "System") -- with the same dark variable set duplicated under a
-  new `:root[data-theme="dark"]` block for the explicit-dark case. Tailwind's
-  own `dark:` variant (used in one place, book-cover.tsx, to swap which token
-  a border/background uses rather than just riding a token's own light/dark
-  value) defaults to OS-only in Tailwind v4 regardless of this, so it's now
-  redefined via `@custom-variant dark` to also honor `data-theme`, or it would
-  have silently ignored an explicit choice.
+- Added a Light / Dark / System theme switcher to Settings, so the app no longer has to follow the OS preference. Choice is stored per browser (localStorage), not per account -- deliberate, since it's a device-level display preference and keeping it there avoids a schema change and lets a shared device revert with no account switching. A blocking inline script in the root layout applies a stored choice before first paint, so there's no flash of the wrong theme on load.
+- This needed touching how dark mode itself works, not just adding a toggle: the existing `@media (prefers-color-scheme: dark)` block in globals.css only ever reflected the OS, with no way to override it. It's now guarded so an explicit choice wins -- a `data-theme="light"|"dark"` attribute on <html> (absent for "System") -- with the same dark variable set duplicated under a new `:root[data-theme="dark"]` block for the explicit-dark case. Tailwind's own `dark:` variant (used in one place, book-cover.tsx, to swap which token a border/background uses rather than just riding a token's own light/dark value) defaults to OS-only in Tailwind v4 regardless of this, so it's now redefined via `@custom-variant dark` to also honor `data-theme`, or it would have silently ignored an explicit choice.
+
 
 6.2.0 -- 2026-09-16
 --------------------
-- Added a real progress indicator to the import loading screen: a determinate progress
-  bar, a "Row X of Y" counter with percentage, a ticker naming the book currently being
-  processed, and a live New/Updated/Skipped tally that updates as it goes -- so a large
-  import (hundreds of rows) reads as visibly working the whole way through, not just a
-  static "Importing..." label for however long it takes. Mocked up first as an Artifact
-  over a couple of rounds before building.
-- This required changing how import actually runs, not just the UI: previously the whole
-  file was sent as one request that only replied once every row was done, which had two
-  problems -- no way to show real progress mid-request, and (worse) a real risk of the
-  whole thing rolling back or dying if the connection dropped before that one giant
-  response ever came back. Now the client splits the file into batches of 10 rows and
-  sends them one at a time, each one committing fully before the next is sent, so closing
-  the tab mid-import only loses whatever hasn't been sent yet -- everything already
-  processed stays saved. If a batch request fails outright, the confirm screen reports
-  exactly how many of the file's rows made it in before stopping, since by then some
-  already have -- re-running the same file is safe and picks up the rest (Copy-ID-matched
-  rows just re-match harmlessly).
-- The progress bar/ticker still read as continuously moving even though the batches
-  arrive in chunks: each batch's rows are revealed to the UI one at a time at a pace that
-  adapts to how long that batch actually took, rather than jumping straight to the new
-  totals the instant a batch's response lands. The import endpoint now returns a
-  per-row outcome list (not just aggregate counts) specifically so the client has real
-  data to animate through, rather than faking movement.
+- Added a real progress indicator to the import loading screen: a determinate progress bar, a "Row X of Y" counter with percentage, a ticker naming the book currently being processed, and a live New/Updated/Skipped tally that updates as it goes -- so a large import (hundreds of rows) reads as visibly working the whole way through, not just a static "Importing..." label for however long it takes. Mocked up first as an Artifact over a couple of rounds before building.
+- This required changing how import actually runs, not just the UI: previously the whole file was sent as one request that only replied once every row was done, which had two problems -- no way to show real progress mid-request, and (worse) a real risk of the whole thing rolling back or dying if the connection dropped before that one giant response ever came back. Now the client splits the file into batches of 10 rows and sends them one at a time, each one committing fully before the next is sent, so closing the tab mid-import only loses whatever hasn't been sent yet -- everything already processed stays saved. If a batch request fails outright, the confirm screen reports exactly how many of the file's rows made it in before stopping, since by then some already have -- re-running the same file is safe and picks up the rest (Copy-ID-matched rows just re-match harmlessly).
+- The progress bar/ticker still read as continuously moving even though the batches arrive in chunks: each batch's rows are revealed to the UI one at a time at a pace that adapts to how long that batch actually took, rather than jumping straight to the new totals the instant a batch's response lands. The import endpoint now returns a per-row outcome list (not just aggregate counts) specifically so the client has real data to animate through, rather than faking movement.
 
 
 6.1.0 -- 2026-09-16
 --------------------
-- Added an animated loading state to the import confirm modal, shown while the actual
-  import request is in flight: the three bars of the Mark logo drop into place bottom-to-
-  top like books settling onto a shelf, then lift away and repeat (pure CSS keyframes,
-  respects prefers-reduced-motion). Mocked up first in a Claude Design canvas -- two
-  motion directions were drafted (bars dropping in vertically vs. sliding in from
-  alternating sides) before picking the dropping version.
-- Fixed the Settings page's "Last backup taken by..." line not updating until the page
-  was manually refreshed. Root cause: the download button triggered the export via a
-  plain `<a>` click (fire-and-forget, no way to know when the request actually finished)
-  and just guessed an 800ms delay before calling `router.refresh()` -- under real
-  conditions the refresh could fire before the server's `Library.lastBackupAt` write had
-  actually completed, so the page re-rendered with stale data. Fixed by fetching the
-  export directly (so the response is awaited, by which point the write has definitely
-  landed), reading the new date/name back from response headers the export route now
-  sets, and updating the displayed text from that immediately -- no more guessing a
-  timeout, and no dependency on a full router refresh's timing at all.
+- Added an animated loading state to the import confirm modal, shown while the actual import request is in flight: the three bars of the Mark logo drop into place bottom-to-top like books settling onto a shelf, then lift away and repeat (pure CSS keyframes, respects prefers-reduced-motion). Mocked up first in a Claude Design canvas -- two motion directions were drafted (bars dropping in vertically vs. sliding in from alternating sides) before picking the dropping version.
+- Fixed the Settings page's "Last backup taken by..." line not updating until the page was manually refreshed. Root cause: the download button triggered the export via a plain `<a>` click (fire-and-forget, no way to know when the request actually finished) and just guessed an 800ms delay before calling `router.refresh()` -- under real conditions the refresh could fire before the server's `Library.lastBackupAt` write had actually completed, so the page re-rendered with stale data. Fixed by fetching the export directly (so the response is awaited, by which point the write has definitely landed), reading the new date/name back from response headers the export route now sets, and updating the displayed text from that immediately -- no more guessing a timeout, and no dependency on a full router refresh's timing at all.
 
 
 6.0.0 -- 2026-09-15
 --------------------
-- Added CSV backup and import to Settings, in a new "Backup & Import" block. Mocked up first
-  as an interactive Artifact over several rounds before any code was written -- see that
-  session's design decisions below, since most of this feature's behavior was worked out
-  there rather than while building.
-- Backup: a "Download CSV backup" button exports every non-removed copy (Copy ID, ISBN,
-  effective title/authors/publisher, shelf, status, reservation, notes, BookCrossing ID,
-  date added) using the library's override-merged view (applyBookOverride), so a backup
-  reflects what the library actually sees, not just the shared Book row. Records who took
-  the backup and when (Library.lastBackupAt/lastBackupByUserId) and shows it above the
-  button. A separate "Download import template" link produces the same file shape with zero
-  data rows -- literally what a real export produces for an empty library.
-- Import: drag-and-drop or file-picker CSV upload, parsed and column-mapped entirely in the
-  browser (src/lib/csv.ts's isomorphic parseCsv) before anything reaches the server. The
-  mapping screen auto-matches columns by name, lets any column be manually remapped or
-  ignored via a dropdown in its header, and disables a target field in every other column's
-  dropdown once one column claims it -- so the same field can never be mapped twice, a bug
-  caught during the mockup round rather than in production.
-- Import matches rows to existing copies by Copy ID (from a prior export), not ISBN --
-  ISBN alone can't tell two physical copies of the same book apart. A row with no Copy ID,
-  or one this library doesn't recognize, always creates a new copy rather than merging into
-  an existing one; a matched row only touches the fields it actually supplies, leaving
-  everything else on that copy untouched (real upsert semantics, not a blind overwrite).
-  Every ISBN is validated with the same cleanIsbn/isValidIsbn rules scan-in already uses;
-  rows with a missing or malformed ISBN are skipped and reported as separate counts on the
-  confirm screen, which now runs a real dry-run against the database (a `dryRun` mode on
-  POST /api/library/import that does the same Copy ID/ISBN checks with zero writes) so the
-  new/updated/skipped counts shown before committing are exactly what the real import will
-  do, not an estimate.
-- A brand-new ISBN encountered during import never triggers a live Google Books/Open
-  Library lookup -- that's the same external-call path that already caused a production
-  timeout once for a single scan-in, and an import can easily contain dozens of new ISBNs.
-  Instead it gets a bare Book placeholder marked "manual-unresolved" (reusing scan-in's own
-  failed-lookup marker), which scan-in already retries automatically the next time that
-  ISBN is scanned in anywhere. Any book-content fields (title/authors/publisher) a row
-  supplies are written as this library's BookOverride, never onto the shared Book row --
-  so importing bad or guessed data into one library can't corrupt what another library
-  sharing that ISBN sees, the same protection the manual book-edit form already has.
-- Added a "Look up this ISBN" button to the book-edit page for any book still marked
-  manual-unresolved, capped at one manual attempt per copy (Book.manualLookupAttempts) so
-  it can't be spammed on a book that genuinely isn't in either catalog -- but this cap is
-  completely separate from, and doesn't limit, scan-in's own automatic retry, since that
-  only ever fires once per real physical scan and the catalogs it checks keep growing. A
-  successful lookup -- whether a real catalog hit or one already resolved a moment earlier
-  by a different copy of the same book, which skips the network call entirely -- always
-  wins over whatever was on the page and is written straight to the database immediately,
-  with no separate save step, so nothing is lost if the page is closed without saving. It
-  also deletes this library's existing BookOverride for that book rather than leaving it in
-  place: an override otherwise always wins over the canonical Book in the merged view, which
-  would make the button look like it does nothing if a library had already saved its own
-  correction for a still-unidentified book.
+- Added CSV backup and import to Settings, in a new "Backup & Import" block. Mocked up first as an interactive Artifact over several rounds before any code was written -- see that session's design decisions below, since most of this feature's behavior was worked out there rather than while building.
+- Backup: a "Download CSV backup" button exports every non-removed copy (Copy ID, ISBN, effective title/authors/publisher, shelf, status, reservation, notes, BookCrossing ID, date added) using the library's override-merged view (applyBookOverride), so a backup reflects what the library actually sees, not just the shared Book row. Records who took the backup and when (Library.lastBackupAt/lastBackupByUserId) and shows it above the button. A separate "Download import template" link produces the same file shape with zero data rows -- literally what a real export produces for an empty library.
+- Import: drag-and-drop or file-picker CSV upload, parsed and column-mapped entirely in the browser (src/lib/csv.ts's isomorphic parseCsv) before anything reaches the server. The mapping screen auto-matches columns by name, lets any column be manually remapped or ignored via a dropdown in its header, and disables a target field in every other column's dropdown once one column claims it -- so the same field can never be mapped twice, a bug caught during the mockup round rather than in production.
+- Import matches rows to existing copies by Copy ID (from a prior export), not ISBN -- ISBN alone can't tell two physical copies of the same book apart. A row with no Copy ID, or one this library doesn't recognize, always creates a new copy rather than merging into an existing one; a matched row only touches the fields it actually supplies, leaving everything else on that copy untouched (real upsert semantics, not a blind overwrite). Every ISBN is validated with the same cleanIsbn/isValidIsbn rules scan-in already uses; rows with a missing or malformed ISBN are skipped and reported as separate counts on the confirm screen, which now runs a real dry-run against the database (a `dryRun` mode on POST /api/library/import that does the same Copy ID/ISBN checks with zero writes) so the new/updated/skipped counts shown before committing are exactly what the real import will do, not an estimate.
+- A brand-new ISBN encountered during import never triggers a live Google Books/Open Library lookup -- that's the same external-call path that already caused a production timeout once for a single scan-in, and an import can easily contain dozens of new ISBNs. Instead it gets a bare Book placeholder marked "manual-unresolved" (reusing scan-in's own failed-lookup marker), which scan-in already retries automatically the next time that ISBN is scanned in anywhere. Any book-content fields (title/authors/publisher) a row supplies are written as this library's BookOverride, never onto the shared Book row -- so importing bad or guessed data into one library can't corrupt what another library sharing that ISBN sees, the same protection the manual book-edit form already has.
+- Added a "Look up this ISBN" button to the book-edit page for any book still marked manual-unresolved, capped at one manual attempt per copy (Book.manualLookupAttempts) so it can't be spammed on a book that genuinely isn't in either catalog -- but this cap is completely separate from, and doesn't limit, scan-in's own automatic retry, since that only ever fires once per real physical scan and the catalogs it checks keep growing. A successful lookup -- whether a real catalog hit or one already resolved a moment earlier by a different copy of the same book, which skips the network call entirely -- always wins over whatever was on the page and is written straight to the database immediately, with no separate save step, so nothing is lost if the page is closed without saving. It also deletes this library's existing BookOverride for that book rather than leaving it in place: an override otherwise always wins over the canonical Book in the merged view, which would make the button look like it does nothing if a library had already saved its own correction for a still-unidentified book.
 
 
 5.2.1 -- 2026-09-15
