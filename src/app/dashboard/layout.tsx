@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Mark size={22} />
               Stacks
             </span>
-            <ProfileMenu name={user.name ?? user.email} username={user.username} email={user.email} />
+            <ProfileMenu name={user.name ?? user.email} username={user.username} />
           </div>
         </header>
         <main className="mx-auto flex w-full max-w-[920px] flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
@@ -58,7 +58,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 activeId={context.library.id}
               />
             </div>
-            <ProfileMenu name={user.name ?? user.email} username={user.username} email={user.email} />
+            <ProfileMenu name={user.name ?? user.email} username={user.username} />
           </div>
           <NavTabs />
         </header>

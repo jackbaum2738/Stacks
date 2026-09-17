@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export function ProfileMenu({ name, username, email }: { name: string; username: string | null; email: string }) {
+export function ProfileMenu({ name, username }: { name: string; username: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -60,7 +60,7 @@ export function ProfileMenu({ name, username, email }: { name: string; username:
           <div className="border-b border-line px-2.5 py-2 pb-1.5 font-sans text-[13px] text-ink-soft">
             Signed in as
             <strong className="block truncate font-sans text-sm font-semibold text-ink">
-              {username ?? email}
+              {username}
             </strong>
           </div>
           <Link
