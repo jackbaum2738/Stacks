@@ -290,8 +290,8 @@ export default function LibraryBrowsePage() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink text-left">
-                <th className="w-[42px] py-2 pl-4"></th>
-                <th className="w-11 py-2"></th>
+                {canEdit && <th className="w-[42px] py-2 pl-4"></th>}
+                <th className={canEdit ? "w-11 py-2" : "w-[60px] py-2 pl-4"}></th>
                 {headers.map((h) => (
                   <th
                     key={h.key}
@@ -320,8 +320,8 @@ export default function LibraryBrowsePage() {
                     selected.has(row.id) ? "bg-row-hover" : ""
                   }`}
                 >
-                  <td onClick={canEdit ? (e) => e.stopPropagation() : undefined} className="py-2.5 pl-4">
-                    {canEdit && (
+                  {canEdit && (
+                    <td onClick={(e) => e.stopPropagation()} className="py-2.5 pl-4">
                       <input
                         type="checkbox"
                         checked={selected.has(row.id)}
@@ -329,9 +329,9 @@ export default function LibraryBrowsePage() {
                         aria-label={`Select ${row.book.title}`}
                         className="accent-accent"
                       />
-                    )}
-                  </td>
-                  <td className="py-2.5">
+                    </td>
+                  )}
+                  <td className={canEdit ? "py-2.5" : "py-2.5 pl-4"}>
                     <div className="relative h-[50px] w-[34px]">
                       <BookCover src={row.book.coverUrl} alt={row.book.title} className="h-[50px] w-[34px]" />
                       {row.notes && (
