@@ -2,18 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PersonCombobox } from "@/components/person-combobox";
-import { formLabelClass, formInputClass } from "@/lib/form-styles";
+import { PersonCombobox, type PersonSummary } from "@/components/person-combobox";
+import { formLabelClass } from "@/lib/form-styles";
 
 interface ModalCopy {
   id: string;
   book: { title: string };
-  reservation: { id: string; reservedFor: string; contact: string | null } | null;
+  reservation: { id: string; person: PersonSummary | null } | null;
 }
 
-function commonValue(copies: ModalCopy[], key: "reservedFor" | "contact"): string {
-  const values = new Set(copies.map((c) => (c.reservation?.[key] ?? "") || ""));
-  return values.size === 1 ? [...values][0] : "";
+function commonPerson(copies: ModalCopy[]): PersonSummary | null {
+  const ids = new Set(copies.map((c) => c.reservation?.person?.id ?? ""));
+  if (ids.size !== 1) return null;
+  return copies[0]?.reservation?.person ?? null;
 }
 
 /**
@@ -36,8 +37,7 @@ export function ReservationModal({
   const targets = mode === "edit" ? copies.filter((c) => c.reservation) : copies;
   const bulk = targets.length > 1;
 
-  const [reservedFor, setReservedFor] = useState(mode === "edit" ? commonValue(targets, "reservedFor") : "");
-  const [contact, setContact] = useState(mode === "edit" ? commonValue(targets, "contact") : "");
+  const [person, setPerson] = useState<PersonSummary | null>(mode === "edit" ? commonPerson(targets) : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,8 +45,7 @@ export function ReservationModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const name = reservedFor.trim();
-    if (!name) return;
+    if (!person) return;
     setBusy(true);
     setError(null);
 
@@ -56,12 +55,12 @@ export function ReservationModal({
           ? fetch(`/api/reservations/${c.reservation.id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reservedFor: name, contact: contact || null }),
+              body: JSON.stringify({ personId: person.id }),
             })
           : fetch("/api/reservations", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ copyId: c.id, reservedFor: name, contact: contact || undefined }),
+              body: JSON.stringify({ copyId: c.id, personId: person.id }),
             })
       )
     );
@@ -113,8 +112,8 @@ export function ReservationModal({
     mode === "edit"
       ? bulk
         ? `Editing ${targets.length} reservations${
-            reservedFor ? ` — all currently for ${reservedFor}` : " for different people"
-          }. Saving applies the name below to all of them.`
+            person ? ` — all currently for ${person.name}` : " for different people"
+          }. Saving applies the person below to all of them.`
         : `Change who “${targets[0].book.title}” is reserved for, or remove the reservation.`
       : `Hold ${bulk ? "these books" : "this book"} for a specific person until you're ready to send ${bulk ? "them" : "it"}.`;
 
@@ -133,29 +132,16 @@ export function ReservationModal({
         <h2 className="mb-1 font-display text-2xl leading-[1.2] font-semibold text-ink">{heading}</h2>
         <p className="mb-4 font-sans text-sm leading-[1.55] text-ink-soft">{subheading}</p>
 
-        <div className="mb-3 space-y-1">
+        <div className="mb-4 space-y-1">
           <label htmlFor="reservationModalName" className={formLabelClass}>
             Reserved for
           </label>
           <PersonCombobox
             id="reservationModalName"
-            value={reservedFor}
-            onChange={setReservedFor}
+            selected={person}
+            onChange={setPerson}
             required
-            placeholder="e.g. Hans in Germany"
-          />
-        </div>
-
-        <div className="mb-4 space-y-1">
-          <label htmlFor="reservationModalContact" className={formLabelClass}>
-            Contact (optional)
-          </label>
-          <input
-            id="reservationModalContact"
-            value={contact}
-            onChange={(e) => setContact(e.target.value)}
-            placeholder="Email or note"
-            className={formInputClass}
+            placeholder="e.g. Hans Richter"
           />
         </div>
 
@@ -182,7 +168,7 @@ export function ReservationModal({
             </button>
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || !person}
               className="rounded-[2px] bg-accent px-3 py-2 font-sans text-sm font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
             >
               {mode === "edit" ? "Save changes" : "Reserve"}

@@ -53,6 +53,7 @@ model Library {
   shelves            Shelf[]
   copies             Copy[]
   bookOverrides      BookOverride[]
+  people             Person[]
   lastBackupBy       User?          @relation("LibraryLastBackupBy", fields: [lastBackupByUserId], references: [id], onDelete: SetNull)
 }
 
@@ -160,12 +161,38 @@ model Copy {
 model Reservation {
   id          String    @id @default(cuid())
   copyId      String    @unique
-  reservedFor String
-  contact     String?
+  personId    String?
   note        String?
   createdAt   DateTime  @default(now())
   releasedAt  DateTime?
   createdById String?
   copy        Copy      @relation(fields: [copyId], references: [id], onDelete: Cascade)
+  person      Person?   @relation(fields: [personId], references: [id])
   createdBy   User?     @relation("ReservationCreatedBy", fields: [createdById], references: [id])
+}
+
+/// Someone books get reserved for, in a library-scoped directory (PR: People tab). Only
+/// `name` is required -- email is the sole field that must be unique per library (and can
+/// still be left blank, since a nullable column's NULLs never collide with each other in
+/// Postgres), so unlike email, duplicate names are fully expected (two people can share a
+/// name) and never merged automatically.
+model Person {
+  id           String        @id @default(cuid())
+  libraryId    String
+  name         String
+  email        String?
+  phone        String?
+  location     String?
+  birthday     DateTime?
+  /// Short "P-XXXXXX" identifier for CSV export/import round-tripping, same idea as
+  /// Copy.code -- see src/lib/person-code.ts. Needed because names alone can't be trusted
+  /// to match a row back to the right person once duplicates are allowed.
+  code         String
+  createdAt    DateTime      @default(now())
+  library      Library       @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+
+  @@unique([libraryId, code])
+  @@unique([libraryId, email])
+  @@index([libraryId])
 }

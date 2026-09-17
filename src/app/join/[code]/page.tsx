@@ -20,8 +20,7 @@ export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
     return (
       <Card title="Invite link not valid">
         <p className="font-sans text-sm text-ink-soft">
-          This invite link doesn&apos;t work anymore — it may have been replaced with a new one. Ask
-          whoever shared it with you for a fresh link.
+          This link is no longer valid — contact the library owner to request a new one.
         </p>
       </Card>
     );

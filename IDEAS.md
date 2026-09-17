@@ -3,21 +3,15 @@
 Things worth doing later, captured so they don't get lost. Not scheduled —
 move an item into an actual task when it's time to build it.
 
-## People directory for reservations
+## "Export people" button on the People tab
 
-Right now "reserved for" is a free-text field with autocomplete against
-previously-used names. Turn that into a proper directory instead:
-
-- A "People" tab/page listing everyone books have ever been reserved for.
-- The reservation form becomes a picker from that list, rather than a text
-  field with suggestions.
-- Still be able to add a brand new person directly from the reservation
-  form, without leaving it, for the common case of reserving for someone
-  new.
-
-This would likely mean promoting "reserved for" from a plain string on
-`Reservation` into a real `Person` model scoped to a library, with
-`Reservation` pointing at it by id.
+The full backup zip now always includes `people.csv`, but there's no
+lightweight way to export *just* the directory (no books, no zip) for
+someone who only wants to bulk-edit contact details in a spreadsheet. Add a
+one-click "Export people" button on the People tab itself that downloads a
+bare `people.csv` -- same shape as the file inside the zip, just without the
+books half or the zip wrapper. Raised as an open question during the People
+directory build and left for later rather than assumed.
 
 ## Transactional email
 
@@ -42,12 +36,4 @@ orphan it, so the confirmation must say the library will be deleted too, and
 only on confirming does it delete the user and that library together. If you
 belong to a library with other members, your account can just be removed
 from it (existing membership-removal semantics) without touching the library.
-
-## Better error for a dead invite link
-
-Using an invite link whose library was deleted, or whose invite code was
-regenerated (so it no longer matches any library), currently isn't handled
-with a friendly message. It should say the library doesn't exist/can't be
-found, and suggest contacting the library owner for a new invite link,
-instead of a generic error or a confusing state.
 

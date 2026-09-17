@@ -37,7 +37,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
         setInviterName(data.inviterName);
         setInviteRole(data.role);
       })
-      .catch(() => setInviteError("This invite link isn't valid or has been replaced with a new one."));
+      .catch(() => setInviteError("This link is no longer valid — contact the library owner to request a new one."));
   }, [inviteCode]);
 
   const roleLabel: Record<string, string> = { ADMIN: "an Admin", MEMBER: "a Member", VIEW_ONLY: "a View-Only member" };

@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       include: {
         book: { include: { overrides: { where: { libraryId: context.library.id } } } },
         shelf: true,
-        reservation: true,
+        reservation: { include: { person: true } },
       },
     });
   });

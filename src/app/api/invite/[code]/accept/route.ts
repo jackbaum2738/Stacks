@@ -9,7 +9,12 @@ export async function POST(_request: NextRequest, ctx: RouteContext<"/api/invite
 
   const { code } = await ctx.params;
   const found = await findLibraryByInviteCode(code);
-  if (!found) return NextResponse.json({ error: "Invite link not found" }, { status: 404 });
+  if (!found) {
+    return NextResponse.json(
+      { error: "This link is no longer valid — contact the library owner to request a new one." },
+      { status: 404 }
+    );
+  }
   const { library, role } = found;
 
   const existing = user.memberships.find((m) => m.libraryId === library.id);
