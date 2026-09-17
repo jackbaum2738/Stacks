@@ -398,6 +398,28 @@ not just the PR they were stated in:
   date/name back from response headers the route now sets, updating the
   displayed text from that directly instead of waiting on `router.refresh()`'s
   timing at all.
+- **Adding padding to a fixed-width table cell can silently steal space from a
+  sibling column, and it took three PRs (#21, #23, #25) on the Library list
+  view's View Only row spacing to land on the right fix.** The list table has
+  no `table-layout: fixed`, so column widths are just auto-layout hints — a
+  `w-11` (44px) cell with `pl-4` (16px) padding added on top needs 50px+ of
+  content width, and since the table is `w-full`, the browser takes that extra
+  width from the nearest flexible sibling column (the title cell here) rather
+  than growing the whole table. First attempt (#21) added `pl-4` straight to
+  the cover cell without changing its width hint — content area lost, and the
+  gap that used to exist *after* the cover (before the title) shrank to zero,
+  reading as "smushed" from a new angle. Second attempt (#23) sidestepped this
+  by always reserving the whole bulk-select checkbox column's width, leaving
+  it visually empty for View Only — no column resized, but now there was a
+  much bigger gap before the cover (58px) than after it (10px), reading as
+  lopsided. The actual fix (#25): keep the checkbox column conditional as
+  originally, but when adding `pl-4` to a cell that also has a fixed width
+  hint, **widen that hint by exactly the padding amount** (`w-11` → `w-[60px]`
+  for 16px of added `pl-4`) so the post-padding content area is unchanged and
+  the browser has no reason to shrink anything else. **General lesson**: on
+  any `w-full`, non-`table-layout: fixed` table, adding padding to a cell that
+  also carries a `w-*` width class is never a no-op — either widen the class
+  by the same amount, or the padding comes out of a sibling column's space.
 
 ## Scope notes
 
@@ -584,6 +606,18 @@ not just the PR they were stated in:
   library with a shelf, two scanned-in copies, and a reservation, wiped it as the Admin, and
   confirmed via the API that shelves/copies/reservations were gone while both members and the
   invite code survived.
+- **PR #21/#23/#25** (`claude/project-thread-b5ssfv`, `claude/list-row-spacing-fix`,
+  `claude/list-row-spacing-balance`, all merged) — three iterations, from a project-thread bug
+  report with a screenshot, to fix the Library list view's cover-thumbnail spacing for View
+  Only members (who don't render the bulk-select checkbox column). See the "Bugs found and
+  fixed" note above for the full root-cause arc and the general table-padding lesson it
+  produced. Each round was driven by Jack pointing out exactly what still looked wrong from a
+  real screenshot of the live change rather than a mockup — #21 shipped without a mockup (a
+  small CSS tweak to an already-shipped, already-approved view, not a new UX direction), then
+  needed two more real-screenshot-driven corrections once the actual rendered result didn't
+  match intent. Verified at each step with Playwright: real DOM `getBoundingClientRect()`
+  measurements of the checkbox/cover cell widths (not just eyeballing), comparing an Owner
+  session against a View Only session on local Postgres.
 
 ## Keeping this file current
 
