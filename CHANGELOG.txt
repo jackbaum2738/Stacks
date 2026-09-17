@@ -4,6 +4,15 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.5.1 -- 2026-09-17
+--------------------
+- Fixed cover thumbnails sitting flush against the left edge of the Library list view
+  for View Only members. The left padding for that row came entirely from the bulk-select
+  checkbox cell (`pl-4`), which only Member+ roles have; since View Only never renders that
+  cell, the cover thumbnail became the row's first, unpadded element. Moved the padding
+  onto the cover cell itself (conditionally, only when the checkbox cell is absent) so the
+  row reads the same regardless of role.
+
 6.5.0 -- 2026-09-17
 --------------------
 - Replaced the "Copy ID" column in the CSV export/import with a short, human-friendly

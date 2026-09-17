@@ -263,7 +263,7 @@ export default function LibraryBrowsePage() {
             <thead>
               <tr className="border-b-2 border-ink text-left">
                 {canEdit && <th className="w-[42px] py-2 pl-4"></th>}
-                <th className="w-11 py-2"></th>
+                <th className={`w-11 py-2 ${canEdit ? "" : "pl-4"}`}></th>
                 {headers.map((h) => (
                   <th
                     key={h.key}
@@ -303,7 +303,7 @@ export default function LibraryBrowsePage() {
                       />
                     </td>
                   )}
-                  <td className="py-2.5">
+                  <td className={`py-2.5 ${canEdit ? "" : "pl-4"}`}>
                     <BookCover src={row.book.coverUrl} alt={row.book.title} className="h-[50px] w-[34px]" />
                   </td>
                   <td className="max-w-[240px] truncate py-2.5 font-display text-[16px] font-medium text-ink">
