@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { LibraryLoadingOverlay } from "@/components/library-loading-overlay";
 
 type WipeCounts = { copies: number; shelves: number; reservations: number; bookOverrides: number };
 
@@ -130,30 +131,33 @@ function DeleteLibraryAction({ libraryName }: { libraryName: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  async function onSubmit(e: React.FormEvent) {
+  function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setError(null);
-    const res = await fetch("/api/library", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confirmName }),
+    startTransition(async () => {
+      const res = await fetch("/api/library", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmName }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Something went wrong");
+        return;
+      }
+      router.push("/dashboard");
+      router.refresh();
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Something went wrong");
-      setBusy(false);
-      return;
-    }
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
     <div className="space-y-3 p-4">
+      {isPending && (
+        <LibraryLoadingOverlay message={`Deleting ${libraryName}…`} hint="Returning every book" />
+      )}
       <div>
         <h2 className="font-mono text-[11px] tracking-[.16em] text-accent uppercase">Delete this library</h2>
         <p className="mt-1 font-sans text-sm text-ink-soft">
@@ -182,7 +186,7 @@ function DeleteLibraryAction({ libraryName }: { libraryName: string }) {
           />
           <button
             type="submit"
-            disabled={busy || confirmName !== libraryName}
+            disabled={isPending || confirmName !== libraryName}
             className="rounded-[2px] bg-accent px-4 py-2 font-sans text-sm font-medium text-on-accent hover:brightness-95 disabled:opacity-40"
           >
             Delete library
