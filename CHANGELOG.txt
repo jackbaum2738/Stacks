@@ -4,6 +4,19 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.3.0 -- 2026-09-17
+--------------------
+- Replaced the "Copy ID" column in the CSV export/import with a short, human-friendly
+  code ("C-7F3K9Q") instead of the raw internal database ID ("cmg7x1p3k0007ky04q8f2h1z9").
+  The code is random rather than sequential (explicit user choice) and only needs to be
+  unique within its own library, never across libraries, since every lookup that uses it
+  is already scoped by library first. Generated once, when a copy is created (scan-in or
+  a new row during import), via a shared helper (src/lib/copy-code.ts) so both call sites
+  stay consistent; excludes visually-confusing characters (0/O, 1/I/L). A migration
+  backfilled the new column for existing copies. Import's Copy-ID matching now looks up
+  by this code instead of the raw ID -- nothing else in the app displayed or depended on
+  the old raw ID, so the change is contained to export, import, and copy creation.
+
 6.2.0 -- 2026-09-16
 --------------------
 - Added a real progress indicator to the import loading screen: a determinate progress

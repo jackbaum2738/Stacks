@@ -128,6 +128,11 @@ model Copy {
   bookId         String
   shelfId        String?
   status         CopyStatus   @default(AVAILABLE)
+  /// A short, human-friendly identifier shown in place of `id` on the CSV export/import
+  /// ("C-7F3K9Q") -- random rather than sequential per the user's explicit choice, and
+  /// only unique per-library (see src/lib/copy-code.ts), since nothing ever compares codes
+  /// across libraries.
+  code           String
   addedAt        DateTime     @default(now())
   removedAt      DateTime?
   notes          String?
@@ -137,6 +142,7 @@ model Copy {
   shelf          Shelf?       @relation(fields: [shelfId], references: [id])
   reservation    Reservation?
 
+  @@unique([libraryId, code])
   @@index([libraryId, status])
   @@index([bookId])
 }
