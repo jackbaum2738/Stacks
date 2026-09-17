@@ -22,7 +22,8 @@ export function canEditLibrary(role: Role): boolean {
   return atLeast(role, "MEMBER");
 }
 
-/** Manage shelves, invite links, CSV import, and other members' roles/removal. */
+/** Manage shelves, invite links, CSV import, other members' roles/removal, and wipe the
+ * library's collection. Full library deletion is Owner-only -- see isOwner. */
 export function canManageLibrarySettings(role: Role): boolean {
   return atLeast(role, "ADMIN");
 }
