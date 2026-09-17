@@ -32,14 +32,6 @@ not emailed, and there's no email verification on signup. If that's ever wanted:
   tooling) or **AWS SES** (near-free per email, but more setup friction — sandbox
   mode and domain verification before it can send to arbitrary addresses).
 
-## Light / dark / system theme setting
-
-The app already fully supports light and dark mode (it follows the
-system/browser preference throughout), but there's no in-app control to
-override that. Add a theme preference to Settings — Light / Dark / Match
-system — stored per user (or per library?) so it persists across visits
-regardless of what the OS is set to.
-
 ## "Wipe library" as an alternative to deleting it
 
 The Settings page's "delete this library" only offers full deletion today.

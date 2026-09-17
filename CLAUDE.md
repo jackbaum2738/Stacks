@@ -49,9 +49,21 @@ it didn't, for a while).
 - **Custom auth** — bcryptjs for password hashing, `jose` for JWT session cookies.
   No NextAuth. A separate "active library" cookie tracks which library is
   currently selected (a user can belong to more than one).
-- **Tailwind CSS v4**, dark mode via `dark:` variants driven by OS preference only
-  — there is no in-app light/dark/system toggle yet (recorded as a future idea,
-  see `IDEAS.md`).
+- **Tailwind CSS v4**, dark mode via CSS custom properties re-defined under
+  `@media (prefers-color-scheme: dark)`, plus a Settings → Appearance switcher
+  (PR #16) that can override the OS preference: it sets `data-theme="light"` /
+  `"dark"` on `<html>` (via `localStorage["stacks:theme"]`, read by a small
+  blocking inline script in `layout.tsx` so there's no flash of the wrong
+  theme), or clears the attribute for "System". `globals.css` has three
+  layers to keep in sync when touching theming: the base `:root` block
+  (light values), `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ... } }`
+  (OS-driven dark, unless overridden to light), and `:root[data-theme="dark"]`
+  (explicit dark, regardless of OS) — same variable list duplicated across
+  the last two. Tailwind's own `dark:` variant (rare in this codebase —
+  `book-cover.tsx` is the only user) defaults to OS-preference-only in v4, so
+  it's redefined via `@custom-variant dark` at the top of `globals.css` to
+  also respect the `data-theme` attribute — don't add a `dark:` class
+  anywhere without checking that redefinition still covers it.
 - **Visual identity: "Ex Libris"** (PR #4/#5, replacing the unmodified Next.js
   starter look). Archival/manila palette — paper surfaces, ink text, a stamp-red
   `accent` and teal `accent-2` — as CSS custom properties + Tailwind `@theme`
