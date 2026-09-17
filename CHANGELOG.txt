@@ -4,6 +4,29 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.3.0 -- 2026-09-17
+--------------------
+- Added free-text notes to each copy, styled as a manila notecard (tape strip, slight
+  tilt, folded corner) rather than a plain form field -- for things like "recommended by
+  the Sorensens" or "read this before lending it out again." Notes are per physical copy,
+  not per book title, since two copies of the same ISBN in one library can carry
+  different notes. The database field and its PATCH endpoint already existed (added
+  earlier for CSV round-tripping but never surfaced in the UI); this was mostly wiring up
+  the UI plus a small amount of new client state.
+- The book detail page shows the card directly (add/edit/delete inline, with an
+  auto-growing textarea so editing never requires scrolling to see the whole note). The
+  Library page's grid and list views show a small manila tag in the corner of a copy's
+  cover when it has a note -- clicking the tag opens a lighter read/edit popup in place,
+  without navigating to the book page or disturbing the row's existing reserve/remove
+  buttons. Mocked up first as an Artifact, four rounds of feedback before building: the
+  grid tag originally opened the full book page (changed to a dedicated popup); the list
+  view's note affordance first lived in the row's actions cluster, which threw off icon
+  alignment row-to-row once notes made the icon count inconsistent (moved to the cover
+  corner, matching the grid tile, so actions stay in the same two spots on every row);
+  and the popup itself gained inline editing and the same tape/folded-corner treatment as
+  the on-page card after the first pass only supported reading.
+
+
 6.2.0 -- 2026-09-16
 --------------------
 - Added a real progress indicator to the import loading screen: a determinate progress
