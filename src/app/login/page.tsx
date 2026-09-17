@@ -15,8 +15,9 @@ export default function LoginPage(props: PageProps<"/login">) {
   // lose it.
   const inviteCode = next?.match(/^\/join\/([^/]+)$/)?.[1] ?? null;
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,7 +29,7 @@ export default function LoginPage(props: PageProps<"/login">) {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identifier, password }),
     });
 
     if (!res.ok) {
@@ -62,15 +63,15 @@ export default function LoginPage(props: PageProps<"/login">) {
         )}
 
         <div className="space-y-1">
-          <label htmlFor="email" className={formLabelClass}>
-            Email
+          <label htmlFor="identifier" className={formLabelClass}>
+            Email or username
           </label>
           <input
-            id="email"
-            type="email"
+            id="identifier"
+            type="text"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             className={formInputClass}
           />
         </div>
@@ -79,14 +80,27 @@ export default function LoginPage(props: PageProps<"/login">) {
           <label htmlFor="password" className={formLabelClass}>
             Password
           </label>
-          <input
-            id="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={formInputClass}
-          />
+          <div className="relative">
+            <input
+              id="password"
+              type={passwordVisible ? "text" : "password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`${formInputClass} pr-7`}
+            />
+            <button
+              type="button"
+              onClick={() => setPasswordVisible((v) => !v)}
+              aria-label={passwordVisible ? "Hide password" : "Show password"}
+              className="absolute top-1/2 right-0 -translate-y-1/2 p-1 text-ink-faint hover:text-ink"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <button

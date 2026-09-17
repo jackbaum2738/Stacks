@@ -1,7 +1,20 @@
 import type { Role } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { getCurrentLibrary } from "@/lib/auth";
+import { getCurrentUser, getCurrentLibrary } from "@/lib/auth";
 import { canEditLibrary, canManageLibrarySettings } from "@/lib/permissions";
+
+type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+
+/** Resolves the signed-in user for an account-level route (not library-scoped), or a 401. */
+export async function requireCurrentUser(): Promise<
+  { user: CurrentUser; response: null } | { user: null; response: NextResponse }
+> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { user: null, response: NextResponse.json({ error: "Not signed in" }, { status: 401 }) };
+  }
+  return { user, response: null };
+}
 
 type LibraryContext = NonNullable<Awaited<ReturnType<typeof getCurrentLibrary>>>;
 

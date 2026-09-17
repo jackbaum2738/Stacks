@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser, getCurrentLibrary } from "@/lib/auth";
-import { LogoutButton } from "@/components/logout-button";
+import { ProfileMenu } from "@/components/profile-menu";
 import { LibrarySwitcher } from "@/components/library-switcher";
 import { CreateFirstLibraryForm } from "@/components/create-first-library-form";
 import { Mark } from "@/components/mark";
@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Mark size={22} />
               Stacks
             </span>
-            <LogoutButton />
+            <ProfileMenu name={user.name ?? user.email} username={user.username} email={user.email} />
           </div>
         </header>
         <main className="mx-auto flex w-full max-w-[920px] flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
@@ -58,7 +58,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 activeId={context.library.id}
               />
             </div>
-            <LogoutButton />
+            <ProfileMenu name={user.name ?? user.email} username={user.username} email={user.email} />
           </div>
           <NavTabs />
         </header>

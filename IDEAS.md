@@ -26,17 +26,12 @@ not emailed, and there's no email verification on signup. If that's ever wanted:
   tooling) or **AWS SES** (near-free per email, but more setup friction — sandbox
   mode and domain verification before it can send to arbitrary addresses).
 
-## Profile screen (own-account management)
+## Delete your own account
 
-There's currently no page for managing your own account — only the library-
-level Settings page (shelves, members, delete library). Add one covering:
-
-- Change email and password.
-- Edit other personal details (whatever we end up tracking on `User`).
-- Delete your own account.
-
-Deleting your own profile needs a safety check: if you're the only member of
-a library (checked per library you belong to), deleting your account would
+The Profile screen (PR #28) covers changing your name, username, email, and
+password, but not deleting the account itself — deferred deliberately so that
+PR stayed focused. Needs a safety check: if you're the only member of a
+library (checked per library you belong to), deleting your account would
 orphan it, so the confirmation must say the library will be deleted too, and
 only on confirming does it delete the user and that library together. If you
 belong to a library with other members, your account can just be removed
