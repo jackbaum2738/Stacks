@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
-import { PersonCombobox } from "@/components/person-combobox";
+import { PersonCombobox, type PersonSummary } from "@/components/person-combobox";
 import { useLibraryRole } from "@/components/library-role-context";
 
 interface CopyRowData {
@@ -11,7 +11,7 @@ interface CopyRowData {
   status: "AVAILABLE" | "RESERVED" | "REMOVED";
   shelf: { id: string; name: string } | null;
   book: { title: string; authors: string[]; coverUrl: string | null };
-  reservation: { id: string; reservedFor: string; contact: string | null; note: string | null } | null;
+  reservation: { id: string; person: PersonSummary | null; note: string | null } | null;
 }
 
 export function CopyRow({
@@ -27,19 +27,19 @@ export function CopyRow({
   const router = useRouter();
   const { canEdit } = useLibraryRole();
   const [showReserveForm, setShowReserveForm] = useState(false);
-  const [reservedFor, setReservedFor] = useState("");
-  const [contact, setContact] = useState("");
+  const [person, setPerson] = useState<PersonSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function reserve(e: React.FormEvent) {
     e.preventDefault();
+    if (!person) return;
     setBusy(true);
     setError(null);
     const res = await fetch("/api/reservations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ copyId: copy.id, reservedFor, contact: contact || undefined }),
+      body: JSON.stringify({ copyId: copy.id, personId: person.id }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -48,8 +48,7 @@ export function CopyRow({
       return;
     }
     setShowReserveForm(false);
-    setReservedFor("");
-    setContact("");
+    setPerson(null);
     router.refresh();
     onUpdated?.();
   }
@@ -88,8 +87,8 @@ export function CopyRow({
           </p>
           {copy.reservation && (
             <p className="font-sans text-sm text-reserved-text">
-              Reserved for {copy.reservation.reservedFor}
-              {copy.reservation.contact ? ` (${copy.reservation.contact})` : ""}
+              Reserved for {copy.reservation.person?.name ?? "someone no longer in your directory"}
+              {copy.reservation.person?.email ? ` (${copy.reservation.person.email})` : ""}
             </p>
           )}
         </div>
@@ -126,17 +125,11 @@ export function CopyRow({
 
       {canEdit && showReserveForm && (
         <form onSubmit={reserve} className="flex flex-wrap items-center gap-2 border border-line bg-bg p-3">
-          <PersonCombobox value={reservedFor} onChange={setReservedFor} required />
-          <input
-            value={contact}
-            onChange={(e) => setContact(e.target.value)}
-            placeholder="Contact (optional)"
-            className="min-w-0 flex-1 border-b border-line-strong bg-transparent px-0.5 py-1.5 font-sans text-sm text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
-          />
+          <PersonCombobox selected={person} onChange={setPerson} required />
           <button
             type="submit"
-            disabled={busy}
-            className="rounded-[2px] bg-ink px-3 py-1.5 font-sans text-sm font-medium text-surface hover:brightness-95"
+            disabled={busy || !person}
+            className="rounded-[2px] bg-ink px-3 py-1.5 font-sans text-sm font-medium text-surface hover:brightness-95 disabled:opacity-50"
           >
             Save
           </button>

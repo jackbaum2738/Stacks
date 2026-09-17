@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
 import { StatusPill } from "@/components/status-pill";
 import { ReservationModal } from "@/components/reservation-modal";
+import type { PersonSummary } from "@/components/person-combobox";
 import { DeleteCopiesModal } from "@/components/delete-copies-modal";
 import { LibrarySelectionBar } from "@/components/library-selection-bar";
 import { LibraryContextMenu, type ContextMenuTarget } from "@/components/library-context-menu";
@@ -23,7 +24,7 @@ interface BookResult {
     addedAt: string;
     notes: string | null;
     shelf: { id: string; name: string } | null;
-    reservation: { id: string; reservedFor: string; contact: string | null; note: string | null } | null;
+    reservation: { id: string; person: PersonSummary | null; note: string | null } | null;
   }[];
 }
 
@@ -33,7 +34,7 @@ interface Row {
   addedAt: string;
   notes: string | null;
   shelf: { id: string; name: string } | null;
-  reservation: { id: string; reservedFor: string; contact: string | null } | null;
+  reservation: { id: string; person: PersonSummary | null } | null;
   book: { title: string; authors: string[]; coverUrl: string | null };
 }
 
@@ -58,7 +59,7 @@ function compareRows(a: Row, b: Row, key: SortKey, dir: 1 | -1): number {
       return (new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()) * dir;
     case "status":
       if (a.status !== b.status) return (a.status === "RESERVED" ? 1 : -1) * dir;
-      return collator.compare(a.reservation?.reservedFor ?? "", b.reservation?.reservedFor ?? "") * dir;
+      return collator.compare(a.reservation?.person?.name ?? "", b.reservation?.person?.name ?? "") * dir;
   }
 }
 
@@ -366,7 +367,7 @@ export default function LibraryBrowsePage() {
                     <StatusPill status={row.status} />
                     {row.reservation && (
                       <span className="mt-1 block font-sans text-xs text-reserved-text">
-                        {row.reservation.reservedFor}
+                        {row.reservation.person?.name ?? "someone no longer in your directory"}
                       </span>
                     )}
                   </td>
@@ -466,7 +467,7 @@ export default function LibraryBrowsePage() {
               </div>
               {row.reservation && (
                 <p className="truncate font-sans text-xs text-reserved-text">
-                  Reserved — {row.reservation.reservedFor}
+                  Reserved — {row.reservation.person?.name ?? "someone no longer in your directory"}
                 </p>
               )}
             </div>

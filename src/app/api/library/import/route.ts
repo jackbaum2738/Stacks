@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireLibraryContext } from "@/lib/api-context";
 import { cleanIsbn, isValidIsbn, toIsbn13 } from "@/lib/isbn";
 import { generateUniqueCopyCode } from "@/lib/copy-code";
+import { generateUniquePersonCode } from "@/lib/person-code";
 
 // Every row here is pure DB work (import deliberately never calls the external ISBN
 // lookup -- see CLAUDE.md/IDEAS.md design notes), but a few hundred rows of sequential
@@ -19,7 +20,7 @@ const rowSchema = z.object({
   shelf: z.string().trim().optional(),
   status: z.string().trim().optional(),
   reservedFor: z.string().trim().optional(),
-  contact: z.string().trim().optional(),
+  reservedForPersonId: z.string().trim().optional(),
   notes: z.string().trim().optional(),
   bookCrossingId: z.string().trim().optional(),
 });
@@ -40,6 +41,8 @@ function normalizeStatus(raw: string | undefined): "AVAILABLE" | "RESERVED" | "R
   return undefined;
 }
 
+type PersonOutcome = "matched" | "created" | "none";
+
 /**
  * Bulk-imports a CSV that's already been parsed and column-mapped client-side. Design
  * recap (agreed with the user before building):
@@ -58,10 +61,19 @@ function normalizeStatus(raw: string | undefined): "AVAILABLE" | "RESERVED" | "R
  *    canonical Book (or existing override) exactly as it was.
  *  - An update to an existing copy only touches the fields the row actually supplies;
  *    blank cells leave the existing value alone rather than clearing it.
+ *  - Reservee resolution (see resolvePerson below) mirrors Copy ID exactly: a row whose
+ *    "Reserved For Person ID" matches an existing person in this library uses that person
+ *    outright; a row with a Person ID that doesn't match always creates a brand-new person
+ *    rather than falling back to guessing by name (same as an unrecognized Copy ID always
+ *    creating a new Copy rather than merging into an existing one). Only a *blank* Person
+ *    ID cell falls back to matching by name: no name match creates a person (mirroring how
+ *    an unrecognized shelf name auto-creates a Shelf), exactly one match reuses them, and
+ *    two or more matches always creates a new person rather than guessing which one --
+ *    duplicate names are expected now that Person.name isn't unique.
  *
- * Pass `dryRun: true` to get back the same new/updated/skipped counts the real import
- * would produce -- used to populate the confirm screen before anything is written -- with
- * no side effects at all (read-only Copy ID lookups, no Book/Shelf/Reservation writes).
+ * Pass `dryRun: true` to get back the same new/updated/skipped counts (and people
+ * matched/created counts) the real import would produce -- used to populate the confirm
+ * screen before anything is written -- with no side effects at all.
  *
  * The real (non-dry-run) import is called once per batch of rows, not once for the whole
  * file -- the client (src/components/backup-import-section.tsx) splits a large file into
@@ -88,6 +100,32 @@ export async function POST(request: Request) {
     let updatedCount = 0;
     let skippedMissingIsbn = 0;
     let skippedInvalidIsbn = 0;
+    let peopleNewCount = 0;
+    let peopleMatchedCount = 0;
+    // Simulates the transaction's "read your own writes" behavior for a person created
+    // earlier in this same dry run, so a second row reserving the same brand-new name is
+    // counted as a match against them rather than as a second "new person".
+    const pendingPeopleByName = new Set<string>();
+
+    async function dryResolvePerson(nameRaw: string, personIdRaw: string | undefined): Promise<PersonOutcome> {
+      const name = nameRaw.trim();
+      const personCode = personIdRaw?.trim();
+      if (personCode) {
+        const existing = await prisma.person.findFirst({ where: { libraryId, code: personCode }, select: { id: true } });
+        if (existing) return "matched";
+      } else if (name) {
+        const key = name.toLowerCase();
+        if (pendingPeopleByName.has(key)) return "matched";
+        const matches = await prisma.person.findMany({
+          where: { libraryId, name: { equals: name, mode: "insensitive" } },
+          select: { id: true },
+        });
+        if (matches.length === 1) return "matched";
+      }
+      if (!name) return "none";
+      pendingPeopleByName.add(name.toLowerCase());
+      return "created";
+    }
 
     for (const row of parsed.data.rows) {
       const rawIsbn = row.isbn ?? "";
@@ -104,9 +142,22 @@ export async function POST(request: Request) {
         : null;
       if (existingCopy) updatedCount++;
       else newCount++;
+
+      if (normalizeStatus(row.status) === "RESERVED") {
+        const outcome = await dryResolvePerson(row.reservedFor ?? "", row.reservedForPersonId);
+        if (outcome === "matched") peopleMatchedCount++;
+        else if (outcome === "created") peopleNewCount++;
+      }
     }
 
-    return NextResponse.json({ newCount, updatedCount, skippedMissingIsbn, skippedInvalidIsbn });
+    return NextResponse.json({
+      newCount,
+      updatedCount,
+      skippedMissingIsbn,
+      skippedInvalidIsbn,
+      peopleNewCount,
+      peopleMatchedCount,
+    });
   }
 
   const result = await prisma.$transaction(
@@ -115,10 +166,16 @@ export async function POST(request: Request) {
       let updatedCount = 0;
       let skippedMissingIsbn = 0;
       let skippedInvalidIsbn = 0;
+      let peopleNewCount = 0;
+      let peopleMatchedCount = 0;
       // Per-row outcome, in input order -- lets the client drive a live progress ticker
       // across however many of these batched requests a large import takes, without it
       // having to guess at pacing from the aggregate counts alone.
-      const rowResults: { label: string | null; outcome: "new" | "updated" | "skippedMissingIsbn" | "skippedInvalidIsbn" }[] = [];
+      const rowResults: {
+        label: string | null;
+        outcome: "new" | "updated" | "skippedMissingIsbn" | "skippedInvalidIsbn";
+        personOutcome: PersonOutcome | null;
+      }[] = [];
       const shelfCache = new Map<string, string>();
 
       async function resolveShelfId(shelfNameRaw: string): Promise<string | null> {
@@ -136,18 +193,43 @@ export async function POST(request: Request) {
         return shelf.id;
       }
 
+      async function resolvePerson(
+        nameRaw: string,
+        personIdRaw: string | undefined
+      ): Promise<{ personId: string | null; outcome: PersonOutcome }> {
+        const name = nameRaw.trim();
+        const personCode = personIdRaw?.trim();
+
+        if (personCode) {
+          const existing = await tx.person.findFirst({ where: { libraryId, code: personCode } });
+          if (existing) return { personId: existing.id, outcome: "matched" };
+          // Unrecognized Person ID: always create new, mirroring an unrecognized Copy ID.
+        } else if (name) {
+          const matches = await tx.person.findMany({
+            where: { libraryId, name: { equals: name, mode: "insensitive" } },
+            select: { id: true },
+          });
+          if (matches.length === 1) return { personId: matches[0].id, outcome: "matched" };
+        }
+
+        if (!name) return { personId: null, outcome: "none" };
+        const code = await generateUniquePersonCode(tx, libraryId);
+        const created = await tx.person.create({ data: { libraryId, name, code } });
+        return { personId: created.id, outcome: "created" };
+      }
+
       for (const row of parsed.data.rows) {
         const label = row.title || row.isbn || null;
         const rawIsbn = row.isbn ?? "";
         if (!rawIsbn) {
           skippedMissingIsbn++;
-          rowResults.push({ label, outcome: "skippedMissingIsbn" });
+          rowResults.push({ label, outcome: "skippedMissingIsbn", personOutcome: null });
           continue;
         }
         const cleaned = cleanIsbn(rawIsbn);
         if (!isValidIsbn(cleaned)) {
           skippedInvalidIsbn++;
-          rowResults.push({ label, outcome: "skippedInvalidIsbn" });
+          rowResults.push({ label, outcome: "skippedInvalidIsbn", personOutcome: null });
           continue;
         }
         const isbn13 = toIsbn13(cleaned);
@@ -183,10 +265,16 @@ export async function POST(request: Request) {
 
         const shelfId = row.shelf ? await resolveShelfId(row.shelf) : undefined;
         const requestedStatus = normalizeStatus(row.status);
-        const reservedFor = row.reservedFor ?? "";
-        // RESERVED needs a name to hang the reservation on; without one, fall back to
-        // AVAILABLE rather than create a Reservation row with a blank required field.
-        const status = requestedStatus === "RESERVED" && !reservedFor ? "AVAILABLE" : requestedStatus;
+
+        let personResult: { personId: string | null; outcome: PersonOutcome } = { personId: null, outcome: "none" };
+        if (requestedStatus === "RESERVED") {
+          personResult = await resolvePerson(row.reservedFor ?? "", row.reservedForPersonId);
+        }
+        // RESERVED needs a person to hang the reservation on; without one, fall back to
+        // AVAILABLE rather than create a Reservation row with no person attached.
+        const status = requestedStatus === "RESERVED" && !personResult.personId ? "AVAILABLE" : requestedStatus;
+        if (personResult.outcome === "matched") peopleMatchedCount++;
+        else if (personResult.outcome === "created") peopleNewCount++;
 
         if (existingCopy) {
           await tx.copy.update({
@@ -199,11 +287,11 @@ export async function POST(request: Request) {
             },
           });
 
-          if (status === "RESERVED" && reservedFor) {
+          if (status === "RESERVED" && personResult.personId) {
             await tx.reservation.upsert({
               where: { copyId: existingCopy.id },
-              create: { copyId: existingCopy.id, reservedFor, contact: row.contact || null, createdById: userId },
-              update: { reservedFor, contact: row.contact || null },
+              create: { copyId: existingCopy.id, personId: personResult.personId, createdById: userId },
+              update: { personId: personResult.personId },
             });
           } else if (status && status !== "RESERVED" && existingCopy.reservation) {
             // Releasing a reservation must delete the row, not flag it -- Reservation.copyId
@@ -213,7 +301,7 @@ export async function POST(request: Request) {
           }
 
           updatedCount++;
-          rowResults.push({ label, outcome: "updated" });
+          rowResults.push({ label, outcome: "updated", personOutcome: requestedStatus === "RESERVED" ? personResult.outcome : null });
         } else {
           const code = await generateUniqueCopyCode(tx, libraryId);
           const created = await tx.copy.create({
@@ -228,18 +316,18 @@ export async function POST(request: Request) {
             },
           });
 
-          if (status === "RESERVED" && reservedFor) {
+          if (status === "RESERVED" && personResult.personId) {
             await tx.reservation.create({
-              data: { copyId: created.id, reservedFor, contact: row.contact || null, createdById: userId },
+              data: { copyId: created.id, personId: personResult.personId, createdById: userId },
             });
           }
 
           newCount++;
-          rowResults.push({ label, outcome: "new" });
+          rowResults.push({ label, outcome: "new", personOutcome: requestedStatus === "RESERVED" ? personResult.outcome : null });
         }
       }
 
-      return { newCount, updatedCount, skippedMissingIsbn, skippedInvalidIsbn, rowResults };
+      return { newCount, updatedCount, skippedMissingIsbn, skippedInvalidIsbn, peopleNewCount, peopleMatchedCount, rowResults };
     },
     { timeout: 30000 }
   );

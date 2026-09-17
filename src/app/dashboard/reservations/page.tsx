@@ -16,11 +16,12 @@ export default async function ReservationsPage() {
         include: {
           book: { include: { overrides: { where: { libraryId } } } },
           shelf: true,
-          reservation: true,
+          reservation: { include: { person: true } },
         },
       },
+      person: true,
     },
-    orderBy: { reservedFor: "asc" },
+    orderBy: { person: { name: "asc" } },
   });
 
   const reservations = found.map((reservation) => ({
@@ -28,10 +29,15 @@ export default async function ReservationsPage() {
     copy: { ...reservation.copy, book: applyBookOverride(reservation.copy.book, reservation.copy.book.overrides[0]) },
   }));
 
-  const grouped = new Map<string, typeof reservations>();
+  // Grouped by person id, not name -- two different people can share a name, and they
+  // should never be collapsed into one heading just because the text matches.
+  const grouped = new Map<string, { label: string; group: typeof reservations }>();
   for (const reservation of reservations) {
-    const key = reservation.reservedFor;
-    grouped.set(key, [...(grouped.get(key) ?? []), reservation]);
+    const key = reservation.personId ?? "unknown";
+    const label = reservation.person?.name ?? "Someone no longer in your directory";
+    const existing = grouped.get(key);
+    if (existing) existing.group.push(reservation);
+    else grouped.set(key, { label, group: [reservation] });
   }
 
   return (
@@ -41,11 +47,10 @@ export default async function ReservationsPage() {
       {reservations.length === 0 ? (
         <p className="font-sans text-sm text-ink-soft">No active reservations.</p>
       ) : (
-        Array.from(grouped.entries()).map(([reservedFor, group]) => (
-          <div key={reservedFor}>
+        Array.from(grouped.entries()).map(([key, { label, group }]) => (
+          <div key={key}>
             <h2 className="mb-2 font-display font-semibold text-ink">
-              {reservedFor}{" "}
-              <span className="font-sans text-sm font-normal text-ink-soft">({group.length})</span>
+              {label} <span className="font-sans text-sm font-normal text-ink-soft">({group.length})</span>
             </h2>
             <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
               {group.map((reservation) => (

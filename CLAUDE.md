@@ -96,6 +96,22 @@ it's per-`Copy`, never per-`Book`). Sharing a library between people uses a rand
 `Library.inviteCode` link, not email (no transactional email provider is set up —
 see CHANGELOG 2.0.0).
 
+**People directory (PR: People tab).** `Reservation.reservedFor`/`contact` (plain strings)
+were replaced by `Reservation.personId` pointing at a library-scoped `Person`
+(`id, libraryId, name, email?, phone?, location?, birthday?, code`) — see
+`src/components/person-combobox.tsx`/`person-modal.tsx`/`delete-person-modal.tsx` and
+`/dashboard/people`. Only `name` is required; `email` is the **sole** field unique
+per-library (`@@unique([libraryId, email])`, safe because nullable columns never collide
+with each other in Postgres), so duplicate names are fully expected and never merged
+automatically. `Person.code` ("P-XXXXXX", `src/lib/person-code.ts`) is the CSV
+round-tripping key, same idea as `Copy.code`. Deleting a Person is always allowed even
+mid-reservation (a Person isn't a user account) — any *active* reservation is released
+(copy back to AVAILABLE) and deleted first, inside the same transaction as the Person
+delete; a released/historical Reservation just has its `personId` nulled by
+`onDelete: SetNull`, keeping history intact without blocking the delete. Person
+add/edit/delete is Member+ (`canEdit`), one tier below shelf/settings management, since a
+Person record carries no account access of its own.
+
 `Copy.notes` (free text, 2000-char cap) is per physical copy, same reasoning as
 `bookCrossingId` — two copies of the same ISBN can carry different notes. The field
 and its `PATCH /api/copies/[id]` endpoint existed since the CSV import/export work
@@ -251,6 +267,47 @@ touch this again:**
   button would look broken. Chosen deliberately over the alternative (hiding the
   button once an override exists), which would permanently lose the option after
   any test/throwaway save.
+
+**Backup/import as a zip of two files (People tab PR) — key decisions if you touch this
+again:**
+- `GET /api/library/export` and `/api/library/import-template` now return a `.zip`
+  (`src/lib/backup-zip.ts`'s `createZip`/`readZip`, isomorphic JSZip) containing
+  `books.csv` + `people.csv`, not one flat CSV. A person-per-copy-row export can only
+  ever list people who currently hold a book, so `people.csv` is built from a plain
+  `prisma.person.findMany`, independent of any reservation — someone with zero active
+  reservations is never dropped. Column lists live in `src/lib/csv.ts` as
+  `BOOKS_EXPORT_COLUMNS`/`PEOPLE_EXPORT_COLUMNS`.
+- **`src/components/backup-import-section.tsx` accepts a `.zip`, or either
+  `books.csv`/`people.csv` on its own** — it sniffs the filename first, then the header
+  shape (`detectFileKind`), rather than requiring a specific upload flow. A zip runs
+  its mapping wizard one file at a time (books, then people — same order the old
+  single-CSV wizard used for its one step), both steps saying "Continue"; the real
+  import then runs **people first, then books**, the opposite order, so a books row
+  carrying a Person ID from the same backup can match it exactly as soon as that
+  person exists rather than falling back to a name guess.
+- **Person-resolution rule, mirrors Copy ID exactly (`/api/library/import`'s
+  `resolvePerson`):** a `books.csv` row's "Reserved For Person ID" is checked first —
+  if it matches an existing Person in this library, that Person is used outright; if
+  it's present but *doesn't* match anyone, a new Person is created (never falls back to
+  guessing by name), same as an unrecognized Copy ID always creating a new Copy rather
+  than merging into an existing one. Only a **blank** Person ID cell falls back to
+  matching "Reserved For" by name: no match creates a Person (mirrors an unrecognized
+  shelf name auto-creating a Shelf), exactly one match reuses them, and **two or more
+  matches always creates a new Person** rather than guessing which one — this last
+  rule only exists because Person names, unlike Shelf names, are allowed to duplicate.
+  `/api/library/import-people` (standalone `people.csv`) is Person-ID-only with no
+  name/email fallback at all, exactly like Copy ID — an unrecognized or blank ID always
+  creates new, since matching by name or email here would silently merge two different
+  people or two different inboxes.
+- The import wizard's mapping/confirm/in-progress/results screens all render Books
+  and/or People sections depending on what was actually uploaded (zip vs. books-only vs.
+  people-only) rather than one fixed layout — see `ImportSummary`/`hasPeopleFile` in
+  `backup-import-section.tsx`. A books-only import's People tally comes from
+  `peopleNewCount`/`peopleMatchedCount` on the books route's own response (people
+  implied by "Reserved For"); a people-file-present import (zip or people-only) uses
+  the people route's own counts instead — a books-only completion message never says a
+  matched person was "updated", since `books.csv` never touches a matched person's own
+  contact fields.
 
 ## Working agreements (how the user wants sessions to run)
 
@@ -618,7 +675,7 @@ not just the PR they were stated in:
   match intent. Verified at each step with Playwright: real DOM `getBoundingClientRect()`
   measurements of the checkbox/cover cell widths (not just eyeballing), comparing an Owner
   session against a View Only session on local Postgres.
-- **PR #28** (`claude/project-thread-b65fhp`, open) — closed the "Better error for a dead
+- **PR #28** (`claude/project-thread-b65fhp`, merged) — closed the "Better error for a dead
   invite link" item from IDEAS.md. A dead invite link (regenerated code or deleted library)
   showed a generic, inconsistently-worded "not valid" message across four surfaces (`/join/
   [code]`, the register page's invite preview, the register API, the accept-invite API).
@@ -628,6 +685,22 @@ not just the PR they were stated in:
   preferred one simple message over the added schema, so it shipped as pure copy: "This link
   is no longer valid — contact the library owner to request a new one," made consistent
   across all four places. No schema change.
+- **PR #29** (`claude/people-directory`) — added the People directory (see the "People
+  directory" note under "Data model" and the "Backup/import as a zip of two files" note under
+  "CSV backup/import" above for the full design). Mockup-first over seven rounds as an
+  interactive Artifact before any code was written — row/cross UI matched to the Library page,
+  duplicate names allowed with email as the sole unique field, Location added as a fifth field,
+  Member-level delete with reservation-count-aware confirmation wording, and the whole
+  import/export rework (one zip of two files; either file also importable alone; Person-ID-only
+  matching for a standalone `people.csv`; a `books.csv` row's blank Person ID falling back to a
+  name match; two-or-more name matches always creating a new Person) all worked out and revised
+  in conversation before Jack said "Good - build". Verified with a live local Playwright run:
+  adding a person from the People tab, duplicate names allowed but a clashing email rejected,
+  column sort toggling, search by email substring, the reservation combobox's inline
+  person-creation path, both delete-confirmation wordings (with vs. without an active
+  reservation), a full zip backup containing both files with a zero-reservation person present
+  in `people.csv`, re-importing that same zip idempotently (people phase then books phase, zero
+  new rows), and a standalone `people.csv`-only import correctly hiding the Books section.
 
 ## Keeping this file current
 

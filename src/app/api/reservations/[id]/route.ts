@@ -4,8 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireLibraryContext } from "@/lib/api-context";
 
 const patchSchema = z.object({
-  reservedFor: z.string().trim().min(1).max(200).optional(),
-  contact: z.string().trim().max(200).nullable().optional(),
+  personId: z.string().trim().min(1).optional(),
   note: z.string().trim().max(2000).nullable().optional(),
   release: z.boolean().optional(),
 });
@@ -37,10 +36,17 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/reserv
     return NextResponse.json({ released: true });
   }
 
+  if (fields.personId) {
+    const person = await prisma.person.findFirst({
+      where: { id: fields.personId, libraryId: context.library.id },
+    });
+    if (!person) return NextResponse.json({ error: "Person not found" }, { status: 404 });
+  }
+
   const updated = await prisma.reservation.update({
     where: { id },
     data: fields,
-    include: { copy: { include: { book: true, shelf: true } } },
+    include: { copy: { include: { book: true, shelf: true } }, person: true },
   });
 
   return NextResponse.json({ reservation: updated });
