@@ -798,7 +798,7 @@ not just the PR they were stated in:
   click (focus never left the trigger button), caught by a live Playwright run rather than
   by inspection. Mocked up first as an Artifact, approved without changes ("new one is
   good").
-- **PR #33** (`claude/project-thread-vc3oh3`, open) — added a page-size picker and
+- **PR #33** (`claude/project-thread-vc3oh3`, merged) — added a page-size picker and
   pagination to the Library list (see the "Library list pagination" note under "Data
   model" above for the full design). Built from a project-thread request; mocked up first
   as an interactive Artifact, one round of feedback (Jack asked to drop the "Show" label
@@ -810,6 +810,23 @@ not just the PR they were stated in:
   preserves the current page; searching resets to page 1 and the pager disappears once
   results fit on one page; a same-browser reload keeps the chosen page size but resets to
   page 1. Test data cleaned up from the local DB afterward.
+- **PR #34** (`claude/project-thread-a8yr7j`, open) — added a full-screen loading takeover
+  for switching, creating, and deleting a library (see the CHANGELOG's 6.11.0 entry for the
+  full design). Built from a project-thread request; mocked up first as an interactive
+  Artifact before any code was touched, iterated live in chat with Jack picking each of the
+  three captions from short lists (switch: "Dusting off the shelves", create: "Unlocking the
+  reading room", delete: "Returning every book") before approving. `LibraryLoadingOverlay`
+  reuses import's `MarkLoader` + dimmed-card chrome but has no progress bar, since these are
+  each a single request with nothing real to meter. Uses React 19's async `useTransition`
+  (not a local busy flag or a guessed timeout) so the overlay's visibility is tied to the
+  transition's real `isPending` state and only clears once `router.refresh()`'s new data has
+  actually landed — the same class of bug as the earlier `LibrarySwitcher` "stuck creating"
+  and "Last backup taken by..." staleness bugs, avoided this time by construction rather than
+  patched after the fact. Verified with a live local Playwright run: registered a fresh
+  account, created a second library and confirmed the create overlay's message/caption
+  appear and clear on navigation, switched back to the first library and confirmed the same
+  for switch, then deleted the second library from Settings and confirmed the same for
+  delete (11/11 checks passed).
 
 ## Keeping this file current
 

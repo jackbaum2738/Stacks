@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { LibraryLoadingOverlay } from "@/components/library-loading-overlay";
 
 const NEW_LIBRARY_ID = "__new__";
 
@@ -20,8 +21,9 @@ export function LibrarySwitcher({
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [overlay, setOverlay] = useState<{ message: string; hint: string } | null>(null);
 
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState<string | null>(null);
@@ -57,16 +59,20 @@ export function LibrarySwitcher({
     if (returnFocus) triggerRef.current?.focus();
   }
 
-  async function selectLibrary(id: string) {
+  function selectLibrary(id: string) {
     closeMenu(true);
     if (id === activeId) return;
-    await fetch("/api/library/switch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ libraryId: id }),
+    const target = libraries.find((lib) => lib.id === id);
+    setOverlay({ message: `Switching to ${target?.name ?? "library"}…`, hint: "Dusting off the shelves" });
+    startTransition(async () => {
+      await fetch("/api/library/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ libraryId: id }),
+      });
+      router.push("/dashboard");
+      router.refresh();
     });
-    router.push("/dashboard");
-    router.refresh();
   }
 
   function startCreate() {
@@ -74,26 +80,28 @@ export function LibrarySwitcher({
     setCreating(true);
   }
 
-  async function createLibrary(e: React.FormEvent) {
+  function createLibrary(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setError(null);
-    const res = await fetch("/api/library", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName }),
+    const name = newName;
+    setOverlay({ message: `Creating ${name}…`, hint: "Unlocking the reading room" });
+    startTransition(async () => {
+      const res = await fetch("/api/library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Something went wrong");
+        setOverlay(null);
+        return;
+      }
+      setCreating(false);
+      setNewName("");
+      router.push("/dashboard");
+      router.refresh();
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Something went wrong");
-      setBusy(false);
-      return;
-    }
-    setCreating(false);
-    setNewName("");
-    setBusy(false);
-    router.push("/dashboard");
-    router.refresh();
   }
 
   function moveHighlight(delta: 1 | -1) {
@@ -149,32 +157,36 @@ export function LibrarySwitcher({
 
   if (creating) {
     return (
-      <form onSubmit={createLibrary} className="flex items-center gap-2">
-        <input
-          autoFocus
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="New library name"
-          required
-          className="w-40 border-b border-line-strong bg-transparent px-0.5 py-1 font-sans text-sm text-ink focus-visible:border-accent focus-visible:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-[2px] bg-ink px-2 py-1 font-sans text-sm font-medium text-surface hover:brightness-95 disabled:opacity-50"
-        >
-          Create
-        </button>
-        <button type="button" onClick={() => setCreating(false)} className="font-sans text-sm text-ink-soft">
-          Cancel
-        </button>
-        {error && <p className="font-sans text-sm text-accent">{error}</p>}
-      </form>
+      <>
+        <form onSubmit={createLibrary} className="flex items-center gap-2">
+          <input
+            autoFocus
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="New library name"
+            required
+            className="w-40 border-b border-line-strong bg-transparent px-0.5 py-1 font-sans text-sm text-ink focus-visible:border-accent focus-visible:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-[2px] bg-ink px-2 py-1 font-sans text-sm font-medium text-surface hover:brightness-95 disabled:opacity-50"
+          >
+            Create
+          </button>
+          <button type="button" onClick={() => setCreating(false)} className="font-sans text-sm text-ink-soft">
+            Cancel
+          </button>
+          {error && <p className="font-sans text-sm text-accent">{error}</p>}
+        </form>
+        {isPending && overlay && <LibraryLoadingOverlay message={overlay.message} hint={overlay.hint} />}
+      </>
     );
   }
 
   return (
     <div ref={rootRef} className="relative">
+      {isPending && overlay && <LibraryLoadingOverlay message={overlay.message} hint={overlay.hint} />}
       <button
         ref={triggerRef}
         type="button"
