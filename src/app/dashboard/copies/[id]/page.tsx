@@ -15,7 +15,7 @@ export default async function CopyDetailPage(props: PageProps<"/dashboard/copies
     include: {
       book: { include: { overrides: { where: { libraryId: context.library.id } } } },
       shelf: true,
-      reservation: true,
+      reservation: { include: { person: true } },
     },
   });
   if (!found) notFound();

@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       overrides: { where: { libraryId: context.library.id } },
       copies: {
         where: { libraryId: context.library.id, status: { not: "REMOVED" } },
-        include: { shelf: true, reservation: true },
+        include: { shelf: true, reservation: { include: { person: true } } },
       },
     },
   });

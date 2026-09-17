@@ -1,10 +1,12 @@
 /**
- * Column order for both the library export and the import template — keeping these in
- * one place is what makes export -> edit in a spreadsheet -> re-import round-trip cleanly.
- * "Date Added" is informational only; it has no matching import target field (see
- * TARGET_FIELDS in the import UI), so a re-imported row never tries to set it.
+ * Column order for both the books half of the library export and its import template —
+ * keeping these in one place is what makes export -> edit in a spreadsheet -> re-import
+ * round-trip cleanly. "Date Added" is informational only; it has no matching import target
+ * field (see TARGET_FIELDS in the import UI), so a re-imported row never tries to set it.
+ * "Reserved For Person ID" is what actually links a row to the right Person once two
+ * people can share a name -- "Reserved For" alone stays for a human skimming the file.
  */
-export const EXPORT_COLUMNS = [
+export const BOOKS_EXPORT_COLUMNS = [
   "Copy ID",
   "ISBN",
   "Title",
@@ -13,11 +15,14 @@ export const EXPORT_COLUMNS = [
   "Shelf",
   "Status",
   "Reserved For",
-  "Contact",
+  "Reserved For Person ID",
   "Notes",
   "BookCrossing ID",
   "Date Added",
 ] as const;
+
+/** Column order for the people half of the export/import -- see BOOKS_EXPORT_COLUMNS. */
+export const PEOPLE_EXPORT_COLUMNS = ["Person ID", "Name", "Email", "Phone", "Location", "Birthday"] as const;
 
 function csvEscape(value: string): string {
   if (/[",\n\r]/.test(value)) {

@@ -19,7 +19,7 @@ export default async function ShelfDetailPage(props: PageProps<"/dashboard/shelv
         include: {
           book: { include: { overrides: { where: { libraryId } } } },
           shelf: true,
-          reservation: true,
+          reservation: { include: { person: true } },
         },
         orderBy: { addedAt: "desc" },
       },

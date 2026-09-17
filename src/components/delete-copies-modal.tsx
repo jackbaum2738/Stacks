@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 interface ModalCopy {
   id: string;
   book: { title: string };
-  reservation: { reservedFor: string } | null;
+  reservation: { person: { name: string } | null } | null;
 }
 
 export function DeleteCopiesModal({
@@ -28,7 +28,7 @@ export function DeleteCopiesModal({
   const message =
     copies.length === 1
       ? copies[0].reservation
-        ? `“${copies[0].book.title}” is reserved for ${copies[0].reservation.reservedFor}. Remove it from your library anyway?`
+        ? `“${copies[0].book.title}” is reserved for ${copies[0].reservation.person?.name ?? "someone no longer in your directory"}. Remove it from your library anyway?`
         : `Remove “${copies[0].book.title}” from your library?`
       : reservedOnes.length > 0
         ? `Remove ${copies.length} books from your library? ${reservedOnes.length} of them ${reservedOnes.length === 1 ? "is" : "are"} currently reserved for someone.`

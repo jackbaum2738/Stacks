@@ -11,6 +11,7 @@ import { ReservationModal } from "@/components/reservation-modal";
 import { DeleteCopiesModal } from "@/components/delete-copies-modal";
 import { formatDate } from "@/lib/format-date";
 import { useLibraryRole } from "@/components/library-role-context";
+import type { PersonSummary } from "@/components/person-combobox";
 
 interface CopyDetailData {
   id: string;
@@ -28,7 +29,7 @@ interface CopyDetailData {
     pageCount: number | null;
     description: string | null;
   };
-  reservation: { id: string; reservedFor: string; contact: string | null; createdAt: Date } | null;
+  reservation: { id: string; person: PersonSummary | null; createdAt: Date } | null;
 }
 
 export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; libraryName: string }) {
@@ -84,8 +85,8 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
           )}
           {copy.reservation && (
             <span className="font-sans text-sm text-ink-muted">
-              for {copy.reservation.reservedFor}
-              {copy.reservation.contact ? ` · ${copy.reservation.contact}` : ""}
+              for {copy.reservation.person?.name ?? "someone no longer in your directory"}
+              {copy.reservation.person?.email ? ` · ${copy.reservation.person.email}` : ""}
             </span>
           )}
         </div>

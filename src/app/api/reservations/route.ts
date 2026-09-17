@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       copy: { libraryId: context.library.id },
       ...(includeReleased ? {} : { releasedAt: null }),
     },
-    include: { copy: { include: { book: true, shelf: true } }, createdBy: { select: { name: true } } },
+    include: { copy: { include: { book: true, shelf: true } }, person: true, createdBy: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -24,9 +24,7 @@ export async function GET(request: Request) {
 
 const createSchema = z.object({
   copyId: z.string().trim().min(1),
-  reservedFor: z.string().trim().min(1).max(200),
-  contact: z.string().trim().max(200).optional(),
-  note: z.string().trim().max(2000).optional(),
+  personId: z.string().trim().min(1),
 });
 
 export async function POST(request: Request) {
@@ -46,17 +44,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This copy isn't available to reserve" }, { status: 409 });
   }
 
+  const person = await prisma.person.findFirst({
+    where: { id: parsed.data.personId, libraryId: context.library.id },
+  });
+  if (!person) return NextResponse.json({ error: "Person not found" }, { status: 404 });
+
   const reservation = await prisma.$transaction(async (tx) => {
     await tx.copy.update({ where: { id: copy.id }, data: { status: "RESERVED" } });
     return tx.reservation.create({
       data: {
         copyId: copy.id,
-        reservedFor: parsed.data.reservedFor,
-        contact: parsed.data.contact,
-        note: parsed.data.note,
+        personId: person.id,
         createdById: context.user.id,
       },
-      include: { copy: { include: { book: true, shelf: true } } },
+      include: { copy: { include: { book: true, shelf: true } }, person: true },
     });
   });
 

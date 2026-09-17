@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/copies
   const updated = await prisma.copy.update({
     where: { id },
     data: parsed.data,
-    include: { book: true, shelf: true, reservation: true },
+    include: { book: true, shelf: true, reservation: { include: { person: true } } },
   });
 
   return NextResponse.json({ copy: updated });
@@ -56,7 +56,7 @@ export async function DELETE(_request: NextRequest, ctx: RouteContext<"/api/copi
     return tx.copy.update({
       where: { id },
       data: { status: "REMOVED", removedAt: new Date() },
-      include: { book: true, shelf: true, reservation: true },
+      include: { book: true, shelf: true, reservation: { include: { person: true } } },
     });
   });
 

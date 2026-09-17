@@ -82,7 +82,7 @@ export default function ScanStationPage() {
         setResult({
           ok: true,
           message: data.copy.reservation
-            ? `Removed — reservation for ${data.copy.reservation.reservedFor} marked fulfilled.`
+            ? `Removed — reservation for ${data.copy.reservation.person?.name ?? "someone no longer in your directory"} marked fulfilled.`
             : "Removed from your library.",
           title: data.copy.book.title,
           authors: data.copy.book.authors,
