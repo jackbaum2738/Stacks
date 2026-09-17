@@ -1,26 +1,22 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { findLibraryByInviteCode } from "@/lib/invite-code";
 import { JoinButton } from "@/components/join-button";
 import { Wordmark } from "@/components/wordmark";
+
+const ROLE_LABEL: Record<string, string> = {
+  ADMIN: "an Admin",
+  MEMBER: "a Member",
+  VIEW_ONLY: "a View-Only member",
+};
 
 export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
   const { code } = await props.params;
 
-  const library = await prisma.library.findUnique({
-    where: { inviteCode: code },
-    select: {
-      id: true,
-      name: true,
-      memberships: {
-        where: { role: "OWNER" },
-        take: 1,
-        select: { user: { select: { name: true, email: true } } },
-      },
-    },
-  });
+  const found = await findLibraryByInviteCode(code);
 
-  if (!library) {
+  if (!found) {
     return (
       <Card title="Invite link not valid">
         <p className="font-sans text-sm text-ink-soft">
@@ -31,8 +27,14 @@ export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
     );
   }
 
-  const owner = library.memberships[0]?.user;
-  const inviterName = owner?.name || owner?.email || "Someone";
+  const { library, role } = found;
+  const roleLabel = ROLE_LABEL[role];
+
+  const owner = await prisma.membership.findFirst({
+    where: { libraryId: library.id, role: "OWNER" },
+    select: { user: { select: { name: true, email: true } } },
+  });
+  const inviterName = owner?.user.name || owner?.user.email || "Someone";
 
   const user = await getCurrentUser();
 
@@ -40,7 +42,7 @@ export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
     return (
       <Card title={`${inviterName} invited you to ${library.name}`}>
         <p className="font-sans text-sm text-ink-soft">
-          Sign in or create an account to join this shared library on Stacks.
+          Sign in or create an account to join this shared library on Stacks, as {roleLabel}.
         </p>
         <div className="flex flex-col gap-2">
           <Link
@@ -67,7 +69,7 @@ export default async function JoinInvitePage(props: PageProps<"/join/[code]">) {
       <p className="font-sans text-sm text-ink-soft">
         {alreadyMember
           ? "Switch to this library to work in it now."
-          : `Signed in as ${user.email}. Join this shared library?`}
+          : `Signed in as ${user.email}. Join this shared library as ${roleLabel}?`}
       </p>
       <JoinButton code={code} label={alreadyMember ? "Switch to this library" : `Join ${library.name}`} />
     </Card>

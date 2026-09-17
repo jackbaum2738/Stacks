@@ -2,10 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentLibrary } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canManageLibrarySettings } from "@/lib/permissions";
 
 export default async function ShelvesPage() {
   const context = await getCurrentLibrary();
   if (!context) redirect("/login");
+
+  const canManage = canManageLibrarySettings(context.membership.role);
 
   const shelves = await prisma.shelf.findMany({
     where: { libraryId: context.library.id },
@@ -17,18 +20,26 @@ export default async function ShelvesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-[32px] font-semibold text-ink">Shelves</h1>
-        <Link href="/dashboard/settings" className="font-sans text-sm font-medium text-accent">
-          Manage shelves
-        </Link>
+        {canManage && (
+          <Link href="/dashboard/settings" className="font-sans text-sm font-medium text-accent">
+            Manage shelves
+          </Link>
+        )}
       </div>
 
       {shelves.length === 0 ? (
         <p className="font-sans text-sm text-ink-soft">
-          No shelves yet.{" "}
-          <Link href="/dashboard/settings" className="text-accent">
-            Add one
-          </Link>{" "}
-          to get started.
+          {canManage ? (
+            <>
+              No shelves yet.{" "}
+              <Link href="/dashboard/settings" className="text-accent">
+                Add one
+              </Link>{" "}
+              to get started.
+            </>
+          ) : (
+            "No shelves yet."
+          )}
         </p>
       ) : (
         <ul className="divide-y divide-line-inner border border-line bg-surface px-4">

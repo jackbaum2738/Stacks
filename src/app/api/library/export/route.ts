@@ -16,7 +16,7 @@ const STATUS_LABEL: Record<string, string> = {
  * round-trips cleanly. Records who took the backup and when, shown on the Settings page.
  */
 export async function GET() {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "edit" });
   if (!context) return response;
 
   const copies = await prisma.copy.findMany({

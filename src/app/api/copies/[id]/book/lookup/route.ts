@@ -23,7 +23,7 @@ export const maxDuration = 45;
  *    clicked forever on a book that just isn't in either catalog.
  */
 export async function POST(_request: Request, ctx: RouteContext<"/api/copies/[id]/book/lookup">) {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "edit" });
   if (!context) return response;
   const { id } = await ctx.params;
 

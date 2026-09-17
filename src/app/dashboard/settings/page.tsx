@@ -7,6 +7,7 @@ import { MemberRow } from "@/components/member-row";
 import { InviteLinkManager } from "@/components/invite-link-manager";
 import { DeleteLibraryForm } from "@/components/delete-library-form";
 import { BackupImportSection } from "@/components/backup-import-section";
+import { canEditLibrary, canManageLibrarySettings, isOwner } from "@/lib/permissions";
 
 export default async function SettingsPage() {
   const context = await getCurrentLibrary();
@@ -37,8 +38,10 @@ export default async function SettingsPage() {
         }
       : null;
 
-  const canManage = context.membership.role === "OWNER" || context.membership.role === "ADMIN";
-  const isOwner = context.membership.role === "OWNER";
+  const canManage = canManageLibrarySettings(context.membership.role);
+  const canImport = canManage; // Admin+ only -- Member is excluded so they can't create shelves indirectly via import.
+  const canExport = canEditLibrary(context.membership.role); // View Only excluded -- export writes a lastBackup marker.
+  const ownerIsMe = isOwner(context.membership.role);
 
   return (
     <div className="space-y-10">
@@ -47,18 +50,20 @@ export default async function SettingsPage() {
         <p className="font-mono text-[11px] tracking-[.10em] text-ink-soft uppercase">{context.library.name}</p>
       </div>
 
-      <section className="space-y-3">
-        <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Shelves</h2>
-        <CreateShelfForm />
-        <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
-          {shelves.map((shelf) => (
-            <ShelfManageRow
-              key={shelf.id}
-              shelf={{ id: shelf.id, name: shelf.name, copyCount: shelf._count.copies }}
-            />
-          ))}
-        </ul>
-      </section>
+      {canManage && (
+        <section className="space-y-3">
+          <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Shelves</h2>
+          <CreateShelfForm />
+          <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
+            {shelves.map((shelf) => (
+              <ShelfManageRow
+                key={shelf.id}
+                shelf={{ id: shelf.id, name: shelf.name, copyCount: shelf._count.copies }}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Members</h2>
@@ -68,18 +73,22 @@ export default async function SettingsPage() {
               key={m.id}
               member={{ id: m.id, role: m.role, user: m.user }}
               canManage={canManage}
+              isOwnerViewer={ownerIsMe}
+              isSelf={m.userId === context.user.id}
             />
           ))}
         </ul>
         {canManage && <InviteLinkManager />}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Backup &amp; Import</h2>
-        <BackupImportSection lastBackup={lastBackup} />
-      </section>
+      {(canImport || canExport) && (
+        <section className="space-y-3">
+          <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Backup &amp; Import</h2>
+          <BackupImportSection lastBackup={lastBackup} canImport={canImport} canExport={canExport} />
+        </section>
+      )}
 
-      {isOwner && (
+      {ownerIsMe && (
         <section>
           <DeleteLibraryForm libraryName={context.library.name} />
         </section>

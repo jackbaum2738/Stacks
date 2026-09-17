@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionCookie } from "@/lib/auth";
 import { uniqueSlug } from "@/lib/library";
+import { findLibraryByInviteCode } from "@/lib/invite-code";
+import type { InvitableRole } from "@/lib/permissions";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -26,11 +28,14 @@ export async function POST(request: Request) {
   }
 
   let invitedLibrary: { id: string } | null = null;
+  let invitedRole: InvitableRole | null = null;
   if (inviteCode) {
-    invitedLibrary = await prisma.library.findUnique({ where: { inviteCode }, select: { id: true } });
-    if (!invitedLibrary) {
+    const found = await findLibraryByInviteCode(inviteCode);
+    if (!found) {
       return NextResponse.json({ error: "That invite link is no longer valid" }, { status: 404 });
     }
+    invitedLibrary = { id: found.library.id };
+    invitedRole = found.role;
   } else if (!libraryName) {
     return NextResponse.json({ error: "Library name is required" }, { status: 400 });
   }
@@ -43,7 +48,7 @@ export async function POST(request: Request) {
           name,
           email,
           passwordHash,
-          memberships: { create: { role: "MEMBER", libraryId: invitedLibrary.id } },
+          memberships: { create: { role: invitedRole!, libraryId: invitedLibrary.id } },
         },
       })
     : await prisma.user.create({
