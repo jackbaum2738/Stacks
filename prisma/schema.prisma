@@ -24,9 +24,7 @@ enum CopyStatus {
 model User {
   id           String        @id @default(cuid())
   email        String        @unique
-  /// Nullable for now: the two accounts that predate usernames need one set by hand before
-  /// this can become required. See CLAUDE.md's "Usernames and profile" note.
-  username     String?       @unique
+  username     String        @unique
   passwordHash String
   name         String?
   createdAt    DateTime      @default(now())

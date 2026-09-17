@@ -309,14 +309,15 @@ again:**
   matched person was "updated", since `books.csv` never touches a matched person's own
   contact fields.
 
-**Usernames and profile (PR #30) — key decisions if you touch this again:**
-- `User.username` is nullable + unique even though every new signup requires one, because the
-  migration landed against real production accounts (Jack's two) that predate usernames. Jack's
-  plan, agreed before building: he sets a username on each from the new Profile page once this
-  ships, then a follow-up migration makes the column `NOT NULL`. Don't add UI for the
-  "no username yet" state beyond `username ?? "Not set"` — an early mockup round had a whole
-  amber-flag treatment for this, dropped once Jack confirmed there'd only ever be two accounts
-  to backfill by hand.
+**Usernames and profile (PR #30, made required in PR #32) — key decisions if you touch this again:**
+- `User.username` was nullable + unique for one release (PR #30 shipped it that way even though
+  every new signup already required one) because that migration landed against real production
+  accounts (Jack's two) that predated usernames. Jack's plan, agreed before building: set a
+  username on each from the new Profile page, then a follow-up migration makes the column
+  `NOT NULL`. He confirmed both were set on 2026-09-17 and PR #32 made the column required —
+  `username` is now `String @unique` in the schema, not `String?`, and every component/route
+  treats it as always-present (no more `username ?? "Not set"` or `?? email` fallback anywhere).
+  If you're reading this before PR #32 merged, expect the nullable version instead.
 - Sign-in takes one `identifier` field (email or username, both compared lowercased) instead of
   a dedicated `email` field — `POST /api/auth/login` looks up `WHERE email = ? OR username = ?`.
   Username is always stored lowercased (`normalizeUsername` in `src/lib/account-validation.ts`),
@@ -779,6 +780,17 @@ not just the PR they were stated in:
   click (focus never left the trigger button), caught by a live Playwright run rather than
   by inspection. Mocked up first as an Artifact, approved without changes ("new one is
   good").
+- **PR #32** (`claude/username-required`, open) — follow-up to PR #30: made `User.username`
+  required now that Jack set a username on both real accounts from the new Profile page.
+  `prisma/schema.prisma` changed `username String? @unique` to `username String @unique`, with
+  a one-line `ALTER TABLE "User" ALTER COLUMN "username" SET NOT NULL` migration (safe to run
+  since no row had a null username by the time this shipped). Removed the now-dead null-handling
+  this required while PR #30 was still in its transition period: `ProfileMenu`'s `username ?? email`
+  fallback (and its now-unused `email` prop), `ProfileForm`'s `initialUsername: string | null`
+  and its `?? ""` default, and the `username ?? "Not set"` display row. No user-facing behavior
+  change beyond the DB constraint itself, since every real account already had a username by the
+  time this merged. Verified by re-running PR #30's full Playwright regression (23 checks) against
+  the migrated schema.
 
 ## Keeping this file current
 
