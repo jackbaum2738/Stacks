@@ -32,7 +32,7 @@ export function ProfileForm({
   initialEmail,
 }: {
   initialName: string;
-  initialUsername: string | null;
+  initialUsername: string;
   initialEmail: string;
 }) {
   const router = useRouter();
@@ -60,7 +60,7 @@ export function ProfileForm({
   const [nameInput, setNameInput] = useState(initialName);
 
   // Username
-  const [usernameInput, setUsernameInput] = useState(initialUsername ?? "");
+  const [usernameInput, setUsernameInput] = useState(initialUsername);
   const [usernameChecking, setUsernameChecking] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
 
@@ -84,7 +84,7 @@ export function ProfileForm({
     setOpenField(field);
     if (field === "name") setNameInput(name);
     if (field === "username") {
-      setUsernameInput(username ?? "");
+      setUsernameInput(username);
       setUsernameError(null);
     }
     if (field === "email") {
@@ -243,7 +243,7 @@ export function ProfileForm({
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className={formLabelClass}>Username</div>
-            <div className="font-sans text-[15px] text-ink">{username ?? "Not set"}</div>
+            <div className="font-sans text-[15px] text-ink">{username}</div>
           </div>
           <button onClick={() => openInline("username")} className="font-sans text-[13px] font-semibold text-accent-2 hover:underline">
             Change
