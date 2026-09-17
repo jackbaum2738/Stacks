@@ -798,6 +798,18 @@ not just the PR they were stated in:
   click (focus never left the trigger button), caught by a live Playwright run rather than
   by inspection. Mocked up first as an Artifact, approved without changes ("new one is
   good").
+- **PR #33** (`claude/project-thread-vc3oh3`, open) — added a page-size picker and
+  pagination to the Library list (see the "Library list pagination" note under "Data
+  model" above for the full design). Built from a project-thread request; mocked up first
+  as an interactive Artifact, one round of feedback (Jack asked to drop the "Show" label
+  next to the page-size numbers) before any code was touched. Verified with a live local
+  Playwright run against a seeded 430-copy test library: default page size 25 with the
+  correct page count; switching to 200 shows 200 rows; clicking Next shows the next 200
+  while the page-size picker still reads 200 (the specific bug Jack reported — paging
+  used to have no defined behavior since pagination didn't exist yet); List ↔ Grid
+  preserves the current page; searching resets to page 1 and the pager disappears once
+  results fit on one page; a same-browser reload keeps the chosen page size but resets to
+  page 1. Test data cleaned up from the local DB afterward.
 
 ## Keeping this file current
 
