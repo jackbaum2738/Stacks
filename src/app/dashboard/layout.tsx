@@ -6,6 +6,7 @@ import { LibrarySwitcher } from "@/components/library-switcher";
 import { CreateFirstLibraryForm } from "@/components/create-first-library-form";
 import { Mark } from "@/components/mark";
 import { NavTabs } from "@/components/nav-tabs";
+import { LibraryRoleProvider } from "@/components/library-role-context";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -43,24 +44,26 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!context) redirect("/login");
 
   return (
-    <div className="flex flex-1 flex-col bg-bg">
-      <header className="border-b-2 border-ink bg-surface">
-        <div className="mx-auto flex max-w-[920px] items-center justify-between gap-4 px-6 py-[13px]">
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="flex items-center gap-2 font-display text-[19px] font-semibold text-ink">
-              <Mark size={22} />
-              Stacks
-            </Link>
-            <LibrarySwitcher
-              libraries={context.user.memberships.map((m) => m.library)}
-              activeId={context.library.id}
-            />
+    <LibraryRoleProvider role={context.membership.role}>
+      <div className="flex flex-1 flex-col bg-bg">
+        <header className="border-b-2 border-ink bg-surface">
+          <div className="mx-auto flex max-w-[920px] items-center justify-between gap-4 px-6 py-[13px]">
+            <div className="flex items-center gap-6">
+              <Link href="/dashboard" className="flex items-center gap-2 font-display text-[19px] font-semibold text-ink">
+                <Mark size={22} />
+                Stacks
+              </Link>
+              <LibrarySwitcher
+                libraries={context.user.memberships.map((m) => m.library)}
+                activeId={context.library.id}
+              />
+            </div>
+            <LogoutButton />
           </div>
-          <LogoutButton />
-        </div>
-        <NavTabs />
-      </header>
-      <main className="mx-auto w-full max-w-[920px] flex-1 px-6 py-[30px] pb-10">{children}</main>
-    </div>
+          <NavTabs />
+        </header>
+        <main className="mx-auto w-full max-w-[920px] flex-1 px-6 py-[30px] pb-10">{children}</main>
+      </div>
+    </LibraryRoleProvider>
   );
 }

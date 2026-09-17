@@ -16,7 +16,7 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "edit" });
   if (!context) return response;
 
   const parsed = schema.safeParse(await request.json().catch(() => null));

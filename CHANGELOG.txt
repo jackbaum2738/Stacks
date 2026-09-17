@@ -4,7 +4,7 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
-6.4.0 -- 2026-09-17
+6.5.0 -- 2026-09-17
 --------------------
 - Added free-text notes to each copy, styled as a manila notecard (tape strip, slight
   tilt, folded corner) rather than a plain form field -- for things like "recommended by
@@ -31,6 +31,53 @@ Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/change
   the OS-follows-system case and the new `:root[data-theme="dark"]` block for an explicit
   choice), not just one, or an explicitly-dark session would render notecards with
   undefined colors.
+- Reconciled with another concurrent PR (#17, the role/permission system): View Only
+  members can still read a copy's note (it's part of the read-only view, same as anything
+  else on the book page) but no longer see the add/edit/delete affordances for it, on the
+  book detail page or in the grid/list quick-read popup -- matching every other
+  edit action, which was already gated, and matching the server, which already rejected
+  the underlying PATCH for anyone below Member.
+
+
+6.4.0 -- 2026-09-17
+--------------------
+- Added a real permission system: alongside Owner, a library now has Admin, Member, and
+  View Only roles, replacing the old setup where every non-owner had the same access and
+  "Admin" existed in the schema but nothing could ever grant it. Admin can do everything a
+  Member can plus manage shelves, invite links, CSV import, and other members' roles.
+  Member can scan/reserve/edit books but not touch settings. View Only is read-only --
+  can't scan, reserve, edit, or add notes at all. Rules worked out and agreed with the user
+  before building: Member is deliberately excluded from CSV import (not just shelf
+  management) because import auto-creates a Shelf row for any unrecognized shelf name in
+  the file, which would otherwise let a Member create shelves indirectly through the back
+  door of a feature they're supposed to be locked out of.
+- The single library-wide invite link is now three separate links -- "Invite as Admin",
+  "Invite as Member", "Invite as View Only" -- each independently generated/regenerated in
+  Settings, since there's still no transactional email to target an invite at one person's
+  role individually. Owner is never a link target; the only way to become Owner is a
+  transfer. `Library.inviteCode` (unique, single column) is replaced by
+  `inviteCodeAdmin`/`inviteCodeMember`/`inviteCodeViewOnly`; the migration copies any
+  already-shared link into `inviteCodeAdmin` so it keeps granting the same access it always
+  did (the old link always granted full read/write access, which is what Admin represents
+  now).
+- Added ownership transfer ("Make owner" on another member's row) -- the only way anyone,
+  including the current Owner, stops being Owner. A Membership row with role OWNER can
+  never be deleted or have its role changed through the regular member-management
+  endpoints (enforced server-side, not just hidden in the UI), so an Owner who wants to
+  leave the library transfers ownership first, then removes their own now-Admin membership
+  like anyone else. This also means an Admin can never remove or demote the Owner, by
+  construction rather than by a member-count check.
+- Every plain "Member" from before this change is promoted to Admin in the migration --
+  that role already had full read/write access (everything short of managing
+  members/invites/deleting the library, none of which the old UI even exposed), so nobody's
+  access shrinks the moment this ships. The new, narrower "Member" tier only applies to
+  accounts created after this point.
+- Centralized the role checks in src/lib/permissions.ts and a `require: "edit" | "manage"`
+  option on requireLibraryContext (src/lib/api-context.ts) rather than repeating role
+  comparisons in every route, and a LibraryRoleProvider React context
+  (src/components/library-role-context.tsx) so client components (the Scan station, the
+  Library browse/grid view, book detail) can hide actions a View Only member can't take
+  without each one re-deriving the role from scratch.
 
 
 6.3.0 -- 2026-09-17

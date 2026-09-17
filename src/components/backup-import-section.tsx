@@ -122,8 +122,12 @@ const btnGhost =
 
 export function BackupImportSection({
   lastBackup: initialLastBackup,
+  canImport,
+  canExport,
 }: {
   lastBackup: { atLabel: string; byName: string } | null;
+  canImport: boolean;
+  canExport: boolean;
 }) {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("idle");
@@ -411,83 +415,91 @@ export function BackupImportSection({
   return (
     <>
       <div className="border border-line bg-surface">
-        <div className="px-4 pt-3 font-sans text-[12.5px] font-semibold text-ink-soft">Backup</div>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <p className="font-sans text-sm text-ink-soft">
-            {lastBackup ? (
-              <>
-                Last backup taken by <span className="text-ink">{lastBackup.byName}</span>
-                <br />
-                <span className="font-mono text-xs text-ink-faint">{lastBackup.atLabel}</span>
-              </>
-            ) : (
-              "No backup taken yet"
-            )}
-          </p>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={handleBackupDownload} disabled={downloadBusy} className={btnPrimary}>
-              {downloadBusy ? "Preparing…" : "Download CSV backup"}
-            </button>
-            {downloadConfirm && (
-              <span className="font-sans text-sm font-semibold text-ok">&#10003; Downloaded</span>
-            )}
-          </div>
-        </div>
-
-        <div className="border-t border-line-inner px-4 pt-3 font-sans text-[12.5px] font-semibold text-ink-soft">
-          Import
-        </div>
-        <div className="px-4 pb-4">
-          <p className="mb-2 font-sans text-sm text-ink-soft">
-            Import a CSV to add or update copies. Each row matches an existing copy by its Copy
-            ID (from a Stacks export) &mdash; a row with no Copy ID, or one that doesn&rsquo;t
-            match, is always added as a new copy. Anything already in your library that
-            isn&rsquo;t in the file is left exactly as it is.
-          </p>
-          <p className="mb-3 font-sans text-xs text-ink-faint">
-            <button type="button" onClick={handleTemplateDownload} className="font-semibold text-accent-2 underline underline-offset-2 hover:text-accent">
-              Download import template
-            </button>{" "}
-            &mdash; a blank CSV with just the column headings, ready to fill in
-            {templateConfirm && <span className="ml-2 font-semibold text-ok">&#10003; Downloaded</span>}
-          </p>
-
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={onDrop}
-            className={`flex flex-col items-center gap-2 border-[1.5px] border-dashed px-5 py-6 text-center ${
-              dragOver ? "border-accent-2 bg-[color-mix(in_srgb,var(--accent-2)_8%,var(--bg))]" : "border-line-strong bg-bg"
-            }`}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-[28px] w-[28px] text-ink-faint">
-              <path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="font-sans text-sm font-medium text-ink">Drag &amp; drop a CSV here</span>
-            <span className="font-mono text-xs text-ink-faint">.csv only</span>
-            <button type="button" onClick={() => fileInputRef.current?.click()} className={`${btnGhost} mt-1`}>
-              Choose file&hellip;
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFile(file);
-              }}
-            />
-            {dropError && (
-              <p className="mt-1 rounded-[2px] bg-[var(--pill-reserved-bg)] px-3 py-2 font-sans text-xs text-[var(--pill-reserved-fg)]">
-                {dropError}
+        {canExport && (
+          <>
+            <div className="px-4 pt-3 font-sans text-[12.5px] font-semibold text-ink-soft">Backup</div>
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <p className="font-sans text-sm text-ink-soft">
+                {lastBackup ? (
+                  <>
+                    Last backup taken by <span className="text-ink">{lastBackup.byName}</span>
+                    <br />
+                    <span className="font-mono text-xs text-ink-faint">{lastBackup.atLabel}</span>
+                  </>
+                ) : (
+                  "No backup taken yet"
+                )}
               </p>
-            )}
-          </div>
-        </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={handleBackupDownload} disabled={downloadBusy} className={btnPrimary}>
+                  {downloadBusy ? "Preparing…" : "Download CSV backup"}
+                </button>
+                {downloadConfirm && (
+                  <span className="font-sans text-sm font-semibold text-ok">&#10003; Downloaded</span>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {canImport && (
+          <>
+            <div className={`px-4 pt-3 font-sans text-[12.5px] font-semibold text-ink-soft ${canExport ? "border-t border-line-inner" : ""}`}>
+              Import
+            </div>
+            <div className="px-4 pb-4">
+              <p className="mb-2 font-sans text-sm text-ink-soft">
+                Import a CSV to add or update copies. Each row matches an existing copy by its Copy
+                ID (from a Stacks export) &mdash; a row with no Copy ID, or one that doesn&rsquo;t
+                match, is always added as a new copy. Anything already in your library that
+                isn&rsquo;t in the file is left exactly as it is.
+              </p>
+              <p className="mb-3 font-sans text-xs text-ink-faint">
+                <button type="button" onClick={handleTemplateDownload} className="font-semibold text-accent-2 underline underline-offset-2 hover:text-accent">
+                  Download import template
+                </button>{" "}
+                &mdash; a blank CSV with just the column headings, ready to fill in
+                {templateConfirm && <span className="ml-2 font-semibold text-ok">&#10003; Downloaded</span>}
+              </p>
+
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={onDrop}
+                className={`flex flex-col items-center gap-2 border-[1.5px] border-dashed px-5 py-6 text-center ${
+                  dragOver ? "border-accent-2 bg-[color-mix(in_srgb,var(--accent-2)_8%,var(--bg))]" : "border-line-strong bg-bg"
+                }`}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-[28px] w-[28px] text-ink-faint">
+                  <path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="font-sans text-sm font-medium text-ink">Drag &amp; drop a CSV here</span>
+                <span className="font-mono text-xs text-ink-faint">.csv only</span>
+                <button type="button" onClick={() => fileInputRef.current?.click()} className={`${btnGhost} mt-1`}>
+                  Choose file&hellip;
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFile(file);
+                  }}
+                />
+                {dropError && (
+                  <p className="mt-1 rounded-[2px] bg-[var(--pill-reserved-bg)] px-3 py-2 font-sans text-xs text-[var(--pill-reserved-fg)]">
+                    {dropError}
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {stage === "mapping" && parsed && (

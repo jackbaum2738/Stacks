@@ -14,11 +14,13 @@ function autoGrow(el: HTMLTextAreaElement | null) {
 export function NotePopup({
   bookTitle,
   note,
+  canEdit,
   onClose,
   onSave,
 }: {
   bookTitle: string;
   note: string;
+  canEdit: boolean;
   onClose: () => void;
   /** Persists the edited note (empty string clears it) and reports whether it succeeded. */
   onSave: (value: string) => Promise<boolean>;
@@ -74,7 +76,7 @@ export function NotePopup({
         className="notecard-tape notecard-fold relative w-full max-w-[340px] rotate-[-1deg] rounded-[2px] border border-manila-line bg-manila p-[22px] pt-[26px] text-manila-ink shadow-[0_12px_0_-6px_var(--manila-shadow)]"
       >
         <div className="absolute top-[10px] right-[10px] flex gap-1">
-          {!editing && (
+          {!editing && canEdit && (
             <button
               type="button"
               onClick={startEdit}

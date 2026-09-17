@@ -10,6 +10,7 @@ import { LibrarySelectionBar } from "@/components/library-selection-bar";
 import { LibraryContextMenu, type ContextMenuTarget } from "@/components/library-context-menu";
 import { NotePopup } from "@/components/note-popup";
 import { formatDate } from "@/lib/format-date";
+import { useLibraryRole } from "@/components/library-role-context";
 
 interface BookResult {
   id: string;
@@ -63,6 +64,7 @@ function compareRows(a: Row, b: Row, key: SortKey, dir: 1 | -1): number {
 
 export default function LibraryBrowsePage() {
   const router = useRouter();
+  const { canEdit } = useLibraryRole();
   const [query, setQuery] = useState("");
   const [books, setBooks] = useState<BookResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -264,7 +266,7 @@ export default function LibraryBrowsePage() {
         />
       </div>
 
-      {selected.size > 0 && (
+      {canEdit && selected.size > 0 && (
         <LibrarySelectionBar
           count={selected.size}
           anyReserved={anySelectedReserved}
@@ -288,7 +290,7 @@ export default function LibraryBrowsePage() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink text-left">
-                <th className="w-[42px] py-2 pl-4"></th>
+                {canEdit && <th className="w-[42px] py-2 pl-4"></th>}
                 <th className="w-11 py-2"></th>
                 {headers.map((h) => (
                   <th
@@ -306,7 +308,7 @@ export default function LibraryBrowsePage() {
                     </button>
                   </th>
                 ))}
-                <th className="w-[74px] py-2"></th>
+                {canEdit && <th className="w-[74px] py-2"></th>}
               </tr>
             </thead>
             <tbody>
@@ -318,15 +320,17 @@ export default function LibraryBrowsePage() {
                     selected.has(row.id) ? "bg-row-hover" : ""
                   }`}
                 >
-                  <td onClick={(e) => e.stopPropagation()} className="py-2.5 pl-4">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(row.id)}
-                      onChange={(e) => toggleSelect(row.id, e.target.checked)}
-                      aria-label={`Select ${row.book.title}`}
-                      className="accent-accent"
-                    />
-                  </td>
+                  {canEdit && (
+                    <td onClick={(e) => e.stopPropagation()} className="py-2.5 pl-4">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(row.id)}
+                        onChange={(e) => toggleSelect(row.id, e.target.checked)}
+                        aria-label={`Select ${row.book.title}`}
+                        className="accent-accent"
+                      />
+                    </td>
+                  )}
                   <td className="py-2.5">
                     <div className="relative h-[50px] w-[34px]">
                       <BookCover src={row.book.coverUrl} alt={row.book.title} className="h-[50px] w-[34px]" />
@@ -366,32 +370,34 @@ export default function LibraryBrowsePage() {
                       </span>
                     )}
                   </td>
-                  <td onClick={(e) => e.stopPropagation()} className="py-2.5">
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openRowReserve(row)}
-                        title={row.reservation ? "Edit reservation" : "Reserve"}
-                        aria-label={`${row.reservation ? "Edit reservation for" : "Reserve"} ${row.book.title}`}
-                        className={`rounded-[2px] p-1.5 hover:bg-chip-hover ${row.reservation ? "text-pill-reserved-fg" : "text-ink-faint"}`}
-                      >
-                        <svg viewBox="0 0 24 24" fill={row.reservation ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="h-4 w-4">
-                          <path d="M7 4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16l-5-3.2L7 20V4z" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteModal([row])}
-                        title="Remove from library"
-                        aria-label={`Remove ${row.book.title}`}
-                        className="rounded-[2px] p-1.5 text-ink-faint hover:bg-chip-hover hover:text-accent"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
-                          <path d="M6 6l12 12M18 6L6 18" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
+                  {canEdit && (
+                    <td onClick={(e) => e.stopPropagation()} className="py-2.5">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openRowReserve(row)}
+                          title={row.reservation ? "Edit reservation" : "Reserve"}
+                          aria-label={`${row.reservation ? "Edit reservation for" : "Reserve"} ${row.book.title}`}
+                          className={`rounded-[2px] p-1.5 hover:bg-chip-hover ${row.reservation ? "text-pill-reserved-fg" : "text-ink-faint"}`}
+                        >
+                          <svg viewBox="0 0 24 24" fill={row.reservation ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="h-4 w-4">
+                            <path d="M7 4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16l-5-3.2L7 20V4z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteModal([row])}
+                          title="Remove from library"
+                          aria-label={`Remove ${row.book.title}`}
+                          className="rounded-[2px] p-1.5 text-ink-faint hover:bg-chip-hover hover:text-accent"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
+                            <path d="M6 6l12 12M18 6L6 18" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -407,25 +413,28 @@ export default function LibraryBrowsePage() {
                 className="group relative cursor-pointer"
                 onClick={() => router.push(`/dashboard/copies/${row.id}`)}
                 onContextMenu={(e) => {
+                  if (!canEdit) return;
                   e.preventDefault();
                   setContextMenu({ id: row.id, title: row.book.title, x: e.clientX, y: e.clientY, reserved: !!row.reservation });
                 }}
               >
                 <BookCover src={row.book.coverUrl} alt={row.book.title} className="aspect-[2/3] w-full" />
-                <label
-                  onClick={(e) => e.stopPropagation()}
-                  className={`absolute top-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded-[2px] bg-surface/90 shadow ${
-                    selected.has(row.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.has(row.id)}
-                    onChange={(e) => toggleSelect(row.id, e.target.checked)}
-                    aria-label={`Select ${row.book.title}`}
-                    className="accent-accent"
-                  />
-                </label>
+                {canEdit && (
+                  <label
+                    onClick={(e) => e.stopPropagation()}
+                    className={`absolute top-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded-[2px] bg-surface/90 shadow ${
+                      selected.has(row.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.has(row.id)}
+                      onChange={(e) => toggleSelect(row.id, e.target.checked)}
+                      aria-label={`Select ${row.book.title}`}
+                      className="accent-accent"
+                    />
+                  </label>
+                )}
                 {row.notes && (
                   <button
                     type="button"
@@ -469,6 +478,7 @@ export default function LibraryBrowsePage() {
         <NotePopup
           bookTitle={notePopup.bookTitle}
           note={notePopup.note}
+          canEdit={canEdit}
           onClose={() => setNotePopup(null)}
           onSave={saveNote}
         />

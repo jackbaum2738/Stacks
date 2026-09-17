@@ -12,6 +12,7 @@ enum Role {
   OWNER
   ADMIN
   MEMBER
+  VIEW_ONLY
 }
 
 enum CopyStatus {
@@ -36,7 +37,12 @@ model Library {
   id                 String         @id @default(cuid())
   name               String
   slug               String         @unique
-  inviteCode         String?        @unique
+  /// Three separate invite links (never one for OWNER -- transfer is the only way to become
+  /// Owner) so whoever shares a link controls what the joiner can do, without a transactional
+  /// email provider to target an invite at a specific person's role individually.
+  inviteCodeAdmin    String?        @unique
+  inviteCodeMember   String?        @unique
+  inviteCodeViewOnly String?        @unique
   createdAt          DateTime       @default(now())
   lastBackupAt       DateTime?
   lastBackupByUserId String?

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLibraryRole } from "@/components/library-role-context";
 
 const MAX_NOTE_LENGTH = 2000;
 
@@ -12,6 +13,7 @@ function autoGrow(el: HTMLTextAreaElement | null) {
 
 /** A manila-style notecard for a copy's free-text note (e.g. "recommended by the Sorensens"). */
 export function CopyNotecard({ copyId, initialNote }: { copyId: string; initialNote: string | null }) {
+  const { canEdit } = useLibraryRole();
   const [note, setNote] = useState(initialNote);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initialNote ?? "");
@@ -97,6 +99,7 @@ export function CopyNotecard({ copyId, initialNote }: { copyId: string; initialN
   }
 
   if (!note) {
+    if (!canEdit) return null;
     return (
       <button
         type="button"
@@ -113,32 +116,34 @@ export function CopyNotecard({ copyId, initialNote }: { copyId: string; initialN
 
   return (
     <div className="notecard-tape notecard-fold group relative mt-[22px] max-w-[200px] rotate-[-1.6deg] rounded-[2px] border border-manila-line bg-manila p-4 pb-3.5 text-manila-ink shadow-[0_7px_0_-4px_var(--manila-shadow)] transition-transform hover:rotate-[-0.4deg]">
-      <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-        <button
-          type="button"
-          onClick={startEdit}
-          title="Edit note"
-          aria-label="Edit note"
-          className="flex h-[22px] w-[22px] items-center justify-center rounded-[2px] bg-manila-ink/10 hover:bg-manila-ink/20"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={remove}
-          disabled={busy}
-          title="Delete note"
-          aria-label="Delete note"
-          className="flex h-[22px] w-[22px] items-center justify-center rounded-[2px] bg-manila-ink/10 hover:bg-manila-ink/20"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-3 w-3">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
-      </div>
+      {canEdit && (
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <button
+            type="button"
+            onClick={startEdit}
+            title="Edit note"
+            aria-label="Edit note"
+            className="flex h-[22px] w-[22px] items-center justify-center rounded-[2px] bg-manila-ink/10 hover:bg-manila-ink/20"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={remove}
+            disabled={busy}
+            title="Delete note"
+            aria-label="Delete note"
+            className="flex h-[22px] w-[22px] items-center justify-center rounded-[2px] bg-manila-ink/10 hover:bg-manila-ink/20"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-3 w-3">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+      )}
       <span className="mb-[7px] block font-mono text-[10px] tracking-[.14em] text-manila-ink/65 uppercase">Note</span>
       <p className="font-display text-[15px] leading-[1.45] whitespace-pre-wrap italic break-words">{note}</p>
     </div>

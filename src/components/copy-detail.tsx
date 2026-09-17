@@ -10,6 +10,7 @@ import { CopyNotecard } from "@/components/copy-notecard";
 import { ReservationModal } from "@/components/reservation-modal";
 import { DeleteCopiesModal } from "@/components/delete-copies-modal";
 import { formatDate } from "@/lib/format-date";
+import { useLibraryRole } from "@/components/library-role-context";
 
 interface CopyDetailData {
   id: string;
@@ -32,6 +33,7 @@ interface CopyDetailData {
 
 export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; libraryName: string }) {
   const router = useRouter();
+  const { canEdit } = useLibraryRole();
   const [reserveModal, setReserveModal] = useState<"create" | "edit" | null>(null);
   const [deleteModal, setDeleteModal] = useState(false);
 
@@ -119,41 +121,43 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
           </p>
         )}
 
-        <div className="mt-6 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setReserveModal(copy.reservation ? "edit" : "create")}
-            className="inline-flex items-center gap-1.5 rounded-[2px] bg-ink px-[18px] py-[11px] font-sans text-sm font-medium text-surface hover:brightness-95"
-          >
-            <svg viewBox="0 0 24 24" fill={copy.reservation ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="h-[15px] w-[15px]">
-              <path d="M7 4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16l-5-3.2L7 20V4z" />
-            </svg>
-            {copy.reservation ? "Edit reservation" : "Reserve"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleteModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-[2px] border border-line-strong px-[18px] py-[11px] font-sans text-sm font-medium text-accent hover:bg-chip-hover"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-            Remove from library
-          </button>
-          <Link
-            href={`/dashboard/copies/${copy.id}/edit`}
-            className="inline-flex items-center gap-1.5 rounded-[2px] border border-line-strong px-[18px] py-[11px] font-sans text-sm font-medium text-ink hover:bg-chip-hover"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
-            Edit details
-          </Link>
-        </div>
+        {canEdit && (
+          <div className="mt-6 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setReserveModal(copy.reservation ? "edit" : "create")}
+              className="inline-flex items-center gap-1.5 rounded-[2px] bg-ink px-[18px] py-[11px] font-sans text-sm font-medium text-surface hover:brightness-95"
+            >
+              <svg viewBox="0 0 24 24" fill={copy.reservation ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="h-[15px] w-[15px]">
+                <path d="M7 4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16l-5-3.2L7 20V4z" />
+              </svg>
+              {copy.reservation ? "Edit reservation" : "Reserve"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-[2px] border border-line-strong px-[18px] py-[11px] font-sans text-sm font-medium text-accent hover:bg-chip-hover"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+              Remove from library
+            </button>
+            <Link
+              href={`/dashboard/copies/${copy.id}/edit`}
+              className="inline-flex items-center gap-1.5 rounded-[2px] border border-line-strong px-[18px] py-[11px] font-sans text-sm font-medium text-ink hover:bg-chip-hover"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+              Edit details
+            </Link>
+          </div>
+        )}
       </div>
 
-      {reserveModal && (
+      {canEdit && reserveModal && (
         <ReservationModal
           mode={reserveModal}
           copies={[modalCopy]}
@@ -161,7 +165,7 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
           onDone={() => setReserveModal(null)}
         />
       )}
-      {deleteModal && (
+      {canEdit && deleteModal && (
         <DeleteCopiesModal
           copies={[modalCopy]}
           onClose={() => setDeleteModal(false)}

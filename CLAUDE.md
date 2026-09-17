@@ -124,6 +124,48 @@ unless that row is deleted. This bit us once — see "Bugs found and fixed" belo
 so if you're touching reservation code, releasing a reservation must delete the
 row, not just flag it, or the copy becomes permanently unreservable.
 
+**Roles and invite links (added in a later session, see PR history) — key decisions if you
+touch this again:**
+- Four tiers on `Membership.role`: OWNER (exactly one per library, enforced only by
+  convention/application logic, not a DB constraint), ADMIN, MEMBER, VIEW_ONLY. Admin can do
+  everything Member can, plus manage shelves, invite links, CSV import, and other members'
+  roles/removal (not the Owner's). Member can scan/reserve/edit books but can't touch
+  settings. View Only is read-only everywhere — can't scan, reserve, edit, or add notes.
+  Checks live in `src/lib/permissions.ts` (`canEditLibrary` = Member+, `canManageLibrarySettings`
+  = Admin+) and are applied via `requireLibraryContext({ require: "edit" | "manage" })` in
+  `src/lib/api-context.ts` — always gate a new mutating route through one of those two rather
+  than re-deriving a role check inline. Client components read the same capabilities from
+  `LibraryRoleProvider`/`useLibraryRole` (`src/components/library-role-context.tsx`), set up
+  once in the dashboard layout, so a client-fetched page (Scan, Library browse/grid) doesn't
+  need its own role fetch.
+- **Member is deliberately excluded from CSV import**, not just shelf management, because
+  import auto-creates a `Shelf` row for any unrecognized shelf name in the file
+  (`resolveShelfId` in the import route) — allowing Member to import would let them create
+  shelves indirectly, defeating the "Member can't manage shelves" boundary. This was raised
+  and confirmed with the user before building rather than assumed either way. Export stays
+  available to Member (not View Only) since it's read-only content-wise, even though it does
+  write `Library.lastBackupAt`/`lastBackupByUserId` as a side effect.
+- **Three invite links, not one** — `inviteCodeAdmin`/`inviteCodeMember`/`inviteCodeViewOnly`
+  on `Library`, each independently generated/regenerated from Settings. There is deliberately
+  no invite link for Owner; the only way anyone becomes Owner is the transfer-ownership
+  endpoint. `src/lib/invite-code.ts`'s `findLibraryByInviteCode` checks all three columns and
+  returns which role a given code grants — always go through it rather than querying a
+  specific column, since a code's owning column can be any of the three.
+- **A `Membership` row with role OWNER can never be deleted or have its role changed** through
+  the regular member-management endpoints (`/api/library/members/[id]`) — enforced
+  server-side (409), not just hidden in the UI. The only way to stop being Owner is
+  `/api/library/transfer-ownership` (Owner-only: hands OWNER to another member, demotes the
+  caller to ADMIN in the same transaction). This means an Admin can never remove or demote
+  the Owner by construction, and an Owner who wants to leave the library transfers first,
+  then removes their own now-Admin membership like anyone else — there's no separate
+  "Owner self-removal" code path.
+- The migration that added View Only also **promoted every existing plain MEMBER to ADMIN**,
+  since the old MEMBER role already had full read/write access (the pre-existing UI never
+  exposed shelf/invite/member management to anyone but Owner, but nothing in the API stopped
+  a MEMBER from hitting those routes directly before this change) — nobody's access shrank
+  the moment this shipped. It also copied any already-shared single `inviteCode` into
+  `inviteCodeAdmin` so an old link keeps granting the same access it always did.
+
 **CSV backup/import (PR #12, #14) — key decisions if you touch this again:**
 - **The real import runs as many small requests, never one big one (PR #14).**
   `src/components/backup-import-section.tsx` splits the file into batches of
@@ -478,6 +520,20 @@ not just the PR they were stated in:
   figure beside it, and the ticker's "Importing" label running into the title
   after it) — harmless visually since flex `gap`/margin provided the visual
   separation, but a screen reader would have read them concatenated.
+- **PR #17** (`claude/project-thread-gq3u3r`, merged) — added the Owner/Admin/Member/View Only
+  role system and per-role invite links (see the "Roles and invite links" note under
+  "Data model" above for the full design). Built from a project-thread request, not a
+  from-scratch mockup: the role rules and invite-link approach (four tiers, Member
+  excluded from CSV import specifically, View Only fully read-only including no
+  reservations, existing plain Members promoted to Admin) were worked out and explicitly
+  agreed with the user in conversation before any code was touched, per the "get
+  agreement before building" instruction for this kind of access-control change.
+  Verified with a live local Playwright run: generated all three invite links and
+  registered through each, confirmed API-level 403s for View Only (scan-in, reserve) and
+  Member (import, shelf creation) with Admin succeeding at both, confirmed Settings
+  section visibility per role, and confirmed the Owner-row protections server-side (409
+  removing/demoting an Owner via the member endpoints; ownership transfer moves OWNER to
+  the target and demotes the caller to ADMIN in one transaction).
 - **PR #19** (`claude/library-notes`, open) — added a manila-notecard UI for
   `Copy.notes` (see "Data model" above) — inline on the book detail page, and via
   a corner tag + quick-read/edit popup on grid tiles and list rows in the Library
@@ -493,7 +549,10 @@ not just the PR they were stated in:
   Playwright run: add/edit/delete on the book detail page (including a reload to
   confirm the server round-trip), edit from both the grid and list popups,
   confirmed a tag click never navigates away, and confirmed a copy without a
-  note shows no tag.
+  note shows no tag. Reconciled with PR #17's concurrent role system after
+  both merged: View Only members keep read access to notes but lose the
+  add/edit/delete affordances, matching the server, which already rejected
+  the underlying PATCH for anyone below Member.
 
 ## Keeping this file current
 
