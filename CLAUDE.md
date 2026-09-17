@@ -763,6 +763,22 @@ not just the PR they were stated in:
   password completing the username, email, and password changes in turn; and finally signing out
   and back in with the newly-changed username and password to prove the whole loop actually
   works end to end. Also confirmed signing in by email still works unchanged.
+- **PR #31** (`claude/library-picker-restyle`) — restyled the dashboard header's library
+  picker off a plain native `<select>` (whose open list is unstyled OS chrome no CSS can
+  reach) onto the reservation picker's own menu language: `paper-shadow-sm`, our border/
+  radius, `chip-hover` rows, a checkmark on the active library. "+ New library…" moved out
+  of the option list into its own accent-colored row below a divider, same as how the
+  reservation picker breaks "add a new person" out from its match list, and still opens the
+  same inline create-library form as before (unchanged). Built as a `role="combobox"`
+  trigger button that keeps focus throughout via `aria-activedescendant` instead of moving
+  focus into the popup — this is what made keyboard support work identically regardless of
+  whether the menu was opened by mouse or keyboard (arrows/Home/End/Enter/Escape/typeahead,
+  with "+ New library…" reachable via End+Enter since it's part of the same navigable
+  sequence); an earlier draft attached the keydown handler to the listbox itself, which
+  silently broke Escape and arrow-key navigation whenever the menu was opened by a mouse
+  click (focus never left the trigger button), caught by a live Playwright run rather than
+  by inspection. Mocked up first as an Artifact, approved without changes ("new one is
+  good").
 
 ## Keeping this file current
 
