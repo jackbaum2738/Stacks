@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireLibraryContext } from "@/lib/api-context";
 import { cleanIsbn, isValidIsbn, toIsbn13 } from "@/lib/isbn";
+import { generateUniqueCopyCode } from "@/lib/copy-code";
 
 // Every row here is pure DB work (import deliberately never calls the external ISBN
 // lookup -- see CLAUDE.md/IDEAS.md design notes), but a few hundred rows of sequential
@@ -42,7 +43,8 @@ function normalizeStatus(raw: string | undefined): "AVAILABLE" | "RESERVED" | "R
 /**
  * Bulk-imports a CSV that's already been parsed and column-mapped client-side. Design
  * recap (agreed with the user before building):
- *  - Matching is by Copy ID, not ISBN. A row with no Copy ID, or one this library doesn't
+ *  - Matching is by Copy ID (the short "C-XXXXXX" code from src/lib/copy-code.ts, not the
+ *    internal database id), not ISBN. A row with no Copy ID, or one this library doesn't
  *    recognize, always creates a new Copy -- even if the book itself is already owned
  *    under that ISBN (a second physical copy is never merged into the first).
  *  - Rows already in this library that are missing from the file are left completely
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
         continue;
       }
       const existingCopy = row.copyId
-        ? await prisma.copy.findFirst({ where: { id: row.copyId, libraryId }, select: { id: true } })
+        ? await prisma.copy.findFirst({ where: { code: row.copyId, libraryId }, select: { id: true } })
         : null;
       if (existingCopy) updatedCount++;
       else newCount++;
@@ -176,7 +178,7 @@ export async function POST(request: Request) {
         }
 
         const existingCopy = row.copyId
-          ? await tx.copy.findFirst({ where: { id: row.copyId, libraryId }, include: { reservation: true } })
+          ? await tx.copy.findFirst({ where: { code: row.copyId, libraryId }, include: { reservation: true } })
           : null;
 
         const shelfId = row.shelf ? await resolveShelfId(row.shelf) : undefined;
@@ -213,6 +215,7 @@ export async function POST(request: Request) {
           updatedCount++;
           rowResults.push({ label, outcome: "updated" });
         } else {
+          const code = await generateUniqueCopyCode(tx, libraryId);
           const created = await tx.copy.create({
             data: {
               libraryId,
@@ -221,6 +224,7 @@ export async function POST(request: Request) {
               status: status ?? "AVAILABLE",
               notes: row.notes || null,
               bookCrossingId: row.bookCrossingId || null,
+              code,
             },
           });
 
