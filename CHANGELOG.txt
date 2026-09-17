@@ -4,17 +4,14 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.5.2 -- 2026-09-17
+--------------------
+- Fixed cover thumbnails sitting flush against the left edge of the Library list view for View Only members. The left padding for that row came entirely from the bulk-select checkbox cell (`pl-4`), which only Member+ roles have; since View Only never renders that cell, the cover thumbnail became the row's first, unpadded element. Moved the padding onto the cover cell itself (conditionally, only when the checkbox cell is absent) so the row reads the same regardless of role.
+
+
 6.5.1 -- 2026-09-17
 --------------------
-- Fixed every entry from 6.0.0 through 6.5.0 reading as hard-wrapped paragraphs -- short
-  lines cutting off well before the margin instead of running the full width like every
-  entry before and since. Root cause: the CSV backup/import PR (6.0.0) wrote its entries
-  pre-wrapped at ~90 characters per line rather than as one line per bullet, and every PR
-  after it through 6.5.0 kept that style; the wrapping even broke one word mid-hyphen
-  ("bottom-to-\ntop" in the 6.1.0 entry). Reflowed those entries back to one line per
-  bullet, matching every entry before 6.0.0 and this entry going forward. Also fixed two
-  missing blank lines found along the way (between the 6.4.0/6.3.0 and 6.3.0/6.2.0
-  entries) -- every other version boundary in the file has two.
+- Fixed every entry from 6.0.0 through 6.5.0 reading as hard-wrapped paragraphs -- short lines cutting off well before the margin instead of running the full width like every entry before and since. Root cause: the CSV backup/import PR (6.0.0) wrote its entries pre-wrapped at ~90 characters per line rather than as one line per bullet, and every PR after it through 6.5.0 kept that style; the wrapping even broke one word mid-hyphen ("bottom-to-\ntop" in the 6.1.0 entry). Reflowed those entries back to one line per bullet, matching every entry before 6.0.0 and this entry going forward. Also fixed two missing blank lines found along the way (between the 6.4.0/6.3.0 and 6.3.0/6.2.0 entries) -- every other version boundary in the file has two.
 
 
 6.5.0 -- 2026-09-17
