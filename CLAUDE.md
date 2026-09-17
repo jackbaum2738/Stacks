@@ -497,6 +497,20 @@ not just the PR they were stated in:
   figure beside it, and the ticker's "Importing" label running into the title
   after it) — harmless visually since flex `gap`/margin provided the visual
   separation, but a screen reader would have read them concatenated.
+- **PR #17** (`claude/project-thread-gq3u3r`) — added the Owner/Admin/Member/View Only
+  role system and per-role invite links (see the "Roles and invite links" note under
+  "Data model" above for the full design). Built from a project-thread request, not a
+  from-scratch mockup: the role rules and invite-link approach (four tiers, Member
+  excluded from CSV import specifically, View Only fully read-only including no
+  reservations, existing plain Members promoted to Admin) were worked out and explicitly
+  agreed with the user in conversation before any code was touched, per the "get
+  agreement before building" instruction for this kind of access-control change.
+  Verified with a live local Playwright run: generated all three invite links and
+  registered through each, confirmed API-level 403s for View Only (scan-in, reserve) and
+  Member (import, shelf creation) with Admin succeeding at both, confirmed Settings
+  section visibility per role, and confirmed the Owner-row protections server-side (409
+  removing/demoting an Owner via the member endpoints; ownership transfer moves OWNER to
+  the target and demotes the caller to ADMIN in one transaction).
 
 ## Keeping this file current
 
