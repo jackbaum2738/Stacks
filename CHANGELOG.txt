@@ -4,6 +4,11 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.6.3 -- 2026-09-17
+--------------------
+- Settings > Shelves: replaced the text "Delete" button on each shelf row with the same icon-only cross control used for the per-row remove action on the Library page's list view, and replaced the browser's native confirm() dialog with the app's own bordered confirmation modal (same overlay/card styling as the Library page's remove-book modal) instead of the OS-styled popup. The confirmation wording now reflects what actually happens server-side: since DELETE /api/shelves/[id] already 409s unless the shelf has zero non-removed copies, a shelf that still holds books shows a "still has N books on it, move or remove them first" message with no destructive action offered (deleting would just fail), while an empty shelf gets a plain "this can't be undone" confirm with a Delete button.
+
+
 6.6.2 -- 2026-09-17
 --------------------
 - Fixed a visual imbalance introduced by 6.6.1's fix: reserving the bulk-select checkbox's full column (58px) as empty space for View Only made the gap before the cover thumbnail much wider than the 10px gap after it, reading as lopsided even though it was no longer "smushed." Reverted to hiding the checkbox column entirely for View Only (as in the original 6.5.2 attempt), but this time gave the cover cell its own small left padding (`pl-4`) while also widening its fixed-width hint from `w-11` (44px) to `w-[60px]` -- the extra 16px exactly matches the added padding, so the cell's post-padding content area stays 44px, identical to before, and the browser has no reason to shrink the trailing gap to make room. Confirmed with Playwright measurements: the cover thumbnail's left inset (16px) and trailing gap (10px) are now close in magnitude instead of 58px vs 10px, and the cover's visual left edge lines up with where a Member's checkbox sits.
