@@ -23,7 +23,7 @@ const patchSchema = z.object({
  * copy, not the title/edition, so it was never shared to begin with.
  */
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/copies/[id]/book">) {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "edit" });
   if (!context) return response;
   const { id } = await ctx.params;
 

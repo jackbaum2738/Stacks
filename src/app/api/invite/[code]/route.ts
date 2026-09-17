@@ -1,28 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { findLibraryByInviteCode } from "@/lib/invite-code";
 
-/** Public preview of an invite link — library name and inviter's name, no auth required. */
+/** Public preview of an invite link — library name, inviter's name, and granted role, no auth required. */
 export async function GET(_request: NextRequest, ctx: RouteContext<"/api/invite/[code]">) {
   const { code } = await ctx.params;
 
-  const library = await prisma.library.findUnique({
-    where: { inviteCode: code },
-    select: {
-      name: true,
-      memberships: {
-        where: { role: "OWNER" },
-        take: 1,
-        select: { user: { select: { name: true, email: true } } },
-      },
-    },
+  const found = await findLibraryByInviteCode(code);
+  if (!found) return NextResponse.json({ error: "Invite link not found" }, { status: 404 });
+
+  const owner = await prisma.membership.findFirst({
+    where: { libraryId: found.library.id, role: "OWNER" },
+    select: { user: { select: { name: true, email: true } } },
   });
 
-  if (!library) return NextResponse.json({ error: "Invite link not found" }, { status: 404 });
-
-  const owner = library.memberships[0]?.user;
-
   return NextResponse.json({
-    libraryName: library.name,
-    inviterName: owner?.name || owner?.email || null,
+    libraryName: found.library.name,
+    inviterName: owner?.user.name || owner?.user.email || null,
+    role: found.role,
   });
 }

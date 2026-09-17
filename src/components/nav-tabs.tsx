@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLibraryRole } from "@/components/library-role-context";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/scan", label: "Scan" },
+  { href: "/dashboard/scan", label: "Scan", requiresEdit: true },
   { href: "/dashboard/shelves", label: "Shelves" },
   { href: "/dashboard/search", label: "Library" },
   { href: "/dashboard/reservations", label: "Reservations" },
@@ -14,10 +15,11 @@ const NAV_LINKS = [
 
 export function NavTabs() {
   const pathname = usePathname();
+  const { canEdit } = useLibraryRole();
 
   return (
     <nav className="mx-auto flex max-w-[920px] overflow-x-auto px-6">
-      {NAV_LINKS.map((link) => {
+      {NAV_LINKS.filter((link) => !link.requiresEdit || canEdit).map((link) => {
         const active =
           link.href === "/dashboard" ? pathname === link.href : pathname.startsWith(link.href);
         return (

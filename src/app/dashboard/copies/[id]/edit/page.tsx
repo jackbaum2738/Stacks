@@ -4,12 +4,14 @@ import { getCurrentLibrary } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { EditBookForm } from "@/components/edit-book-form";
 import { applyBookOverride } from "@/lib/book-view";
+import { canEditLibrary } from "@/lib/permissions";
 
 export default async function EditBookPage(props: PageProps<"/dashboard/copies/[id]/edit">) {
   const context = await getCurrentLibrary();
   if (!context) redirect("/login");
   const { id } = await props.params;
   const libraryId = context.library.id;
+  if (!canEditLibrary(context.membership.role)) redirect(`/dashboard/copies/${id}`);
 
   const copy = await prisma.copy.findFirst({
     where: { id, libraryId, status: { not: "REMOVED" } },

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { BookCover } from "@/components/book-cover";
 import { StatusPill } from "@/components/status-pill";
 import { applyBookOverride } from "@/lib/book-view";
+import { canEditLibrary } from "@/lib/permissions";
 
 export default async function DashboardPage() {
   const context = await getCurrentLibrary();
@@ -40,12 +41,14 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Link
-            href="/dashboard/scan"
-            className="rounded-[2px] bg-accent px-5 py-[11px] font-sans text-[15px] font-medium text-on-accent hover:brightness-95"
-          >
-            Scan a book
-          </Link>
+          {canEditLibrary(context.membership.role) && (
+            <Link
+              href="/dashboard/scan"
+              className="rounded-[2px] bg-accent px-5 py-[11px] font-sans text-[15px] font-medium text-on-accent hover:brightness-95"
+            >
+              Scan a book
+            </Link>
+          )}
           <Link
             href="/dashboard/search"
             className="rounded-[2px] border border-ink px-5 py-[11px] font-sans text-[15px] font-medium text-ink hover:bg-chip-hover"

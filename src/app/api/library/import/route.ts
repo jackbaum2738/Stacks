@@ -70,7 +70,7 @@ function normalizeStatus(raw: string | undefined): "AVAILABLE" | "RESERVED" | "R
  * client animate a smooth live progress ticker across however many batches that takes.
  */
 export async function POST(request: Request) {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "manage" });
   if (!context) return response;
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
