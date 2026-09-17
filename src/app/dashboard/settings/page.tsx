@@ -5,7 +5,7 @@ import { CreateShelfForm } from "@/components/create-shelf-form";
 import { ShelfManageRow } from "@/components/shelf-manage-row";
 import { MemberRow } from "@/components/member-row";
 import { InviteLinkManager } from "@/components/invite-link-manager";
-import { DeleteLibraryForm } from "@/components/delete-library-form";
+import { DangerZoneSection } from "@/components/danger-zone-section";
 import { BackupImportSection } from "@/components/backup-import-section";
 import { canEditLibrary, canManageLibrarySettings, isOwner } from "@/lib/permissions";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -14,7 +14,13 @@ export default async function SettingsPage() {
   const context = await getCurrentLibrary();
   if (!context) redirect("/login");
 
-  const [shelves, members, backupInfo] = await Promise.all([
+  const canManage = canManageLibrarySettings(context.membership.role);
+  const canImport = canManage; // Admin+ only -- Member is excluded so they can't create shelves indirectly via import.
+  const canExport = canEditLibrary(context.membership.role); // View Only excluded -- export writes a lastBackup marker.
+  const ownerIsMe = isOwner(context.membership.role);
+  const showDangerZone = canManage || ownerIsMe; // canManage (Admin+) can wipe; only Owner can delete.
+
+  const [shelves, members, backupInfo, wipeCounts] = await Promise.all([
     prisma.shelf.findMany({
       where: { libraryId: context.library.id },
       include: { _count: { select: { copies: { where: { status: { not: "REMOVED" } } } } } },
@@ -29,6 +35,19 @@ export default async function SettingsPage() {
       where: { id: context.library.id },
       select: { lastBackupAt: true, lastBackupBy: { select: { name: true, email: true } } },
     }),
+    showDangerZone && canManage
+      ? Promise.all([
+          prisma.copy.count({ where: { libraryId: context.library.id } }),
+          prisma.shelf.count({ where: { libraryId: context.library.id } }),
+          prisma.reservation.count({ where: { releasedAt: null, copy: { libraryId: context.library.id } } }),
+          prisma.bookOverride.count({ where: { libraryId: context.library.id } }),
+        ]).then(([copies, shelfCount, reservations, bookOverrides]) => ({
+          copies,
+          shelves: shelfCount,
+          reservations,
+          bookOverrides,
+        }))
+      : Promise.resolve(null),
   ]);
 
   const lastBackup =
@@ -38,11 +57,6 @@ export default async function SettingsPage() {
           byName: backupInfo.lastBackupBy?.name ?? backupInfo.lastBackupBy?.email ?? "someone no longer in this library",
         }
       : null;
-
-  const canManage = canManageLibrarySettings(context.membership.role);
-  const canImport = canManage; // Admin+ only -- Member is excluded so they can't create shelves indirectly via import.
-  const canExport = canEditLibrary(context.membership.role); // View Only excluded -- export writes a lastBackup marker.
-  const ownerIsMe = isOwner(context.membership.role);
 
   return (
     <div className="space-y-10">
@@ -102,9 +116,15 @@ export default async function SettingsPage() {
         </section>
       )}
 
-      {ownerIsMe && (
-        <section>
-          <DeleteLibraryForm libraryName={context.library.name} />
+      {showDangerZone && (
+        <section className="space-y-3">
+          <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Danger zone</h2>
+          <DangerZoneSection
+            libraryName={context.library.name}
+            canWipe={canManage}
+            canDelete={ownerIsMe}
+            wipeCounts={wipeCounts}
+          />
         </section>
       )}
     </div>

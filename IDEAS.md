@@ -32,15 +32,6 @@ not emailed, and there's no email verification on signup. If that's ever wanted:
   tooling) or **AWS SES** (near-free per email, but more setup friction — sandbox
   mode and domain verification before it can send to arbitrary addresses).
 
-## "Wipe library" as an alternative to deleting it
-
-The Settings page's "delete this library" only offers full deletion today.
-Add a second, less destructive option: keep the `Library` row (and its
-membership/invite code) but remove every `Copy`/`Shelf`/`Reservation` in it,
-i.e. blank the collection without losing the library itself, its members, or
-its invite link. Useful for someone who wants to start their catalog over
-without re-inviting everyone.
-
 ## Profile screen (own-account management)
 
 There's currently no page for managing your own account — only the library-
