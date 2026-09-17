@@ -4,6 +4,11 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.5.4 -- 2026-09-17
+--------------------
+- Fixed a regression from 6.5.2's View Only cover-spacing fix: moving the missing left padding onto the cover thumbnail's own cell fixed the left edge, but that cell has a fixed width and the table isn't `table-layout: fixed`, so the browser grew the column to fit the new padding -- which ate the gap that used to sit between the cover and the title text instead. Root cause this time: the bulk-select checkbox column was the one actually providing that gap (via its own width plus padding), and removing the whole column removed the gap along with it. Fixed properly by always rendering the checkbox's `<th>`/`<td>` at their normal width and padding, and only making the checkbox `<input>` itself conditional on `canEdit` -- so a View Only row gets the same reserved-but-empty lead-in column a Member row's checkbox sits in, and the cover column never needs to resize. Confirmed with real DOM measurements (Playwright) that the checkbox and cover cell widths are now pixel-identical between an Owner and a View Only session.
+
+
 6.5.3 -- 2026-09-17
 --------------------
 - Added free-text notes to each copy, styled as a manila notecard (tape strip, slight tilt, folded corner) rather than a plain form field -- for things like "recommended by the Sorensens" or "read this before lending it out again." Notes are per physical copy, not per book title, since two copies of the same ISBN in one library can carry different notes. The database field and its PATCH endpoint already existed (added earlier for CSV round-tripping but never surfaced in the UI); this was mostly wiring up the UI plus a small amount of new client state.
