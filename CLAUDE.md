@@ -252,6 +252,51 @@ touch this again:**
   button once an override exists), which would permanently lose the option after
   any test/throwaway save.
 
+**Usernames and profile (PR #28) — key decisions if you touch this again:**
+- `User.username` is nullable + unique even though every new signup requires one, because the
+  migration landed against real production accounts (Jack's two) that predate usernames. Jack's
+  plan, agreed before building: he sets a username on each from the new Profile page once this
+  ships, then a follow-up migration makes the column `NOT NULL`. Don't add UI for the
+  "no username yet" state beyond `username ?? "Not set"` — an early mockup round had a whole
+  amber-flag treatment for this, dropped once Jack confirmed there'd only ever be two accounts
+  to backfill by hand.
+- Sign-in takes one `identifier` field (email or username, both compared lowercased) instead of
+  a dedicated `email` field — `POST /api/auth/login` looks up `WHERE email = ? OR username = ?`.
+  Username is always stored lowercased (`normalizeUsername` in `src/lib/account-validation.ts`),
+  so the comparison never needs case-insensitive matching at the DB level.
+- **Changing your name never requires re-entering your password; username, email, and password
+  all do.** Explicit distinction from Jack: a display name carries no login or account-recovery
+  risk if changed by whoever already has the session open, so `PATCH /api/account/name` skips
+  the check the other three routes require. The re-auth popup (`src/components/reauth-modal.tsx`)
+  is shared across all three and dismisses the same way Cancel does if you click outside it.
+- **You can't "reveal" your current password, even after re-authenticating** — the app only
+  ever stores a bcrypt hash, never the plaintext, so there's nothing behind the masked dots to
+  show. Raised directly with Jack during the mockup round; agreed fix was to drop the
+  visibility toggle from the static Password row entirely and keep it only on the *new*
+  password fields in the change-password panel, which do hold a real typed value.
+  Re-authentication still gates opening nothing (the change-password panel opens freely) but
+  gates every Save.
+- Password strength (at least 8 characters, a number, a special character) and email shape (an
+  "@", a letter before the following ".", a letter after it, no quote characters anywhere) are
+  both defined once in `src/lib/account-validation.ts` and imported by every form (sign-up,
+  profile) and every route (`register`, `account/email`, `account/password`) — client-side
+  checks are for the live checklist/gating UX only; the server re-validates from the same
+  functions as the actual authority. Don't duplicate these rules inline anywhere else.
+- The username `Change` panel checks availability (`GET /api/account/username/available`, a
+  plain UX convenience) *before* opening the re-auth popup, per Jack's explicit ask — a taken
+  username should never make you type your password first only to be told to pick another one.
+  The `PATCH` route re-checks uniqueness itself regardless, since two tabs racing each other is
+  still possible.
+- Email changes require typing the new address twice (no confirmation email exists to catch a
+  typo otherwise); sign-up now does the same for the same reason. Both reuse the identical
+  match-check pattern already used for the two new-password fields.
+- Built through five rounds of an Artifact mockup before any code was touched (interaction
+  details worth remembering if the UI changes again): the two "Change" interaction styles
+  Jack asked to compare (inline tinted panel vs. a popup dialog) were both prototyped live in
+  the mockup; he picked the inline panel. The reauth/save button reads "Confirm", not
+  "Confirm & save". The per-field "Editing…" eyebrow label from an early round was cut as
+  unnecessary once the tinted panel + left accent bar made the editing state clear on its own.
+
 ## Working agreements (how the user wants sessions to run)
 
 These were established explicitly mid-project and apply to all future work,
@@ -618,6 +663,23 @@ not just the PR they were stated in:
   match intent. Verified at each step with Playwright: real DOM `getBoundingClientRect()`
   measurements of the checkbox/cover cell widths (not just eyeballing), comparing an Owner
   session against a View Only session on local Postgres.
+- **PR #28** (`claude/profile-usernames`, open) — added the Profile screen and usernames (see
+  the "Usernames and profile" note under "Data model" above for the full design). Built from a
+  project-thread request, mockup-first over five rounds of an interactive Artifact before any
+  code was touched: the header dropdown, the inline-panel-vs-popup "Change" comparison (Jack
+  picked inline), the re-auth-before-save flow, the live password checklist, and the email-shape
+  rule were all worked out in the mockup as Jack's feedback came in, including catching and
+  fixing a real design flaw before it was ever built — an early round asked to let users "reveal"
+  their current password, which isn't possible once it's only ever stored as a bcrypt hash; fixed
+  by moving the reveal toggle onto the new-password fields instead of the static masked row.
+  Account deletion (also in the original IDEAS.md entry) was explicitly deferred to a follow-up
+  at Jack's call. Verified with a live local Playwright run covering: signup's disabled-until-valid
+  submit button and password checklist; the header dropdown showing username (not name); a
+  taken username blocked before the re-auth popup ever opens; a wrong current password rejected
+  with the popup staying open, then clicking outside it to dismiss like Cancel; a correct
+  password completing the username, email, and password changes in turn; and finally signing out
+  and back in with the newly-changed username and password to prove the whole loop actually
+  works end to end. Also confirmed signing in by email still works unchanged.
 
 ## Keeping this file current
 

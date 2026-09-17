@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Wordmark } from "@/components/wordmark";
 import { formLabelClass, formInputClass } from "@/lib/form-styles";
+import { isPasswordValid, isValidEmailShape } from "@/lib/account-validation";
+import { PasswordChecklist } from "@/components/password-checklist";
 
 export default function RegisterPage(props: PageProps<"/register">) {
   const router = useRouter();
@@ -12,8 +14,11 @@ export default function RegisterPage(props: PageProps<"/register">) {
   const inviteCode = typeof searchParams.invite === "string" ? searchParams.invite : null;
 
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [emailConfirm, setEmailConfirm] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [libraryName, setLibraryName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -37,6 +42,21 @@ export default function RegisterPage(props: PageProps<"/register">) {
 
   const roleLabel: Record<string, string> = { ADMIN: "an Admin", MEMBER: "a Member", VIEW_ONLY: "a View-Only member" };
 
+  const emailShapeOk = isValidEmailShape(email);
+  const emailShapeError = email.length > 0 && !emailShapeOk;
+  const emailMismatch = emailConfirm.length > 0 && email !== emailConfirm;
+  const passwordOk = isPasswordValid(password);
+
+  const canSubmit =
+    name.trim().length > 0 &&
+    username.trim().length > 0 &&
+    emailShapeOk &&
+    emailConfirm.length > 0 &&
+    !emailMismatch &&
+    passwordOk &&
+    (inviteCode ? true : libraryName.trim().length > 0) &&
+    !inviteError;
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -46,7 +66,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(
-        inviteCode ? { name, email, password, inviteCode } : { name, email, password, libraryName }
+        inviteCode ? { name, username, email, password, inviteCode } : { name, username, email, password, libraryName }
       ),
     });
 
@@ -115,6 +135,19 @@ export default function RegisterPage(props: PageProps<"/register">) {
         </div>
 
         <div className="space-y-1">
+          <label htmlFor="username" className={formLabelClass}>
+            Username
+          </label>
+          <input
+            id="username"
+            required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className={formInputClass}
+          />
+        </div>
+
+        <div className="space-y-1">
           <label htmlFor="email" className={formLabelClass}>
             Email
           </label>
@@ -129,19 +162,47 @@ export default function RegisterPage(props: PageProps<"/register">) {
         </div>
 
         <div className="space-y-1">
+          <label htmlFor="emailConfirm" className={formLabelClass}>
+            Confirm email
+          </label>
+          <input
+            id="emailConfirm"
+            type="email"
+            required
+            value={emailConfirm}
+            onChange={(e) => setEmailConfirm(e.target.value)}
+            className={formInputClass}
+          />
+          {emailShapeError && <p className="font-mono text-xs text-accent">Enter a valid email.</p>}
+          {!emailShapeError && emailMismatch && <p className="font-mono text-xs text-accent">Emails don&apos;t match.</p>}
+        </div>
+
+        <div className="space-y-1">
           <label htmlFor="password" className={formLabelClass}>
             Password
           </label>
-          <input
-            id="password"
-            type="password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={formInputClass}
-          />
-          <p className="font-sans text-xs text-ink-faint">At least 8 characters.</p>
+          <div className="relative">
+            <input
+              id="password"
+              type={passwordVisible ? "text" : "password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`${formInputClass} pr-7`}
+            />
+            <button
+              type="button"
+              onClick={() => setPasswordVisible((v) => !v)}
+              aria-label={passwordVisible ? "Hide password" : "Show password"}
+              className="absolute top-1/2 right-0 -translate-y-1/2 p-1 text-ink-faint hover:text-ink"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
+          <PasswordChecklist password={password} />
         </div>
 
         {!inviteCode && (
@@ -162,7 +223,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
 
         <button
           type="submit"
-          disabled={submitting || Boolean(inviteError)}
+          disabled={submitting || !canSubmit}
           className="w-full rounded-[2px] bg-accent py-3 font-sans text-[15px] font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
         >
           {submitting ? "Creating…" : inviteLibraryName ? `Join ${inviteLibraryName}` : "Create library"}

@@ -4,12 +4,22 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionCookie } from "@/lib/auth";
 import { uniqueSlug } from "@/lib/library";
 import { findLibraryByInviteCode } from "@/lib/invite-code";
+import { isPasswordValid, isValidEmailShape, isValidUsername, normalizeUsername } from "@/lib/account-validation";
 import type { InvitableRole } from "@/lib/permissions";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(100),
-  email: z.string().trim().email().toLowerCase(),
-  password: z.string().min(8).max(200),
+  username: z.string().trim().min(1).max(32).refine(isValidUsername, {
+    message: "Username must be 3-32 characters: letters, numbers, underscores, or hyphens",
+  }),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine(isValidEmailShape, { message: "Enter a valid email" }),
+  password: z.string().refine(isPasswordValid, {
+    message: "Password must be at least 8 characters and include a number and a special character",
+  }),
   libraryName: z.string().trim().max(100).optional(),
   inviteCode: z.string().trim().min(1).optional(),
 });
@@ -21,10 +31,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
   const { name, email, password, libraryName, inviteCode } = parsed.data;
+  const username = normalizeUsername(parsed.data.username);
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
+  const existingEmail = await prisma.user.findUnique({ where: { email } });
+  if (existingEmail) {
     return NextResponse.json({ error: "An account with that email already exists" }, { status: 409 });
+  }
+  const existingUsername = await prisma.user.findUnique({ where: { username } });
+  if (existingUsername) {
+    return NextResponse.json({ error: "That username is already taken" }, { status: 409 });
   }
 
   let invitedLibrary: { id: string } | null = null;
@@ -46,6 +61,7 @@ export async function POST(request: Request) {
     ? await prisma.user.create({
         data: {
           name,
+          username,
           email,
           passwordHash,
           memberships: { create: { role: invitedRole!, libraryId: invitedLibrary.id } },
@@ -54,6 +70,7 @@ export async function POST(request: Request) {
     : await prisma.user.create({
         data: {
           name,
+          username,
           email,
           passwordHash,
           memberships: {
