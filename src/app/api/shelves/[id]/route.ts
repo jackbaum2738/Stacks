@@ -9,7 +9,7 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/shelves/[id]">) {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "manage" });
   if (!context) return response;
   const { id } = await ctx.params;
 
@@ -26,7 +26,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/shelve
 }
 
 export async function DELETE(_request: NextRequest, ctx: RouteContext<"/api/shelves/[id]">) {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "manage" });
   if (!context) return response;
   const { id } = await ctx.params;
 

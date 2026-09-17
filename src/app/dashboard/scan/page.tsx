@@ -6,6 +6,7 @@ import { BarcodeCameraScanner } from "@/components/barcode-camera-scanner";
 import { BookCover } from "@/components/book-cover";
 import { playErrorSound, playSuccessSound } from "@/lib/feedback-sound";
 import { formLabelClass } from "@/lib/form-styles";
+import { useLibraryRole } from "@/components/library-role-context";
 
 interface Shelf {
   id: string;
@@ -22,6 +23,7 @@ interface ScanResult {
 }
 
 export default function ScanStationPage() {
+  const { canEdit } = useLibraryRole();
   const [mode, setMode] = useState<"add" | "remove">("add");
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [shelfId, setShelfId] = useState("");
@@ -96,6 +98,17 @@ export default function ScanStationPage() {
       setIsbn("");
       inputRef.current?.focus();
     }
+  }
+
+  if (!canEdit) {
+    return (
+      <div className="space-y-2">
+        <h1 className="font-display text-[32px] font-semibold text-ink">Scan station</h1>
+        <p className="font-sans text-sm text-ink-soft">
+          View-only members can&apos;t scan books in or out.
+        </p>
+      </div>
+    );
   }
 
   return (

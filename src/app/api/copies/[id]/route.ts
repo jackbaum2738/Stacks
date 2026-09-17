@@ -9,7 +9,7 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/copies/[id]">) {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "edit" });
   if (!context) return response;
   const { id } = await ctx.params;
 
@@ -39,7 +39,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/copies
 
 /** Soft-removes a copy from the library (keeps history) and releases any active reservation. */
 export async function DELETE(_request: NextRequest, ctx: RouteContext<"/api/copies/[id]">) {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "edit" });
   if (!context) return response;
   const { id } = await ctx.params;
 

@@ -11,7 +11,7 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/reservations/[id]">) {
-  const { context, response } = await requireLibraryContext();
+  const { context, response } = await requireLibraryContext({ require: "edit" });
   if (!context) return response;
   const { id } = await ctx.params;
 

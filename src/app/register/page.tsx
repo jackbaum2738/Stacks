@@ -20,6 +20,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
 
   const [inviteLibraryName, setInviteLibraryName] = useState<string | null>(null);
   const [inviterName, setInviterName] = useState<string | null>(null);
+  const [inviteRole, setInviteRole] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,9 +30,12 @@ export default function RegisterPage(props: PageProps<"/register">) {
       .then((data) => {
         setInviteLibraryName(data.libraryName);
         setInviterName(data.inviterName);
+        setInviteRole(data.role);
       })
       .catch(() => setInviteError("This invite link isn't valid or has been replaced with a new one."));
   }, [inviteCode]);
+
+  const roleLabel: Record<string, string> = { ADMIN: "an Admin", MEMBER: "a Member", VIEW_ONLY: "a View-Only member" };
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,7 +86,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
           </h1>
           <p className="mt-1 font-sans text-sm text-ink-soft">
             {inviteCode
-              ? "Set up your own account to join this shared library."
+              ? `Set up your own account to join this shared library${inviteRole ? ` as ${roleLabel[inviteRole] ?? inviteRole}` : ""}.`
               : "Set up an account and a library to start scanning books into."}
           </p>
         </div>

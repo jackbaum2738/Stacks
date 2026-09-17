@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
 import { PersonCombobox } from "@/components/person-combobox";
+import { useLibraryRole } from "@/components/library-role-context";
 
 interface CopyRowData {
   id: string;
@@ -24,6 +25,7 @@ export function CopyRow({
   onUpdated?: () => void;
 }) {
   const router = useRouter();
+  const { canEdit } = useLibraryRole();
   const [showReserveForm, setShowReserveForm] = useState(false);
   const [reservedFor, setReservedFor] = useState("");
   const [contact, setContact] = useState("");
@@ -91,36 +93,38 @@ export function CopyRow({
             </p>
           )}
         </div>
-        <div className="flex flex-shrink-0 gap-2">
-          {copy.status === "AVAILABLE" && !showReserveForm && (
+        {canEdit && (
+          <div className="flex flex-shrink-0 gap-2">
+            {copy.status === "AVAILABLE" && !showReserveForm && (
+              <button
+                onClick={() => setShowReserveForm(true)}
+                disabled={busy}
+                className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
+              >
+                Reserve
+              </button>
+            )}
+            {copy.status === "RESERVED" && (
+              <button
+                onClick={release}
+                disabled={busy}
+                className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
+              >
+                Release
+              </button>
+            )}
             <button
-              onClick={() => setShowReserveForm(true)}
+              onClick={remove}
               disabled={busy}
-              className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
+              className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-accent hover:bg-chip-hover"
             >
-              Reserve
+              Remove
             </button>
-          )}
-          {copy.status === "RESERVED" && (
-            <button
-              onClick={release}
-              disabled={busy}
-              className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
-            >
-              Release
-            </button>
-          )}
-          <button
-            onClick={remove}
-            disabled={busy}
-            className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-accent hover:bg-chip-hover"
-          >
-            Remove
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
-      {showReserveForm && (
+      {canEdit && showReserveForm && (
         <form onSubmit={reserve} className="flex flex-wrap items-center gap-2 border border-line bg-bg p-3">
           <PersonCombobox value={reservedFor} onChange={setReservedFor} required />
           <input
