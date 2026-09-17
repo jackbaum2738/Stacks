@@ -252,7 +252,7 @@ touch this again:**
   button once an override exists), which would permanently lose the option after
   any test/throwaway save.
 
-**Usernames and profile (PR #28) — key decisions if you touch this again:**
+**Usernames and profile (PR #30) — key decisions if you touch this again:**
 - `User.username` is nullable + unique even though every new signup requires one, because the
   migration landed against real production accounts (Jack's two) that predate usernames. Jack's
   plan, agreed before building: he sets a username on each from the new Profile page once this
@@ -663,7 +663,7 @@ not just the PR they were stated in:
   match intent. Verified at each step with Playwright: real DOM `getBoundingClientRect()`
   measurements of the checkbox/cover cell widths (not just eyeballing), comparing an Owner
   session against a View Only session on local Postgres.
-- **PR #28** (`claude/profile-usernames`, open) — added the Profile screen and usernames (see
+- **PR #30** (`claude/profile-usernames`, open) — added the Profile screen and usernames (see
   the "Usernames and profile" note under "Data model" above for the full design). Built from a
   project-thread request, mockup-first over five rounds of an interactive Artifact before any
   code was touched: the header dropdown, the inline-panel-vs-popup "Change" comparison (Jack
