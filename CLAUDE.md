@@ -675,7 +675,17 @@ not just the PR they were stated in:
   match intent. Verified at each step with Playwright: real DOM `getBoundingClientRect()`
   measurements of the checkbox/cover cell widths (not just eyeballing), comparing an Owner
   session against a View Only session on local Postgres.
-- **PR #28** (`claude/people-directory`) — added the People directory (see the "People
+- **PR #28** (`claude/project-thread-b65fhp`, merged) — closed the "Better error for a dead
+  invite link" item from IDEAS.md. A dead invite link (regenerated code or deleted library)
+  showed a generic, inconsistently-worded "not valid" message across four surfaces (`/join/
+  [code]`, the register page's invite preview, the register API, the accept-invite API).
+  Proposed a version first that logged *why* a link died (code rotated vs. library deleted,
+  via a small audit table) so the message could name the specific reason, and shared that
+  wording with Jack before building anything, per the "mockup/wording first" agreement — he
+  preferred one simple message over the added schema, so it shipped as pure copy: "This link
+  is no longer valid — contact the library owner to request a new one," made consistent
+  across all four places. No schema change.
+- **PR #29** (`claude/people-directory`) — added the People directory (see the "People
   directory" note under "Data model" and the "Backup/import as a zip of two files" note under
   "CSV backup/import" above for the full design). Mockup-first over seven rounds as an
   interactive Artifact before any code was written — row/cross UI matched to the Library page,

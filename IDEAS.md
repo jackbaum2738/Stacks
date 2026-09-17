@@ -42,11 +42,3 @@ only on confirming does it delete the user and that library together. If you
 belong to a library with other members, your account can just be removed
 from it (existing membership-removal semantics) without touching the library.
 
-## Better error for a dead invite link
-
-Using an invite link whose library was deleted, or whose invite code was
-regenerated (so it no longer matches any library), currently isn't handled
-with a friendly message. It should say the library doesn't exist/can't be
-found, and suggest contacting the library owner for a new invite link,
-instead of a generic error or a confusing state.
-
