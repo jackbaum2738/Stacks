@@ -166,6 +166,25 @@ touch this again:**
   the moment this shipped. It also copied any already-shared single `inviteCode` into
   `inviteCodeAdmin` so an old link keeps granting the same access it always did.
 
+**Wipe library (PR #22) — key decisions if you touch this again:**
+- Complements full deletion rather than replacing it: `POST /api/library/wipe` clears every
+  `Shelf`, `Copy`, and `Reservation` (Copy's Reservation cascades automatically) plus that
+  library's `BookOverride` corrections, but leaves the `Library` row, memberships/roles, and
+  all three invite links alone. Both actions live in one `DangerZoneSection` component under a
+  single "Danger zone" heading in Settings, not a second settings row -- explicit instruction
+  from Jack when this was proposed.
+- **Wipe is Admin+ (`requireLibraryContext({ require: "manage" })`), Delete stays Owner-only.**
+  Deliberately more permissive than delete: wipe can't touch membership or lock anyone out, so
+  it's gated at the same tier as shelves/invites/import rather than reserved for the Owner.
+  Agreed with Jack before building, same as the original role-tier decisions in PR #17.
+  BookOverride rows for the library are deleted too (they'd otherwise be orphaned corrections
+  for a catalog that no longer exists).
+- Mocked up first as an Artifact; Jack's feedback dropped a "removed vs. kept" two-column list
+  down to just a 2x2 "removed" count grid (copies, shelves, active reservations, book
+  corrections), and swapped the wipe-succeeded message off the app's usual green -- felt too
+  positive for a destructive action -- onto the amber already used for the "Reserved" status
+  pill (`--pill-reserved-fg`) instead of introducing a new color.
+
 **CSV backup/import (PR #12, #14) — key decisions if you touch this again:**
 - **The real import runs as many small requests, never one big one (PR #14).**
   `src/components/backup-import-section.tsx` splits the file into batches of
@@ -553,6 +572,18 @@ not just the PR they were stated in:
   both merged: View Only members keep read access to notes but lose the
   add/edit/delete affordances, matching the server, which already rejected
   the underlying PATCH for anyone below Member.
+- **PR #22** (`claude/wipe-library`, merged) — added "Wipe library" from the IDEAS.md backlog
+  (see the "Wipe library" note under "Data model" above for the full design). Built from a
+  project-thread request: recommendation and an interactive-Artifact mockup posted first, two
+  rounds of feedback from Jack before any code was written (dropped the confirmation's "kept"
+  column down to a 2x2 "removed" count grid; swapped the wipe-succeeded message off green onto
+  the existing "Reserved" amber), then built once he said to proceed. Verified with a live
+  local Playwright run: Owner sees both Wipe and Delete; an Admin (via a generated invite link)
+  sees Wipe but not Delete and gets a 403 calling `DELETE /api/library` directly; Member and
+  View Only see neither and get a 403 calling `POST /api/library/wipe` directly. Seeded a
+  library with a shelf, two scanned-in copies, and a reservation, wiped it as the Admin, and
+  confirmed via the API that shelves/copies/reservations were gone while both members and the
+  invite code survived.
 
 ## Keeping this file current
 
