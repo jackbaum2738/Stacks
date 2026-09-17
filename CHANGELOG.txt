@@ -4,9 +4,16 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
-6.9.1 -- 2026-09-17
+6.10.1 -- 2026-09-17
 --------------------
 - Made `User.username` required now that Jack set a username on both real production accounts from the new Profile page (PR #30) -- `prisma/schema.prisma` changed `username String? @unique` to `username String @unique`, with a one-line `ALTER TABLE "User" ALTER COLUMN "username" SET NOT NULL` migration. Removed the null-handling that was only there for the transition period: `ProfileMenu`'s `username ?? email` fallback (and its now-unused `email` prop), `ProfileForm`'s `initialUsername: string | null` type and `?? ""` default, and the `username ?? "Not set"` display row on the Profile page. No user-facing behavior change, since every real account already had a username by the time this shipped -- verified by re-running the Profile PR's full 23-check Playwright regression against the migrated schema.
+
+
+6.10.0 -- 2026-09-17
+--------------------
+- The Library page now paginates instead of rendering every result at once: a picker (25/50/100/200, defaulting to 25 per Jack's spec) sits above the list/grid alongside a "Showing X-Y of N" line, and a Prev/Next + numbered pager appears below the results whenever there's more than one page. Changing the page size or re-running the search/sort resets back to page 1 since the underlying result set just changed, but paging forward and back with Next/Prev leaves the page size exactly as set -- the specific bug Jack flagged, where navigating pages at a size of 200 used to have no defined behavior since pagination didn't exist yet. Switching between List and Grid view keeps both the current page and page size, since it's the same results just displayed differently. The chosen page size persists across visits the same way the List/Grid choice already does (localStorage), while the current page itself always starts back at 1 on a fresh visit.
+- Removed `/api/search`'s hardcoded result cap (50 rows for a text query, 300 for browsing everything) now that the Library page paginates client-side over the full result set -- the cap predated pagination and would have silently hidden matches once the library grew past it, especially for the 50-row search cap once a page size picker offering 100 or 200 existed above it. A personal library's full copy list is trivially small for a single query, so the route now returns every match and the client slices it into pages.
+- Mocked up as an interactive Artifact first (https://claude.ai/artifact/B2n1Su93uj7qEnhPMGfHj6) before any code was written -- Jack approved after one round of feedback (dropped the "Show" label next to the page-size numbers, leaving just "25 50 100 200 per page").
 
 
 6.9.0 -- 2026-09-17
