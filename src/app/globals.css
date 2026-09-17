@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/* Redefine Tailwind's `dark:` variant so an explicit theme choice (the
+   `data-theme` attribute set by the Settings theme switcher) wins over the
+   OS preference, which still applies whenever no explicit choice is stored. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-theme] *)) {
+      @slot;
+    }
+  }
+}
+
 :root {
   --bg: #efe7d6;
   --surface: #fbf6ea;
@@ -53,8 +67,10 @@
   --font-mono: var(--font-plex-mono);
 }
 
+/* Dark palette: applied by default when the OS prefers dark (unless an explicit
+   "light" choice below overrides it), and always when "dark" is explicitly chosen. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #1b1813;
     --surface: #23201a;
     --surface-raised: #2b2620;
@@ -79,6 +95,32 @@
     --shadow-tint: #3a342a;
     --shadow-tint-2: #3a342a;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #1b1813;
+  --surface: #23201a;
+  --surface-raised: #2b2620;
+  --ink: #efe6d3;
+  --ink-muted: #efe6d3;
+  --ink-soft: #a79b84;
+  --ink-faint: #8d8270;
+  --line: #3a342a;
+  --line-strong: #4b4335;
+  --line-inner: #3a342a;
+  --accent: #d4665a;
+  --accent-2: #6fa3a4;
+  --ok: #6fa3a4;
+  --on-accent: #fbf6ea;
+  --pill-available-bg: #2b3a2e;
+  --pill-available-fg: #8fc79a;
+  --pill-reserved-bg: #3a2c1f;
+  --pill-reserved-fg: #e2b483;
+  --reserved-text: #e2897e;
+  --row-hover: #211e18;
+  --chip-hover: #2b2620;
+  --shadow-tint: #3a342a;
+  --shadow-tint-2: #3a342a;
 }
 
 body {

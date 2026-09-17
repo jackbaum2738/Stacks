@@ -26,13 +26,19 @@ export const metadata: Metadata = {
   description: "Track and share a home library of physical books.",
 };
 
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("stacks:theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${newsreader.variable} ${karla.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* Runs before paint so an explicit theme choice applies with no flash of the OS default. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {children}
+      </body>
     </html>
   );
 }
