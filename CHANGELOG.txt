@@ -4,6 +4,11 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.6.4 -- 2026-09-17
+--------------------
+- Fixed the dead-invite-link message from IDEAS.md: a link whose library was deleted or whose invite code was regenerated used to show the same generic "Invite link not valid" wording as a mistyped or made-up code, which read as confusing rather than explanatory. Replaced it with "This link is no longer valid -- contact the library owner to request a new one" across every surface that shows an invite error (the /join/[code] page, the register page's invite preview, the register API's own invite-code check, and the accept-invite API), so the message is consistent wherever it can appear. Considered logging *why* a code went dead (regenerated vs. library deleted) to give a more specific message per case, and shared that option with Jack first, but he preferred the single simpler message over the added schema, so that's what shipped.
+
+
 6.6.3 -- 2026-09-17
 --------------------
 - Settings > Shelves: replaced the text "Delete" button on each shelf row with the same icon-only cross control used for the per-row remove action on the Library page's list view, and replaced the browser's native confirm() dialog with the app's own bordered confirmation modal (same overlay/card styling as the Library page's remove-book modal) instead of the OS-styled popup. The confirmation wording now reflects what actually happens server-side: since DELETE /api/shelves/[id] already 409s unless the shelf has zero non-removed copies, a shelf that still holds books shows a "still has N books on it, move or remove them first" message with no destructive action offered (deleting would just fail), while an empty shelf gets a plain "this can't be undone" confirm with a Delete button.
