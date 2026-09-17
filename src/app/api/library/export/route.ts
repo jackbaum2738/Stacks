@@ -32,7 +32,7 @@ export async function GET() {
   const rows = copies.map((copy) => {
     const book = applyBookOverride(copy.book, copy.book.overrides[0]);
     return [
-      copy.id,
+      copy.code,
       copy.book.isbn13,
       book.title,
       book.authors.join("; "),
