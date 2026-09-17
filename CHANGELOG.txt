@@ -4,6 +4,11 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.8.0 -- 2026-09-17
+--------------------
+- Restyled the library picker dropdown in the dashboard header: it's now a button + listbox styled like the reservation picker's suggestion menu (paper-shadow, our border and radius, chip-hover rows) instead of a plain browser `<select>`, whose open list is unstyled OS chrome no CSS can reach. The trigger keeps its previous size/position/font so it doesn't disturb the header layout. "+ New library..." moved out of the option list into its own accent-colored row below a divider, matching how the reservation picker breaks "add a new person" out from its match list, and still opens the same inline create-library form as before. Built as a `role="combobox"` button that owns focus throughout (via `aria-activedescendant` rather than moving focus into the popup) so keyboard support works the same way whether the menu was opened by mouse or keyboard: arrow keys move the highlight and wrap at the ends, Home/End jump to the first/last row (the "+ New library" row included, so it's reachable without a mouse), Enter/Space selects, Escape closes and returns focus to the trigger, and typing jumps to the next library starting with that letter. Mocked up first as an Artifact before any code was written.
+
+
 6.7.0 -- 2026-09-17
 --------------------
 - Added a People directory: a new "People" tab listing everyone books get reserved for, replacing the old free-text "reserved for"/"contact" fields on Reservation. Promoted the reservee from a plain string into a real `Person` model scoped to a library (name, email, phone, location, birthday -- only name required), with `Reservation.personId` pointing at it. Duplicate names are allowed on purpose (two real people can share a name) -- email is the only field that has to be unique per library, and it can still be left blank, since a nullable column's NULLs never collide with each other in Postgres. A migration groups/dedupes existing `reservedFor` strings into one Person per (library, name) pair and rewires every Reservation before dropping the old columns.
