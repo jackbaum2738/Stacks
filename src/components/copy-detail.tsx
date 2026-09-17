@@ -6,6 +6,7 @@ import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
 import { StatusPill } from "@/components/status-pill";
 import { CopyButton } from "@/components/copy-button";
+import { CopyNotecard } from "@/components/copy-notecard";
 import { ReservationModal } from "@/components/reservation-modal";
 import { DeleteCopiesModal } from "@/components/delete-copies-modal";
 import { formatDate } from "@/lib/format-date";
@@ -16,6 +17,7 @@ interface CopyDetailData {
   status: "AVAILABLE" | "RESERVED" | "REMOVED";
   addedAt: Date;
   bookCrossingId: string | null;
+  notes: string | null;
   shelf: { id: string; name: string; code: string | null } | null;
   book: {
     isbn13: string;
@@ -55,6 +57,8 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
             </p>
           )}
         </div>
+
+        <CopyNotecard copyId={copy.id} initialNote={copy.notes} />
       </div>
 
       <div className="min-w-0">

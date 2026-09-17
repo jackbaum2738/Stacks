@@ -96,6 +96,17 @@ it's per-`Copy`, never per-`Book`). Sharing a library between people uses a rand
 `Library.inviteCode` link, not email (no transactional email provider is set up —
 see CHANGELOG 2.0.0).
 
+`Copy.notes` (free text, 2000-char cap) is per physical copy, same reasoning as
+`bookCrossingId` — two copies of the same ISBN can carry different notes. The field
+and its `PATCH /api/copies/[id]` endpoint existed since the CSV import/export work
+(PR #12) but sat unused in the UI until PR #19 gave it a manila-notecard UI
+(`src/components/copy-notecard.tsx` on the book detail page,
+`src/components/note-popup.tsx` for the quick-read/edit popup opened from the
+corner tag on grid tiles and list rows in `/dashboard/search`). The manila color
+tokens and the `.notecard-tape`/`.notecard-fold` pseudo-element classes live in
+`globals.css` alongside the other signature look-and-feel classes — reuse them
+rather than redefining the tape/fold effect if this UI grows.
+
 **Book edits are library-scoped, never written to the shared `Book` row.** A
 `BookOverride` row (unique per `bookId`+`libraryId`) holds one library's corrections
 to title/authors/publisher/pageCount/description/coverUrl; display code merges it
@@ -509,7 +520,7 @@ not just the PR they were stated in:
   figure beside it, and the ticker's "Importing" label running into the title
   after it) — harmless visually since flex `gap`/margin provided the visual
   separation, but a screen reader would have read them concatenated.
-- **PR #17** (`claude/project-thread-gq3u3r`) — added the Owner/Admin/Member/View Only
+- **PR #17** (`claude/project-thread-gq3u3r`, merged) — added the Owner/Admin/Member/View Only
   role system and per-role invite links (see the "Roles and invite links" note under
   "Data model" above for the full design). Built from a project-thread request, not a
   from-scratch mockup: the role rules and invite-link approach (four tiers, Member
@@ -523,6 +534,25 @@ not just the PR they were stated in:
   section visibility per role, and confirmed the Owner-row protections server-side (409
   removing/demoting an Owner via the member endpoints; ownership transfer moves OWNER to
   the target and demotes the caller to ADMIN in one transaction).
+- **PR #19** (`claude/library-notes`, open) — added a manila-notecard UI for
+  `Copy.notes` (see "Data model" above) — inline on the book detail page, and via
+  a corner tag + quick-read/edit popup on grid tiles and list rows in the Library
+  page. Mocked up first as an Artifact over four rounds of feedback before any
+  code was written: the grid tag originally navigated to the full book page
+  (changed to a popup so browsing isn't interrupted); the list view's note
+  affordance first lived in the row's actions cluster, which threw off
+  reserve/remove icon alignment row-to-row once notes made the icon count
+  inconsistent (moved to the cover corner instead, matching the grid tile, so
+  every row's actions sit in the same two spots regardless of notes); the popup
+  then gained inline editing and the same tape/folded-corner treatment as the
+  on-page card, which had only supported reading at first. Verified with a live
+  Playwright run: add/edit/delete on the book detail page (including a reload to
+  confirm the server round-trip), edit from both the grid and list popups,
+  confirmed a tag click never navigates away, and confirmed a copy without a
+  note shows no tag. Reconciled with PR #17's concurrent role system after
+  both merged: View Only members keep read access to notes but lose the
+  add/edit/delete affordances, matching the server, which already rejected
+  the underlying PATCH for anyone below Member.
 
 ## Keeping this file current
 

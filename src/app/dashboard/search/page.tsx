@@ -8,6 +8,7 @@ import { ReservationModal } from "@/components/reservation-modal";
 import { DeleteCopiesModal } from "@/components/delete-copies-modal";
 import { LibrarySelectionBar } from "@/components/library-selection-bar";
 import { LibraryContextMenu, type ContextMenuTarget } from "@/components/library-context-menu";
+import { NotePopup } from "@/components/note-popup";
 import { formatDate } from "@/lib/format-date";
 import { useLibraryRole } from "@/components/library-role-context";
 
@@ -20,6 +21,7 @@ interface BookResult {
     id: string;
     status: "AVAILABLE" | "RESERVED" | "REMOVED";
     addedAt: string;
+    notes: string | null;
     shelf: { id: string; name: string } | null;
     reservation: { id: string; reservedFor: string; contact: string | null; note: string | null } | null;
   }[];
@@ -29,6 +31,7 @@ interface Row {
   id: string;
   status: "AVAILABLE" | "RESERVED" | "REMOVED";
   addedAt: string;
+  notes: string | null;
   shelf: { id: string; name: string } | null;
   reservation: { id: string; reservedFor: string; contact: string | null } | null;
   book: { title: string; authors: string[]; coverUrl: string | null };
@@ -72,6 +75,7 @@ export default function LibraryBrowsePage() {
   const [reserveModal, setReserveModal] = useState<{ mode: "create" | "edit"; rows: Row[] } | null>(null);
   const [deleteModal, setDeleteModal] = useState<Row[] | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null);
+  const [notePopup, setNotePopup] = useState<{ copyId: string; bookTitle: string; note: string } | null>(null);
 
   const runSearch = useCallback((q: string) => {
     return fetch(`/api/search?q=${encodeURIComponent(q)}`)
@@ -169,6 +173,30 @@ export default function LibraryBrowsePage() {
 
   function openRowReserve(row: Row) {
     setReserveModal({ mode: row.reservation ? "edit" : "create", rows: [row] });
+  }
+
+  function openNote(row: Row, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!row.notes) return;
+    setNotePopup({ copyId: row.id, bookTitle: row.book.title, note: row.notes });
+  }
+
+  async function saveNote(value: string) {
+    if (!notePopup) return false;
+    const res = await fetch(`/api/copies/${notePopup.copyId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: value || null }),
+    });
+    if (!res.ok) return false;
+    const copyId = notePopup.copyId;
+    setBooks((prev) =>
+      prev.map((b) => ({
+        ...b,
+        copies: b.copies.map((c) => (c.id === copyId ? { ...c, notes: value || null } : c)),
+      }))
+    );
+    return true;
   }
 
   const trimmedQuery = query.trim();
@@ -304,7 +332,23 @@ export default function LibraryBrowsePage() {
                     </td>
                   )}
                   <td className={`py-2.5 ${canEdit ? "" : "pl-4"}`}>
-                    <BookCover src={row.book.coverUrl} alt={row.book.title} className="h-[50px] w-[34px]" />
+                    <div className="relative h-[50px] w-[34px]">
+                      <BookCover src={row.book.coverUrl} alt={row.book.title} className="h-[50px] w-[34px]" />
+                      {row.notes && (
+                        <button
+                          type="button"
+                          onClick={(e) => openNote(row, e)}
+                          title="Read note"
+                          aria-label={`Read note for ${row.book.title}`}
+                          className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 -rotate-[8deg] items-center justify-center rounded-[2px] border border-manila-line bg-manila text-manila-ink shadow-[0_2px_0_-1px_var(--manila-shadow)] transition-transform hover:rotate-0 hover:scale-[1.12]"
+                        >
+                          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[9px] w-[9px]">
+                            <path d="M4 4h9l3 3v9H4z" strokeLinejoin="round" />
+                            <path d="M13 4v3h3" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="max-w-[240px] truncate py-2.5 font-display text-[16px] font-medium text-ink">
                     {row.book.title}
@@ -391,6 +435,20 @@ export default function LibraryBrowsePage() {
                     />
                   </label>
                 )}
+                {row.notes && (
+                  <button
+                    type="button"
+                    onClick={(e) => openNote(row, e)}
+                    title="Read note"
+                    aria-label={`Read note for ${row.book.title}`}
+                    className="absolute -top-1.5 -right-1.5 z-10 flex h-6 w-6 -rotate-[8deg] items-center justify-center rounded-[2px] border border-manila-line bg-manila text-manila-ink shadow-[0_3px_0_-1.5px_var(--manila-shadow)] transition-transform hover:rotate-0 hover:scale-[1.08]"
+                  >
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-3 w-3">
+                      <path d="M4 4h9l3 3v9H4z" strokeLinejoin="round" />
+                      <path d="M13 4v3h3" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                )}
               </div>
               <button
                 type="button"
@@ -414,6 +472,16 @@ export default function LibraryBrowsePage() {
             </div>
           ))}
         </div>
+      )}
+
+      {notePopup && (
+        <NotePopup
+          bookTitle={notePopup.bookTitle}
+          note={notePopup.note}
+          canEdit={canEdit}
+          onClose={() => setNotePopup(null)}
+          onSave={saveNote}
+        />
       )}
 
       {contextMenu && (

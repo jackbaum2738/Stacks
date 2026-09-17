@@ -38,6 +38,10 @@
   --chip-hover: #f1e7d4;
   --shadow-tint: #e4d9c0;
   --shadow-tint-2: #dccfb2;
+  --manila: #e7cf98;
+  --manila-shadow: #cbaf6c;
+  --manila-line: #b99a53;
+  --manila-ink: #4a3a17;
 }
 
 @theme inline {
@@ -62,6 +66,10 @@
   --color-reserved-text: var(--reserved-text);
   --color-row-hover: var(--row-hover);
   --color-chip-hover: var(--chip-hover);
+  --color-manila: var(--manila);
+  --color-manila-shadow: var(--manila-shadow);
+  --color-manila-line: var(--manila-line);
+  --color-manila-ink: var(--manila-ink);
   --font-display: var(--font-newsreader);
   --font-sans: var(--font-karla);
   --font-mono: var(--font-plex-mono);
@@ -94,6 +102,10 @@
     --chip-hover: #2b2620;
     --shadow-tint: #3a342a;
     --shadow-tint-2: #3a342a;
+    --manila: #4d3f22;
+    --manila-shadow: #2f2614;
+    --manila-line: #6b5a30;
+    --manila-ink: #ecd9a4;
   }
 }
 
@@ -121,6 +133,10 @@
   --chip-hover: #2b2620;
   --shadow-tint: #3a342a;
   --shadow-tint-2: #3a342a;
+  --manila: #4d3f22;
+  --manila-shadow: #2f2614;
+  --manila-line: #6b5a30;
+  --manila-ink: #ecd9a4;
 }
 
 body {
@@ -143,6 +159,34 @@ body {
   box-shadow:
     0 10px 0 -5px var(--shadow-tint),
     0 20px 0 -10px var(--shadow-tint-2);
+}
+
+/* Manila notecard (per-copy notes): a strip of tape and a folded page corner, so it
+   reads as a physical index card rather than another flat panel. Needs `relative` on
+   the element carrying these classes. Mocked up in an Artifact before building. */
+.notecard-tape::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 22px;
+  width: 46px;
+  height: 18px;
+  background: color-mix(in srgb, var(--manila-ink) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--manila-line) 70%, transparent);
+  transform: rotate(3deg);
+  opacity: 0.55;
+}
+.notecard-fold::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  background:
+    linear-gradient(135deg, transparent 50%, color-mix(in srgb, var(--manila) 82%, var(--manila-ink) 18%) 50%),
+    linear-gradient(135deg, transparent 50%, var(--manila-line) 50.6%);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
 /* Animated Mark loader for slow operations (CSV import, etc.) -- the three bars
