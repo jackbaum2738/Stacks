@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   if (inviteCode) {
     const found = await findLibraryByInviteCode(inviteCode);
     if (!found) {
-      return NextResponse.json({ error: "That invite link is no longer valid" }, { status: 404 });
+      return NextResponse.json({ error: "This link is no longer valid — contact the library owner to request a new one." }, { status: 404 });
     }
     invitedLibrary = { id: found.library.id };
     invitedRole = found.role;
