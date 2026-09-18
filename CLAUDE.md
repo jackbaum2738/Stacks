@@ -892,6 +892,22 @@ not just the PR they were stated in:
   "Stacks" -- an unregistered, non-legal-entity name can't itself hold copyright; ownership sits
   with Jack as the individual who created the work, automatically and regardless of any company
   registration; he confirmed he wanted his full name over just "Jack" once asked).
+- **PR #39** (`claude/password-reset-email`, open) — added password reset by email and Brevo
+  as the transactional email provider (see the "Password reset & transactional email" note
+  under "Data model" above for the full design). Built from a project-thread session that
+  started with buying stacksonline.com on Cloudflare and setting up its DNS end to end (SPF,
+  DKIM, DMARC, a branded `mail` subdomain, Google Postmaster Tools, a Gmail "send mail as"
+  alias for `info@` routed through Brevo's SMTP relay) before any app code was touched, then
+  moved to the password-reset feature once the domain/email groundwork was solid. Mocked up
+  the email itself first as an Artifact, four rounds of feedback before any code was written
+  (username shown in brackets for deliverability; an inline "request a new one" link on the
+  expiry line; copyright/footer links added and reconciled against the real site footer's
+  wording; the logo lockup sized up twice, "still too small" each time, before Jack signed
+  off). Verified with a live local Playwright run: full round trip via the dev-console-logged
+  reset link (no real Brevo key in this sandbox) from request through sign-in with the new
+  password, old password rejected, a reused reset token rejected rather than silently
+  accepted twice, and a nonexistent identifier still getting the same generic response as a
+  real match (no account enumeration). Test user cleaned up from the local DB afterward.
 
 ## Keeping this file current
 
