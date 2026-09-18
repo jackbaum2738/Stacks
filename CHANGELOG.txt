@@ -4,6 +4,13 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.20.0 -- 2026-09-18
+--------------------
+- Scanning out an ISBN that matches more than one copy in the library now shows a picker (shelf name, Available/Reserved status, and who a reserved copy is held for) instead of silently guessing -- `POST /api/copies/scan-out` returns `{ choices: [...] }` when the ISBN has multiple non-removed copies, and a follow-up call with `copyId` finalizes the one the user actually picked. Previously it always auto-picked the oldest AVAILABLE copy, falling back to the oldest RESERVED copy only if none were available, with no way to tell the app which physical copy was in hand and no shelf shown in the result -- if two copies of the same title were reserved for different people, or one was reserved and another wasn't, the wrong reservation could get silently released. Came from a project-thread question about how duplicate-ISBN scan-out behaves; flagged the ambiguity, mocked up the picker as an Artifact (https://claude.ai/artifact/RyTHBu8RFL1g57AXcY5G2x), and built it once Jack said to go ahead. A single matching copy still resolves immediately with no extra step, same as before.
+- The scan-out result banner now names the shelf the removed copy came from ("Removed from Shelf B2." / "Removed from Shelf B2 -- reservation for X marked fulfilled.") instead of the generic "Removed from your library." -- needed so the new picker's choice is visibly confirmed, and fixes the same shelf-blindness for the everyday single-copy case too.
+- Verified with a live local Playwright run against local Postgres: a single-copy ISBN still resolves instantly with no picker; two available copies show a picker listing both shelves, Cancel backs out with no side effects, and picking one removes exactly that copy while the other stays untouched and the next scan of the same ISBN auto-resolves to it; a mixed available/reserved pair shows the reservation warning before removal, removing the available copy leaves the reservation active, and removing the reserved copy (once it's the only one left) correctly releases it (21/21 checks passed).
+
+
 6.19.1 -- 2026-09-18
 --------------------
 - Hid the site footer (`SiteFooter`, PR #35) below the `sm` breakpoint -- Jack reported it after testing the mobile nav shell (PR #41) live: on a phone the footer's Stacks logo/version/copyright line just added clutter under a page that already ends with the fixed bottom tab bar, with no real content of its own to justify the extra scroll. Desktop is unaffected.
