@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireLibraryContext } from "@/lib/api-context";
+import { applyBookOverride } from "@/lib/book-view";
 
 export async function GET(request: Request) {
   const { context, response } = await requireLibraryContext();
@@ -15,11 +16,22 @@ export async function GET(request: Request) {
       copy: { libraryId: context.library.id },
       ...(includeReleased ? {} : { releasedAt: null }),
     },
-    include: { copy: { include: { book: true, shelf: true } }, person: true, createdBy: { select: { name: true } } },
+    include: {
+      copy: {
+        include: { book: { include: { overrides: { where: { libraryId: context.library.id } } } }, shelf: true },
+      },
+      person: true,
+      createdBy: { select: { name: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ reservations });
+  return NextResponse.json({
+    reservations: reservations.map((reservation) => ({
+      ...reservation,
+      copy: { ...reservation.copy, book: applyBookOverride(reservation.copy.book, reservation.copy.book.overrides[0]) },
+    })),
+  });
 }
 
 const createSchema = z.object({

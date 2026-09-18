@@ -382,6 +382,31 @@ a remembered mid-list page number wouldn't mean anything against a result set th
 changed since. Mocked up first as an Artifact (one round of feedback: Jack asked to drop the
 "Show" label next to the page-size numbers) before any code was touched.
 
+**Reservations folded into People, no standalone tab (project thread, 2026-09-18) — key
+decisions if you touch this again:** the Reservations nav item and `/dashboard/reservations`
+page are gone. A reservation only exists so that mailing several books to the same person
+abroad in one parcel is cheaper than mailing them one at a time — Jack's explicit correction
+mid-build — **not** to track what's been sitting the longest, and nothing ships until there's
+enough reserved for that person to make the postage worth it. That rules out any "oldest
+first" / "held N+ days" framing: an early mockup round pitched Reservations as an age-sorted
+shipping queue, which Jack rejected on exactly this premise, not on the UI. The People table's
+"N active" count (`src/app/dashboard/people/page.tsx`) is now the only entry point — clicking
+it opens `ReservedOverlay` (`src/components/reserved-overlay.tsx`), a full screen (not a
+slide-over) listing every active reservation in the library, sortable by Book/Reserved
+for/Shelf/Reserved on the same click-header pattern as the People and Library tables. The
+filter box defaults to whichever person's count was clicked but stays editable, so clearing it
+browses every reservation at once — that's also what makes column sorting worth having, per
+Jack. Only two row actions: Edit (reassign who a copy's reserved for, via the existing
+`ReservationModal` in edit mode) and Release (plain `PATCH /api/reservations/[id]` with
+`release: true`, same delete-the-row behavior as everywhere else — see the reservation-release
+bug under "Bugs found and fixed"). A "Mark as sent" action was in the first build round but
+cut before merge: what should actually happen to a copy once it's mailed out (scanned/removed
+like today's manual Remove, or its own trackable status) hasn't been designed, so it's an
+IDEAS.md item and this screen only offers Release for now. Mocked up first as an Artifact,
+two rounds — round one offered three directions (fold into People; an age-sorted "ready to
+ship" queue, recommended at the time; a merged People/Reservations page with two views) before
+Jack corrected the batching premise and picked "option 1 with elements of 2."
+
 ## Working agreements (how the user wants sessions to run)
 
 These were established explicitly mid-project and apply to all future work,
@@ -862,6 +887,17 @@ not just the PR they were stated in:
   "Stacks" -- an unregistered, non-legal-entity name can't itself hold copyright; ownership sits
   with Jack as the individual who created the work, automatically and regardless of any company
   registration; he confirmed he wanted his full name over just "Jack" once asked).
+- **PR #36** (`claude/project-thread-yqofnc`) -- folded Reservations into People and removed
+  the standalone tab (see the "Reservations folded into People" note under "Data model" above
+  for the full design). Came from a project-thread ask to rethink the Reservations page;
+  mocked up first as an Artifact over two rounds -- round one proposed three directions with a
+  recommendation for an age-sorted "ready to ship" queue, which Jack corrected: reservations
+  exist purely to batch several books to the same person before mailing them together
+  cost-effectively, not to track what's waited longest, so nothing about hold duration belongs
+  in the design. Round two rebuilt it as "option 1 with elements of 2" per his direction, and a
+  same-thread follow-up ("yeah I want it added here too") confirmed reassigning who a copy's
+  reserved for (Edit) should live on this screen as well, not just on the Library page's
+  existing reservation editor.
 
 ## Keeping this file current
 
