@@ -77,6 +77,14 @@ it didn't, for a while).
   (`formLabelClass`/`formInputClass`) — reuse it for any new form rather than
   redefining the underline-input look inline. Logo mark + favicon are generated
   SVG/PNG (see `src/components/mark.tsx`, `src/app/icon.svg`), not hand-drawn.
+- **Site footer** (`src/components/site-footer.tsx`, PR: site footer) is wired into the root
+  `layout.tsx`, not the dashboard layout, so it renders on every page including the logged-out
+  landing page, login/register, and `/join/[code]` — every top-level page wrapper in this
+  codebase already carries `flex-1` (a deliberate existing pattern), so a global footer sibling
+  after `{children}` sits at the bottom of short pages without any per-page change. Shows the
+  mark, a `/privacy` link, a copyright line, and the running version, read straight from
+  `package.json` via a JSON import (`resolveJsonModule` is already on in `tsconfig.json`) rather
+  than hand-maintained — bump the version there as usual and the footer follows automatically.
 - **Deployment**: Vercel + Postgres on Neon. `package.json`'s `build` script runs
   `prisma migrate deploy && next build`; `postinstall` runs `prisma generate`.
 
@@ -822,6 +830,20 @@ not just the PR they were stated in:
   preserves the current page; searching resets to page 1 and the pager disappears once
   results fit on one page; a same-browser reload keeps the chosen page size but resets to
   page 1. Test data cleaned up from the local DB afterward.
+- **PR: site footer** (`claude/site-footer`, open) -- added a global site footer (see the "Site
+  footer" note under "Tech stack" above) and a `/privacy` placeholder page. Came from a
+  project-thread ask that grew mid-conversation: started as "just add a footer," Claude proposed
+  a minimal version-number-only treatment and mocked it up, then Jack said he actually wants to
+  roll Stacks out beyond his own household to his dad's wider international book-sharing network
+  and asked for the full treatment -- logo, version, copyright, and a privacy notice link, with
+  help writing the notice itself since Stacks isn't a registered company. A full privacy notice
+  was drafted and checked against the real code (the People directory's third-party data, the two
+  functional cookies, no analytics/tracking/ads/selling) and shared as a mockup, but Jack asked to
+  ship just a "coming soon" placeholder at `/privacy` for now and track writing the real one as an
+  idea -- see IDEAS.md's "Write the real privacy notice" entry for the draft's status and the
+  personal-use-exemption caveat. Copyright line reads "(c) {year} Jack" (first name, not "Stacks"
+  -- an unregistered, non-legal-entity name can't itself hold copyright; ownership sits with Jack
+  as the individual who created the work, automatically and regardless of any company registration).
 
 ## Keeping this file current
 

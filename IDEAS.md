@@ -26,6 +26,22 @@ not emailed, and there's no email verification on signup. If that's ever wanted:
   tooling) or **AWS SES** (near-free per email, but more setup friction — sandbox
   mode and domain verification before it can send to arbitrary addresses).
 
+## Write the real privacy notice
+
+The footer (added the same session this idea was recorded) links to `/privacy`, but
+the page itself is just a "coming soon" placeholder for now — Jack wants to roll
+Stacks out beyond his own household to his dad's wider book-sharing network, "around
+the world," and asked for help writing a real one before that happens. A full draft
+already exists (written and reviewed against the actual code — what's collected, the
+People directory's third-party data, the two functional cookies, no analytics/
+tracking/ads) as an Artifact from that thread; it still needs Jack's sign-off on
+wording, a real contact method, and the copyright name before it replaces this
+placeholder. Also worth another look once the audience actually shifts from "people
+Jack invited personally" to strangers signing up on their own — that's the point
+where the personal/household-use exemption most privacy law (UK GDPR included, since
+Jack's in the UK) leans on gets shakier, and real legal advice becomes worth getting
+rather than just a plain-language notice.
+
 ## Delete your own account
 
 The Profile screen (PR #28) covers changing your name, username, email, and

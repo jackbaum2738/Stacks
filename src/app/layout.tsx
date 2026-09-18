@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Newsreader, Karla, IBM_Plex_Mono } from "next/font/google";
+import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Runs before paint so an explicit theme choice applies with no flash of the OS default. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );
