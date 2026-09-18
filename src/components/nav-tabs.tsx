@@ -7,10 +7,10 @@ import { useLibraryRole } from "@/components/library-role-context";
 const NAV_LINKS = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/scan", label: "Scan", requiresEdit: true },
-  { href: "/dashboard/shelves", label: "Shelves" },
   { href: "/dashboard/search", label: "Library" },
-  { href: "/dashboard/reservations", label: "Reservations" },
   { href: "/dashboard/people", label: "People" },
+  { href: "/dashboard/shelves", label: "Shelves" },
+  { href: "/dashboard/reservations", label: "Reservations" },
   { href: "/dashboard/settings", label: "Settings" },
 ];
 
