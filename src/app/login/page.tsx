@@ -77,9 +77,14 @@ export default function LoginPage(props: PageProps<"/login">) {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="password" className={formLabelClass}>
-            Password
-          </label>
+          <div className="flex items-center justify-between">
+            <label htmlFor="password" className={formLabelClass}>
+              Password
+            </label>
+            <Link href="/forgot-password" className="font-sans text-xs font-medium text-accent-2 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <div className="relative">
             <input
               id="password"
