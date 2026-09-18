@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Newsreader, Karla, IBM_Plex_Mono } from "next/font/google";
 import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
@@ -25,6 +25,13 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Stacks",
   description: "Track and share a home library of physical books.",
+};
+
+// `viewport-fit=cover` lets the fixed mobile bottom tab bar pad itself by
+// `env(safe-area-inset-bottom)` instead of sitting under the iOS home
+// indicator / Android gesture bar.
+export const viewport: Viewport = {
+  viewportFit: "cover",
 };
 
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("stacks:theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
