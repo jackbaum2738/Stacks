@@ -4,8 +4,16 @@
  * (see CLAUDE.md's transactional-email notes) and are meant to stay identical across every
  * email type, not be re-derived per template. Written as classic table-based, inline-styled
  * HTML rather than the app's normal Tailwind/CSS-variable styling, since email clients don't
- * reliably support external stylesheets, CSS custom properties, flexbox/grid, or SVG.
+ * reliably support external stylesheets, CSS custom properties, flexbox/grid, or SVG. The logo
+ * itself is a single flattened PNG (public/logo-full-light.png, same asset the site header and
+ * footer use) rather than div-built bars + a separate text block -- the earlier div/table
+ * version rendered wrong in Gmail (bars centered above the wordmark, wrong font), which a real
+ * image doesn't have to worry about. Email is light-only (see CLAUDE.md), so this always uses
+ * the light-background variant, never the dark one.
  */
+
+const LOGO_WIDTH = 220;
+const LOGO_HEIGHT = 58; // matches the source PNG's 3588:940 aspect ratio
 
 const COLORS = {
   bg: "#efe7d6",
@@ -32,22 +40,6 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-/** The three-bar Stacks mark stacked with gaps, widest at the bottom, matching src/components/mark.tsx. Built from table cells and divs rather than SVG, since many email clients don't render inline SVG. */
-function logoBarsHtml(): string {
-  const row = (width: number, color: string, isLast: boolean) => `
-    <tr>
-      <td align="center" style="padding:${isLast ? "0" : "0 0 3px 0"};">
-        <div style="width:${width}px;height:9px;background-color:${color};border-radius:2px;line-height:9px;font-size:0;">&nbsp;</div>
-      </td>
-    </tr>`;
-  // Narrowest bar on top, widest on the bottom -- matches src/components/mark.tsx.
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="border-collapse:collapse;">
-    ${row(46, COLORS.ink, false)}
-    ${row(53, COLORS.accent2, false)}
-    ${row(60, COLORS.accent, true)}
-  </table>`;
 }
 
 export function renderEmailLayout(params: {
@@ -77,11 +69,8 @@ export function renderEmailLayout(params: {
 <tr>
 <td style="padding:44px 40px 36px 40px;font-family:${FONT_BODY};">
 
-<div style="text-align:center;margin:0 0 12px 0;">
-${logoBarsHtml()}
-</div>
-<div style="text-align:center;margin:0 0 40px 0;font-family:${FONT_DISPLAY};font-size:34px;font-weight:700;color:${COLORS.ink};">
-Stacks
+<div style="text-align:center;margin:0 0 40px 0;">
+<img src="${origin}/logo-full-light.png" width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}" alt="Stacks" style="display:inline-block;width:${LOGO_WIDTH}px;height:${LOGO_HEIGHT}px;border:0;" />
 </div>
 
 ${bodyHtml}
