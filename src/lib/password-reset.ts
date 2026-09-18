@@ -27,6 +27,16 @@ export async function createPasswordResetToken(userId: string): Promise<string> 
 }
 
 /**
+ * Read-only check (unused, not expired) so the reset-password page can show an "invalid link"
+ * state on load for an already-used or expired link, rather than only after a submit attempt.
+ * Doesn't mark the token used -- consumePasswordResetToken below is still the real gate.
+ */
+export async function isPasswordResetTokenValid(token: string): Promise<boolean> {
+  const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash: hashResetToken(token) } });
+  return !!record && !record.usedAt && record.expiresAt > new Date();
+}
+
+/**
  * Validates a raw reset token (unused, not expired) and marks it used. Returns the associated
  * user on success, or null if the token is missing, already used, or expired.
  */
