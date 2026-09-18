@@ -6,7 +6,7 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-line">
+    <footer className="hidden border-t border-line sm:block">
       <div className="mx-auto flex w-full max-w-[920px] flex-wrap items-center justify-between gap-3 px-6 py-4">
         <Link href="/dashboard" className="hover:opacity-80">
           <FullLogo height={36} />
