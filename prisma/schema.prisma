@@ -22,15 +22,34 @@ enum CopyStatus {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  username     String        @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime      @default(now())
-  memberships  Membership[]
-  reservations Reservation[] @relation("ReservationCreatedBy")
-  backupsTaken Library[]     @relation("LibraryLastBackupBy")
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  username            String               @unique
+  passwordHash        String
+  name                String?
+  createdAt           DateTime             @default(now())
+  memberships         Membership[]
+  reservations        Reservation[]        @relation("ReservationCreatedBy")
+  backupsTaken        Library[]            @relation("LibraryLastBackupBy")
+  passwordResetTokens PasswordResetToken[]
+}
+
+/// A one-time, short-lived token emailed to a user who requested a password reset. Stores
+/// only a hash of the token (never the raw value) so a database leak alone can't be replayed
+/// into an account takeover. `usedAt` marks a spent token without deleting it -- there's no
+/// unique constraint here that a leftover used row could ever block, unlike the Reservation
+/// bug (see CLAUDE.md) -- and forgot-password always deletes any other outstanding unused
+/// tokens for the user first, so only the most recently requested link is ever live.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /// A single household/network member's library of physical books.

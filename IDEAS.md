@@ -42,6 +42,29 @@ where the personal/household-use exemption most privacy law (UK GDPR included, s
 Jack's in the UK) leans on gets shakier, and real legal advice becomes worth getting
 rather than just a plain-language notice.
 
+## Email signature for Gmail
+
+Jack sends some Stacks-related emails by hand from `info@stacksonline.com` (not
+through the app) and wants a signature block he can paste into Gmail's own
+signature editor, matching the shared transactional-email header/footer identity
+another thread is standardizing (see CLAUDE.md's "Tech stack" section once that
+work lands, or the email mockup thread if it's still open): the Stacks mark +
+"Stacks" wordmark, then `stacksonline.com` and a Privacy Policy link, then
+`© 2026 Jack Baum`.
+
+Gmail's signature editor strips most markup on paste (no custom fonts, limited
+CSS, no `@font-face` or CSS variables), so this can't just be a copy of the email
+template's HTML -- it needs its own simplified build: the mark as an actual
+`<img>` (a hosted PNG/SVG export, not inline SVG, since Gmail unreliably keeps
+inline SVG on paste) sized to email proportions, the wordmark as plain styled
+text in a Gmail-safe fallback font stack (Gmail won't load Newsreader/Karla from
+`next/font`), and the two footer lines as plain text with real `stacksonline.com`
+and Privacy Policy hyperlinks -- no CSS custom properties, no `@media` dark-mode
+block, since Gmail's signature editor doesn't support either. Worth building
+right after the shared email header/footer partial lands, so the hosted logo
+asset and the real Privacy Policy URL only need to be produced once and reused
+in both places.
+
 ## Delete your own account
 
 The Profile screen (PR #28) covers changing your name, username, email, and
