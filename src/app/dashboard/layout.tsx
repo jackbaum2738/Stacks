@@ -6,6 +6,7 @@ import { LibrarySwitcher } from "@/components/library-switcher";
 import { CreateFirstLibraryForm } from "@/components/create-first-library-form";
 import { FullLogo } from "@/components/full-logo";
 import { NavTabs } from "@/components/nav-tabs";
+import { MobileNav } from "@/components/mobile-nav";
 import { LibraryRoleProvider } from "@/components/library-role-context";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -58,7 +59,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
           <NavTabs />
         </header>
-        <main className="mx-auto w-full max-w-[920px] flex-1 px-6 py-[30px] pb-10">{children}</main>
+        <main className="mx-auto w-full max-w-[920px] flex-1 px-6 py-[30px] pb-[calc(72px+env(safe-area-inset-bottom))] sm:pb-10">
+          {children}
+        </main>
+        <MobileNav />
       </div>
     </LibraryRoleProvider>
   );

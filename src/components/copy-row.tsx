@@ -77,9 +77,18 @@ export function CopyRow({
 
   return (
     <li className="space-y-2 py-3">
-      <div className="flex items-center gap-3">
-        <BookCover src={copy.book.coverUrl} alt={copy.book.title} className="h-16 w-12 flex-shrink-0" />
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex gap-3">
+          <BookCover src={copy.book.coverUrl} alt={copy.book.title} className="h-16 w-12 flex-shrink-0" />
+          <div className="min-w-0 flex-1 sm:hidden">
+            <p className="truncate font-display font-medium text-ink">{copy.book.title}</p>
+            <p className="truncate font-sans text-sm text-ink-soft">
+              {copy.book.authors.join(", ") || "Unknown author"}
+              {showShelf && copy.shelf ? ` · ${copy.shelf.name}` : ""}
+            </p>
+          </div>
+        </div>
+        <div className="hidden min-w-0 flex-1 sm:block">
           <p className="truncate font-display font-medium text-ink">{copy.book.title}</p>
           <p className="truncate font-sans text-sm text-ink-soft">
             {copy.book.authors.join(", ") || "Unknown author"}
@@ -92,13 +101,19 @@ export function CopyRow({
             </p>
           )}
         </div>
+        {copy.reservation && (
+          <p className="rounded-[2px] bg-pill-reserved-bg px-2.5 py-1.5 font-sans text-sm text-reserved-text sm:hidden">
+            Reserved for {copy.reservation.person?.name ?? "someone no longer in your directory"}
+            {copy.reservation.person?.email ? ` (${copy.reservation.person.email})` : ""}
+          </p>
+        )}
         {canEdit && (
           <div className="flex flex-shrink-0 gap-2">
             {copy.status === "AVAILABLE" && !showReserveForm && (
               <button
                 onClick={() => setShowReserveForm(true)}
                 disabled={busy}
-                className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
+                className="flex-1 rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover sm:flex-none"
               >
                 Reserve
               </button>
@@ -107,7 +122,7 @@ export function CopyRow({
               <button
                 onClick={release}
                 disabled={busy}
-                className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
+                className="flex-1 rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover sm:flex-none"
               >
                 Release
               </button>
@@ -115,7 +130,7 @@ export function CopyRow({
             <button
               onClick={remove}
               disabled={busy}
-              className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-accent hover:bg-chip-hover"
+              className="flex-1 rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-accent hover:bg-chip-hover sm:flex-none"
             >
               Remove
             </button>

@@ -9,7 +9,7 @@ export function SiteFooter() {
     <footer className="border-t border-line">
       <div className="mx-auto flex w-full max-w-[920px] flex-wrap items-center justify-between gap-3 px-6 py-4">
         <Link href="/dashboard" className="hover:opacity-80">
-          <FullLogo height={20} />
+          <FullLogo height={36} />
         </Link>
         <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-ink-faint">
           <Link

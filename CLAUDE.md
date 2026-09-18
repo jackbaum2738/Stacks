@@ -105,6 +105,21 @@ it didn't, for a while).
   copyright line, and the running version, read straight from `package.json` via a JSON import
   (`resolveJsonModule` is already on in `tsconfig.json`) rather than hand-maintained — bump the
   version there as usual and the footer follows automatically.
+- **Mobile navigation shell** (`src/components/mobile-nav.tsx`, PR #40) — below the `sm`
+  breakpoint the desktop top tab strip (`nav-tabs.tsx`) and the header's name text
+  (`profile-menu.tsx`) are hidden (`hidden sm:flex`/`hidden sm:inline`) and replaced by a fixed
+  bottom tab bar: Scan, Library, People, plus a "More" button that slides up a sheet with
+  Overview, Shelves, Reservations, Settings. This was a deliberate choice over other options
+  mocked up (a hamburger drawer, a horizontally-scrollable tab strip) — Jack picked the bottom
+  bar as "probably the best option" for a phone-first library app. Its bottom padding uses
+  `env(safe-area-inset-bottom)`, which needs `viewport: { viewportFit: "cover" }` set in the
+  root `layout.tsx`'s `Viewport` export to resolve at all on iOS — don't drop that export if
+  touching viewport/meta config again, the bottom bar will sit under the home indicator without
+  it. Jack's stated direction: build this as a PWA (no App/Play Store listing, so no developer
+  license fees) rather than a native app for now, with a native wrapper only a possible future
+  option. Don't assume every page has a mobile-specific layout yet — only Library, People, and
+  the shared `CopyRow` (Reservations/Shelf detail) got phone-width card layouts in PR #40; other
+  pages just reflow within the new nav shell.
 - **Deployment**: Vercel + Postgres on Neon. `package.json`'s `build` script runs
   `prisma migrate deploy && next build`; `postinstall` runs `prisma generate`.
 
@@ -416,6 +431,15 @@ elsewhere in this file, there's no unique constraint here a leftover used row co
 block, since a fresh request always generates a fresh random token/hash). Requesting a new
 reset link deletes any other outstanding *unused* tokens for that user first, so only the most
 recently requested link is ever live — old used ones are left alone as a paper trail.
+**`/reset-password` checks the token server-side before rendering (added in PR #43)**, not just
+on submit — the page is an async Server Component that calls the read-only
+`isPasswordResetTokenValid` (checks unused + not expired, doesn't mark it used) and shows the
+same "Link invalid — request a new one" panel used for a missing token if it fails, matching
+PR #28's dead-link convention. Only once the token checks out does it render the interactive
+`ResetPasswordForm` client component (`src/components/reset-password-form.tsx`), which still
+goes through `consumePasswordResetToken`'s atomic check-and-mark-used on the real submit — the
+server-side page check is a fail-fast UX layer on top of that, not a replacement for it, since
+the token could in principle go stale between page load and submit.
 `/api/auth/forgot-password` always returns the identical generic response whether or not the
 email/username matched an account, to avoid account enumeration.
 **Every transactional email is hand-written table-based, inline-styled HTML** in
@@ -933,7 +957,7 @@ not just the PR they were stated in:
   password, old password rejected, a reused reset token rejected rather than silently
   accepted twice, and a nonexistent identifier still getting the same generic response as a
   real match (no account enumeration). Test user cleaned up from the local DB afterward.
-- **PR #40** (`claude/scan-shelf-typeahead`, open) — reworked the Scan station's Shelf field
+- **PR #40** (`claude/scan-shelf-typeahead`, merged) — reworked the Scan station's Shelf field
   for barcode-driven scanning: moved it below the ISBN field (matching scan order) and
   replaced the plain `<select>` with `src/components/shelf-combobox.tsx`, a type-ahead
   combobox matching a shelf's name or code, modeled on `PersonCombobox` but resolving a
@@ -960,27 +984,54 @@ not just the PR they were stated in:
   click-to-select, an unmatched shelf on Enter showing an inline error without submitting,
   Remove mode's lone ISBN Enter still submitting directly, and both button labels rendering
   correctly per mode.
+- **PR #41** (`claude/project-thread-pedcpo`, open) — added the mobile navigation shell and
+  phone-width card layouts (see the "Mobile navigation shell" note under "Tech stack" above for
+  the full design). Built from a project-thread ask, kept deliberately separate from sibling
+  threads doing the nav-tab reorder, the reservations/people redesign, and the scan page's
+  shelf-field/barcode-keyboard rework (PR #40 above, merged first — rebased the camera-icon
+  `sm:hidden` change onto its new Shelf-combobox/"Scan in" button layout rather than the old
+  plain row). Diagnosed the header/nav overflow with real DOM measurements (`scrollWidth` vs
+  `clientWidth`) rather than eyeballing it, then mocked up three distinct nav-shell options as
+  an Artifact (https://claude.ai/artifact/8TiMjszXPNzXCAidmHuym5) — Jack picked the bottom tab
+  bar and separately flagged the iOS home-indicator/Android gesture-bar collision risk before
+  it was addressed, and confirmed the PWA-not-native-app direction. Once he asked to see every
+  page, not just the nav shell, built a full 8-screen tappable prototype
+  (https://claude.ai/artifact/BfWyBW8afzpUUqTXB4YTby) covering the nav plus redesigned
+  Library/People/Reservations screens, approved as-is ("Yes good"). Verified with a live local
+  Playwright run across iPhone-13 and 1440x900 viewports, 13 checks covering header overflow,
+  bottom bar + More sheet navigation, the camera-icon desktop/mobile split, the Library
+  table-vs-cards switch, Reservations having no horizontal overflow, and the profile name's
+  visibility split — re-verified after rebasing onto PR #40's merged shelf-combobox rework.
+- **PR #43** (`claude/reset-link-reuse-fix`, open) — fixed `/reset-password` so a link that had
+  already been used or had expired reads as invalid on page load instead of only failing after
+  the user fills in the form and submits (see the "Password reset & transactional email" note
+  under "Data model" above for the mechanism). Came from a project-thread request right after
+  PR #39 (password reset) merged. Verified with a live local Playwright run: a bogus token and a
+  missing token both show "Link invalid" immediately with no form rendered, a fresh link shows
+  the real form, and revisiting the same link after a successful reset shows "Link invalid" with
+  a request-new-link button on load rather than the form. Test user cleaned up afterward.
 - **PR #44** (`claude/project-thread-3t01nt`, open) — replaced the live SVG mark + text
   lockup with a single approved logo PNG everywhere it appears (see "Full logo asset" under
   "Tech stack" above for the full design). Two independently-reported bugs from separate
-  project threads turned out to share one root cause: bumping the footer icon's size (PR #36)
-  left the "Stacks" text next to it stuck at its old size, and the email template's div/table-
-  built bars rendered wrong in real Gmail (bars centered above the wordmark, wrong font) —
-  both were symptoms of the same icon+wordmark lockup being hand-recreated separately in five
-  different places with no way to guarantee they'd match. Fixed at the root by having Jack
-  produce one flattened logo (light- and dark-background PNG variants) in Claude Design —
-  Claude wrote him an exact prompt describing the current mark's bar coordinates/colors and
-  the Newsreader wordmark spec so the recreation would match precisely — approving it before
-  any code changed, then building `FullLogo` (`src/components/full-logo.tsx`) as the one
-  component every call site (site header, dashboard header, footer, `Wordmark`, email
-  template) now renders through. Folded in PR #36's footer-logo-links-to-`/dashboard` change
-  in the same pass, since both touched the same lines in `site-footer.tsx` — #36 should be
-  closed as superseded once this merges. Verified with a live local Playwright run: homepage
-  and dashboard header/footer in both light and dark color schemes (confirming the `dark:`
-  variant correctly swaps the PNG), the `Wordmark` component on the login page, and the real
-  password-reset email HTML rendered end to end through `/api/auth/forgot-password` (a
+  project threads turned out to share one root cause: the footer icon-size bump (PR #36,
+  merged the same day, three rounds: 16px -> 28px -> 36px) left the "Stacks" text next to it
+  stuck at its old size, and the email template's div/table-built bars rendered wrong in real
+  Gmail (bars centered above the wordmark, wrong font) — both were symptoms of the same
+  icon+wordmark lockup being hand-recreated separately in five places with no way to guarantee
+  they'd match. Fixed at the root by having Jack produce one flattened logo (light- and
+  dark-background PNG variants) in Claude Design — Claude wrote him an exact prompt describing
+  the current mark's bar coordinates/colors and the Newsreader wordmark spec so the recreation
+  would match precisely — approving it before any code changed, then building `FullLogo`
+  (`src/components/full-logo.tsx`) as the one component every call site (site header, dashboard
+  header, footer, `Wordmark`, email template) now renders through, replacing PR #36's
+  Mark-size-36-plus-13px-text footer markup entirely (that PR's own useful addition, linking the
+  footer logo to `/dashboard`, was carried forward). Verified with a live local Playwright run:
+  homepage and dashboard header/footer in both light and dark color schemes (confirming the
+  `dark:` variant correctly swaps the PNG), the `Wordmark` component on the login page, and the
+  real password-reset email HTML rendered end to end through `/api/auth/forgot-password` (a
   temporary debug line dumped the generated HTML for a screenshot, then was reverted; test
-  accounts/library cleaned up from the local DB afterward).
+  accounts/library cleaned up from the local DB afterward). Rebased onto `main` after PR #36,
+  #40, #41, and #43 all merged ahead of it the same day.
 
 ## Keeping this file current
 

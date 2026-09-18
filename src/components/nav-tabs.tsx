@@ -19,7 +19,7 @@ export function NavTabs() {
   const { canEdit } = useLibraryRole();
 
   return (
-    <nav className="mx-auto flex max-w-[920px] overflow-x-auto px-6">
+    <nav className="mx-auto hidden max-w-[920px] overflow-x-auto px-6 sm:flex">
       {NAV_LINKS.filter((link) => !link.requiresEdit || canEdit).map((link) => {
         const active =
           link.href === "/dashboard" ? pathname === link.href : pathname.startsWith(link.href);
