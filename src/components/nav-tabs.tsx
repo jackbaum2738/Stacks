@@ -10,7 +10,6 @@ const NAV_LINKS = [
   { href: "/dashboard/search", label: "Library" },
   { href: "/dashboard/people", label: "People" },
   { href: "/dashboard/shelves", label: "Shelves" },
-  { href: "/dashboard/reservations", label: "Reservations" },
   { href: "/dashboard/settings", label: "Settings" },
 ];
 

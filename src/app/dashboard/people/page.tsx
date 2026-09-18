@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLibraryRole } from "@/components/library-role-context";
 import { PersonModal, type PersonRecord } from "@/components/person-modal";
 import { DeletePersonModal } from "@/components/delete-person-modal";
+import { ReservedOverlay } from "@/components/reserved-overlay";
 import { formatDate } from "@/lib/format-date";
 
 type SortKey = "name" | "email" | "phone" | "location" | "birthday" | "reservations";
@@ -52,6 +53,7 @@ export default function PeoplePage() {
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [modalPerson, setModalPerson] = useState<PersonRecord | null | "new">(null);
   const [deleteTarget, setDeleteTarget] = useState<PersonRecord | null>(null);
+  const [reservedFor, setReservedFor] = useState<string | null>(null);
 
   const loadPeople = useCallback(() => {
     setLoading(true);
@@ -156,9 +158,16 @@ export default function PeoplePage() {
                 </p>
               </div>
               {person.activeReservationCount > 0 ? (
-                <span className="flex-shrink-0 rounded-[2px] bg-[var(--pill-reserved-bg)] px-2 py-0.5 font-mono text-[10.5px] text-[var(--pill-reserved-fg)]">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReservedFor(person.name);
+                  }}
+                  className="flex-shrink-0 rounded-[2px] bg-[var(--pill-reserved-bg)] px-2 py-0.5 font-mono text-[10.5px] text-[var(--pill-reserved-fg)] underline underline-offset-2 hover:brightness-95"
+                >
                   {person.activeReservationCount} active
-                </span>
+                </button>
               ) : (
                 <span className="flex-shrink-0 rounded-[2px] bg-line-inner px-2 py-0.5 font-mono text-[10.5px] text-ink-faint">none</span>
               )}
@@ -229,9 +238,16 @@ export default function PeoplePage() {
                   </td>
                   <td className="py-2.5 pr-3">
                     {person.activeReservationCount > 0 ? (
-                      <span className="rounded-[2px] bg-[var(--pill-reserved-bg)] px-2 py-0.5 font-mono text-[10.5px] text-[var(--pill-reserved-fg)]">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReservedFor(person.name);
+                        }}
+                        className="rounded-[2px] bg-[var(--pill-reserved-bg)] px-2 py-0.5 font-mono text-[10.5px] text-[var(--pill-reserved-fg)] underline underline-offset-2 hover:brightness-95"
+                      >
                         {person.activeReservationCount} active
-                      </span>
+                      </button>
                     ) : (
                       <span className="rounded-[2px] bg-line-inner px-2 py-0.5 font-mono text-[10.5px] text-ink-faint">none</span>
                     )}
@@ -272,6 +288,15 @@ export default function PeoplePage() {
           person={deleteTarget}
           onClose={() => setDeleteTarget(null)}
           onDone={() => onDeleted(deleteTarget.id)}
+        />
+      )}
+      {reservedFor && (
+        <ReservedOverlay
+          initialFilter={reservedFor}
+          onClose={() => {
+            setReservedFor(null);
+            loadPeople();
+          }}
         />
       )}
     </div>
