@@ -8,10 +8,13 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-line">
       <div className="mx-auto flex w-full max-w-[920px] flex-wrap items-center justify-between gap-3 px-6 py-4">
-        <span className="flex items-center gap-2 font-display text-[13px] font-semibold text-ink-soft">
-          <Mark size={16} />
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 font-display text-[13px] font-semibold text-ink-soft hover:text-ink"
+        >
+          <Mark size={36} />
           Stacks
-        </span>
+        </Link>
         <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-ink-faint">
           <Link
             href="/privacy"

@@ -4,6 +4,11 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.15.1 -- 2026-09-18
+--------------------
+- Made the footer's Stacks mark a link back to `/dashboard`, matching the header logo's behavior -- it had shipped in PR #35 as plain unlinked text. Sized it up from 16px to 36px, well past the dashboard header's own 22px mark, after two rounds of Jack reporting it still looked unchanged: an exact 22px size match measured as pixel-identical to the header but read as no bigger at all, since the footer's much lighter surrounding text (13px vs. the header's 19px) swallowed a same-size icon's visual weight; a 28px attempt was still too subtle a jump to notice at a glance. Landed on 36px, confirmed against a full-page screenshot next to the header rather than a cropped one, so the size difference is obvious without measuring pixels.
+
+
 6.15.0 -- 2026-09-18
 --------------------
 - Added a real mobile navigation shell: a fixed bottom tab bar (Scan, Library, People, plus a "More" button that slides up a sheet for Overview, Shelves, Reservations, and Settings) replaces the horizontally-overflowing top tab strip below the `sm` breakpoint, and the header's name text collapses to just the avatar so the header itself stops overflowing on a phone-width viewport. New `src/components/mobile-nav.tsx`; `nav-tabs.tsx`'s desktop strip and `profile-menu.tsx`'s name text are now `hidden sm:flex`/`hidden sm:inline` instead of always rendering. The bottom bar's own bottom padding uses `env(safe-area-inset-bottom)` (with a new `viewport: { viewportFit: "cover" }` export in the root layout, required for that `env()` value to resolve at all on iOS) so it clears the iOS home indicator / Android gesture bar instead of sitting underneath it -- came out of Jack flagging that risk specifically when reviewing the nav-shell mockup, before any code was written.
