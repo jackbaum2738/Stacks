@@ -6,7 +6,7 @@ Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/change
 
 6.13.2 -- 2026-09-18
 --------------------
-- Made the footer's Stacks mark a link back to `/dashboard`, matching the header logo's behavior -- it had shipped in PR #35 as plain unlinked text. Sized it up from 16px to 28px, deliberately larger than the dashboard header's own 22px mark: Jack flagged that an exact size match to the header still read as unchanged, since the footer's lighter surrounding text (13px vs. the header's 19px) and thinner bar meant a same-size mark carried less visual weight there -- confirmed by measuring both marks' real rendered bounding boxes rather than eyeballing it.
+- Made the footer's Stacks mark a link back to `/dashboard`, matching the header logo's behavior -- it had shipped in PR #35 as plain unlinked text. Sized it up from 16px to 36px, well past the dashboard header's own 22px mark, after two rounds of Jack reporting it still looked unchanged: an exact 22px size match measured as pixel-identical to the header but read as no bigger at all, since the footer's much lighter surrounding text (13px vs. the header's 19px) swallowed a same-size icon's visual weight; a 28px attempt was still too subtle a jump to notice at a glance. Landed on 36px, confirmed against a full-page screenshot next to the header rather than a cropped one, so the size difference is obvious without measuring pixels.
 
 
 6.13.0 -- 2026-09-18
