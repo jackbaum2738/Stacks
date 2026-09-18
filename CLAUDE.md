@@ -105,21 +105,22 @@ it didn't, for a while).
   copyright line, and the running version, read straight from `package.json` via a JSON import
   (`resolveJsonModule` is already on in `tsconfig.json`) rather than hand-maintained — bump the
   version there as usual and the footer follows automatically.
-- **Mobile navigation shell** (`src/components/mobile-nav.tsx`, PR #40) — below the `sm`
+- **Mobile navigation shell** (`src/components/mobile-nav.tsx`, PR #41) — below the `sm`
   breakpoint the desktop top tab strip (`nav-tabs.tsx`) and the header's name text
   (`profile-menu.tsx`) are hidden (`hidden sm:flex`/`hidden sm:inline`) and replaced by a fixed
   bottom tab bar: Scan, Library, People, plus a "More" button that slides up a sheet with
-  Overview, Shelves, Reservations, Settings. This was a deliberate choice over other options
-  mocked up (a hamburger drawer, a horizontally-scrollable tab strip) — Jack picked the bottom
-  bar as "probably the best option" for a phone-first library app. Its bottom padding uses
-  `env(safe-area-inset-bottom)`, which needs `viewport: { viewportFit: "cover" }` set in the
-  root `layout.tsx`'s `Viewport` export to resolve at all on iOS — don't drop that export if
-  touching viewport/meta config again, the bottom bar will sit under the home indicator without
-  it. Jack's stated direction: build this as a PWA (no App/Play Store listing, so no developer
-  license fees) rather than a native app for now, with a native wrapper only a possible future
-  option. Don't assume every page has a mobile-specific layout yet — only Library, People, and
-  the shared `CopyRow` (Reservations/Shelf detail) got phone-width card layouts in PR #40; other
-  pages just reflow within the new nav shell.
+  Overview, Shelves, Settings (originally also had Reservations — removed by the
+  concurrently-merged PR #42 fold into People, see "PR history" below). This was a deliberate
+  choice over other options mocked up (a hamburger drawer, a horizontally-scrollable tab strip)
+  — Jack picked the bottom bar as "probably the best option" for a phone-first library app. Its
+  bottom padding uses `env(safe-area-inset-bottom)`, which needs
+  `viewport: { viewportFit: "cover" }` set in the root `layout.tsx`'s `Viewport` export to
+  resolve at all on iOS — don't drop that export if touching viewport/meta config again, the
+  bottom bar will sit under the home indicator without it. Jack's stated direction: build this
+  as a PWA (no App/Play Store listing, so no developer license fees) rather than a native app
+  for now, with a native wrapper only a possible future option. Don't assume every page has a
+  mobile-specific layout yet — only Library, People, and the shared `CopyRow` (Shelf detail) got
+  phone-width card layouts in PR #41; other pages just reflow within the new nav shell.
 - **Deployment**: Vercel + Postgres on Neon. `package.json`'s `build` script runs
   `prisma migrate deploy && next build`; `postinstall` runs `prisma generate`.
 
@@ -417,6 +418,31 @@ a remembered mid-list page number wouldn't mean anything against a result set th
 changed since. Mocked up first as an Artifact (one round of feedback: Jack asked to drop the
 "Show" label next to the page-size numbers) before any code was touched.
 
+**Reservations folded into People, no standalone tab (project thread, 2026-09-18) — key
+decisions if you touch this again:** the Reservations nav item and `/dashboard/reservations`
+page are gone. A reservation only exists so that mailing several books to the same person
+abroad in one parcel is cheaper than mailing them one at a time — Jack's explicit correction
+mid-build — **not** to track what's been sitting the longest, and nothing ships until there's
+enough reserved for that person to make the postage worth it. That rules out any "oldest
+first" / "held N+ days" framing: an early mockup round pitched Reservations as an age-sorted
+shipping queue, which Jack rejected on exactly this premise, not on the UI. The People table's
+"N active" count (`src/app/dashboard/people/page.tsx`) is now the only entry point — clicking
+it opens `ReservedOverlay` (`src/components/reserved-overlay.tsx`), a full screen (not a
+slide-over) listing every active reservation in the library, sortable by Book/Reserved
+for/Shelf/Reserved on the same click-header pattern as the People and Library tables. The
+filter box defaults to whichever person's count was clicked but stays editable, so clearing it
+browses every reservation at once — that's also what makes column sorting worth having, per
+Jack. Only two row actions: Edit (reassign who a copy's reserved for, via the existing
+`ReservationModal` in edit mode) and Release (plain `PATCH /api/reservations/[id]` with
+`release: true`, same delete-the-row behavior as everywhere else — see the reservation-release
+bug under "Bugs found and fixed"). A "Mark as sent" action was in the first build round but
+cut before merge: what should actually happen to a copy once it's mailed out (scanned/removed
+like today's manual Remove, or its own trackable status) hasn't been designed, so it's an
+IDEAS.md item and this screen only offers Release for now. Mocked up first as an Artifact,
+two rounds — round one offered three directions (fold into People; an age-sorted "ready to
+ship" queue, recommended at the time; a merged People/Reservations page with two views) before
+Jack corrected the batching premise and picked "option 1 with elements of 2."
+
 **Password reset & transactional email (Brevo) — key decisions if you touch this again:**
 Came out of buying stacksonline.com and setting it up for email deliverability (SPF, DKIM,
 DMARC, a branded `mail` subdomain) in a project-thread session — see that thread for the full
@@ -633,10 +659,12 @@ not just the PR they were stated in:
 ## Scope notes
 
 - The richer list/grid/detail/bulk-action treatment (PR #2) is **only** on the
-  Library page (`/dashboard/search`). The Shelf detail page and Reservations
-  page intentionally still use the older, simpler `CopyRow` component — that
-  wasn't part of what was mocked up or asked for. Don't assume it should be
-  unified across pages without checking with the user first.
+  Library page (`/dashboard/search`). The Shelf detail page intentionally still
+  uses the older, simpler `CopyRow` component — that wasn't part of what was
+  mocked up or asked for. Don't assume it should be unified across pages
+  without checking with the user first. (The standalone Reservations page this
+  note originally also listed was removed in PR #42 — see "Reservations folded
+  into People" under "Data model".)
 - A live Neon database connection string was pasted into chat once, early in the
   project. It was flagged once as a mild exposure risk; no rotation was
   confirmed. Worth a quiet check-in if credentials/security ever come up.
@@ -984,7 +1012,7 @@ not just the PR they were stated in:
   click-to-select, an unmatched shelf on Enter showing an inline error without submitting,
   Remove mode's lone ISBN Enter still submitting directly, and both button labels rendering
   correctly per mode.
-- **PR #41** (`claude/project-thread-pedcpo`, open) — added the mobile navigation shell and
+- **PR #41** (`claude/project-thread-pedcpo`, merged) — added the mobile navigation shell and
   phone-width card layouts (see the "Mobile navigation shell" note under "Tech stack" above for
   the full design). Built from a project-thread ask, kept deliberately separate from sibling
   threads doing the nav-tab reorder, the reservations/people redesign, and the scan page's
@@ -1001,7 +1029,25 @@ not just the PR they were stated in:
   Playwright run across iPhone-13 and 1440x900 viewports, 13 checks covering header overflow,
   bottom bar + More sheet navigation, the camera-icon desktop/mobile split, the Library
   table-vs-cards switch, Reservations having no horizontal overflow, and the profile name's
-  visibility split — re-verified after rebasing onto PR #40's merged shelf-combobox rework.
+  visibility split — re-verified after rebasing onto PR #40's merged shelf-combobox rework. The
+  bottom sheet's "Reservations" entry and the Reservations-specific verification were both made
+  stale by PR #42 merging shortly after (see below) — reconciled there, not by editing this PR's
+  own history entry.
+- **PR #42** (`claude/project-thread-yqofnc`) -- folded Reservations into People and removed
+  the standalone tab (see the "Reservations folded into People" note under "Data model" above
+  for the full design). Came from a project-thread ask to rethink the Reservations page;
+  mocked up first as an Artifact over two rounds -- round one proposed three directions with a
+  recommendation for an age-sorted "ready to ship" queue, which Jack corrected: reservations
+  exist purely to batch several books to the same person before mailing them together
+  cost-effectively, not to track what's waited longest, so nothing about hold duration belongs
+  in the design. Round two rebuilt it as "option 1 with elements of 2" per his direction, and a
+  same-thread follow-up ("yeah I want it added here too") confirmed reassigning who a copy's
+  reserved for (Edit) should live on this screen as well, not just on the Library page's
+  existing reservation editor. Merged alongside PR #41's concurrently-built mobile nav shell:
+  removed the "Reservations" row PR #41 had added to the bottom-sheet "More" menu and gave the
+  People page's new phone-width card layout the same clickable "N active" badge the desktop
+  table already had, so the Reserved overlay stays reachable on a phone now that no nav surface
+  links to a standalone Reservations page.
 - **PR #43** (`claude/reset-link-reuse-fix`, open) — fixed `/reset-password` so a link that had
   already been used or had expired reads as invalid on page load instead of only failing after
   the user fills in the form and submits (see the "Password reset & transactional email" note

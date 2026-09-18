@@ -3,6 +3,18 @@
 Things worth doing later, captured so they don't get lost. Not scheduled —
 move an item into an actual task when it's time to build it.
 
+## "Mark as sent" / what happens to a copy once it leaves the library
+
+The Reserved screen (People tab, rework in the "Reservations, rethought" project
+thread) only offers Release for now -- releasing just frees the copy back up as
+AVAILABLE, same as it always has. An early mockup round also had a "Mark as
+sent" action for a reserved copy that's actually been mailed out, but Jack
+flagged that we haven't actually designed what that means yet: does the copy
+get scanned/removed like it left the library entirely (same as today's manual
+Remove), or does it need its own status distinct from REMOVED so a "sent
+copies" history is browsable later? Left out of the rework and dropped back to
+just Release until this gets its own design pass.
+
 ## "Export people" button on the People tab
 
 The full backup zip now always includes `people.csv`, but there's no
