@@ -77,7 +77,7 @@ it didn't, for a while).
   (`formLabelClass`/`formInputClass`) — reuse it for any new form rather than
   redefining the underline-input look inline. Logo mark + favicon are generated
   SVG/PNG (see `src/components/mark.tsx`, `src/app/icon.svg`), not hand-drawn.
-- **Site footer** (`src/components/site-footer.tsx`, PR: site footer) is wired into the root
+- **Site footer** (`src/components/site-footer.tsx`, PR #35) is wired into the root
   `layout.tsx`, not the dashboard layout, so it renders on every page including the logged-out
   landing page, login/register, and `/join/[code]` — every top-level page wrapper in this
   codebase already carries `flex-1` (a deliberate existing pattern), so a global footer sibling
@@ -807,7 +807,7 @@ not just the PR they were stated in:
   click (focus never left the trigger button), caught by a live Playwright run rather than
   by inspection. Mocked up first as an Artifact, approved without changes ("new one is
   good").
-- **PR #32** (`claude/username-required`, open) — follow-up to PR #30: made `User.username`
+- **PR #32** (`claude/username-required`, merged) — follow-up to PR #30: made `User.username`
   required now that Jack set a username on both real accounts from the new Profile page.
   `prisma/schema.prisma` changed `username String? @unique` to `username String @unique`, with
   a one-line `ALTER TABLE "User" ALTER COLUMN "username" SET NOT NULL` migration (safe to run
@@ -818,7 +818,7 @@ not just the PR they were stated in:
   change beyond the DB constraint itself, since every real account already had a username by the
   time this merged. Verified by re-running PR #30's full Playwright regression (23 checks) against
   the migrated schema.
-- **PR #33** (`claude/project-thread-vc3oh3`, open) — added a page-size picker and
+- **PR #33** (`claude/project-thread-vc3oh3`, merged) — added a page-size picker and
   pagination to the Library list (see the "Library list pagination" note under "Data
   model" above for the full design). Built from a project-thread request; mocked up first
   as an interactive Artifact, one round of feedback (Jack asked to drop the "Show" label
@@ -830,7 +830,24 @@ not just the PR they were stated in:
   preserves the current page; searching resets to page 1 and the pager disappears once
   results fit on one page; a same-browser reload keeps the chosen page size but resets to
   page 1. Test data cleaned up from the local DB afterward.
-- **PR: site footer** (`claude/site-footer`, open) -- added a global site footer (see the "Site
+- **PR #34** (`claude/project-thread-a8yr7j`, open) — added a full-screen loading takeover
+  for switching, creating, and deleting a library (see the CHANGELOG's 6.11.0 entry for the
+  full design). Built from a project-thread request; mocked up first as an interactive
+  Artifact before any code was touched, iterated live in chat with Jack picking each of the
+  three captions from short lists (switch: "Dusting off the shelves", create: "Unlocking the
+  reading room", delete: "Returning every book") before approving. `LibraryLoadingOverlay`
+  reuses import's `MarkLoader` + dimmed-card chrome but has no progress bar, since these are
+  each a single request with nothing real to meter. Uses React 19's async `useTransition`
+  (not a local busy flag or a guessed timeout) so the overlay's visibility is tied to the
+  transition's real `isPending` state and only clears once `router.refresh()`'s new data has
+  actually landed — the same class of bug as the earlier `LibrarySwitcher` "stuck creating"
+  and "Last backup taken by..." staleness bugs, avoided this time by construction rather than
+  patched after the fact. Verified with a live local Playwright run: registered a fresh
+  account, created a second library and confirmed the create overlay's message/caption
+  appear and clear on navigation, switched back to the first library and confirmed the same
+  for switch, then deleted the second library from Settings and confirmed the same for
+  delete (11/11 checks passed).
+- **PR #35** (`claude/site-footer`, open) -- added a global site footer (see the "Site
   footer" note under "Tech stack" above) and a `/privacy` placeholder page. Came from a
   project-thread ask that grew mid-conversation: started as "just add a footer," Claude proposed
   a minimal version-number-only treatment and mocked it up, then Jack said he actually wants to
