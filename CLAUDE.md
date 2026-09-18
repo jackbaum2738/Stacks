@@ -85,6 +85,21 @@ it didn't, for a while).
   mark, a `/privacy` link, a copyright line, and the running version, read straight from
   `package.json` via a JSON import (`resolveJsonModule` is already on in `tsconfig.json`) rather
   than hand-maintained — bump the version there as usual and the footer follows automatically.
+- **Mobile navigation shell** (`src/components/mobile-nav.tsx`, PR #40) — below the `sm`
+  breakpoint the desktop top tab strip (`nav-tabs.tsx`) and the header's name text
+  (`profile-menu.tsx`) are hidden (`hidden sm:flex`/`hidden sm:inline`) and replaced by a fixed
+  bottom tab bar: Scan, Library, People, plus a "More" button that slides up a sheet with
+  Overview, Shelves, Reservations, Settings. This was a deliberate choice over other options
+  mocked up (a hamburger drawer, a horizontally-scrollable tab strip) — Jack picked the bottom
+  bar as "probably the best option" for a phone-first library app. Its bottom padding uses
+  `env(safe-area-inset-bottom)`, which needs `viewport: { viewportFit: "cover" }` set in the
+  root `layout.tsx`'s `Viewport` export to resolve at all on iOS — don't drop that export if
+  touching viewport/meta config again, the bottom bar will sit under the home indicator without
+  it. Jack's stated direction: build this as a PWA (no App/Play Store listing, so no developer
+  license fees) rather than a native app for now, with a native wrapper only a possible future
+  option. Don't assume every page has a mobile-specific layout yet — only Library, People, and
+  the shared `CopyRow` (Reservations/Shelf detail) got phone-width card layouts in PR #40; other
+  pages just reflow within the new nav shell.
 - **Deployment**: Vercel + Postgres on Neon. `package.json`'s `build` script runs
   `prisma migrate deploy && next build`; `postinstall` runs `prisma generate`.
 
@@ -908,6 +923,22 @@ not just the PR they were stated in:
   password, old password rejected, a reused reset token rejected rather than silently
   accepted twice, and a nonexistent identifier still getting the same generic response as a
   real match (no account enumeration). Test user cleaned up from the local DB afterward.
+- **PR #40** (`claude/project-thread-pedcpo`, open) — added the mobile navigation shell and
+  phone-width card layouts (see the "Mobile navigation shell" note under "Tech stack" above for
+  the full design). Built from a project-thread ask, kept deliberately separate from sibling
+  threads doing the nav-tab reorder, the reservations/people redesign, and the scan page's
+  shelf-field/barcode-keyboard rework. Diagnosed the header/nav overflow with real DOM
+  measurements (`scrollWidth` vs `clientWidth`) rather than eyeballing it, then mocked up three
+  distinct nav-shell options as an Artifact (https://claude.ai/artifact/8TiMjszXPNzXCAidmHuym5) —
+  Jack picked the bottom tab bar and separately flagged the iOS home-indicator/Android
+  gesture-bar collision risk before it was addressed, and confirmed the PWA-not-native-app
+  direction. Once he asked to see every page, not just the nav shell, built a full 8-screen
+  tappable prototype (https://claude.ai/artifact/BfWyBW8afzpUUqTXB4YTby) covering the nav plus
+  redesigned Library/People/Reservations screens, approved as-is ("Yes good"). Verified with a
+  live local Playwright run across iPhone-13 and 1440x900 viewports, 13 checks covering header
+  overflow, bottom bar + More sheet navigation, the camera-icon desktop/mobile split, the
+  Library table-vs-cards switch, Reservations having no horizontal overflow, and the profile
+  name's visibility split.
 
 ## Keeping this file current
 

@@ -169,7 +169,7 @@ export default function ScanStationPage() {
         <button
           type="button"
           onClick={() => setShowCamera(true)}
-          className="rounded-[2px] border border-line-strong px-3 py-3 hover:bg-chip-hover"
+          className="inline-flex rounded-[2px] border border-line-strong px-3 py-3 hover:bg-chip-hover sm:hidden"
           aria-label="Scan with camera"
         >
           📷
