@@ -437,6 +437,15 @@ elsewhere in this file, there's no unique constraint here a leftover used row co
 block, since a fresh request always generates a fresh random token/hash). Requesting a new
 reset link deletes any other outstanding *unused* tokens for that user first, so only the most
 recently requested link is ever live — old used ones are left alone as a paper trail.
+**`/reset-password` checks the token server-side before rendering (added in PR #43)**, not just
+on submit — the page is an async Server Component that calls the read-only
+`isPasswordResetTokenValid` (checks unused + not expired, doesn't mark it used) and shows the
+same "Link invalid — request a new one" panel used for a missing token if it fails, matching
+PR #28's dead-link convention. Only once the token checks out does it render the interactive
+`ResetPasswordForm` client component (`src/components/reset-password-form.tsx`), which still
+goes through `consumePasswordResetToken`'s atomic check-and-mark-used on the real submit — the
+server-side page check is a fail-fast UX layer on top of that, not a replacement for it, since
+the token could in principle go stale between page load and submit.
 `/api/auth/forgot-password` always returns the identical generic response whether or not the
 email/username matched an account, to avoid account enumeration.
 **Every transactional email is hand-written table-based, inline-styled HTML** in
@@ -1014,6 +1023,14 @@ not just the PR they were stated in:
   People page's new phone-width card layout the same clickable "N active" badge the desktop
   table already had, so the Reserved overlay stays reachable on a phone now that no nav surface
   links to a standalone Reservations page.
+- **PR #43** (`claude/reset-link-reuse-fix`, open) — fixed `/reset-password` so a link that had
+  already been used or had expired reads as invalid on page load instead of only failing after
+  the user fills in the form and submits (see the "Password reset & transactional email" note
+  under "Data model" above for the mechanism). Came from a project-thread request right after
+  PR #39 (password reset) merged. Verified with a live local Playwright run: a bogus token and a
+  missing token both show "Link invalid" immediately with no form rendered, a fresh link shows
+  the real form, and revisiting the same link after a successful reset shows "Link invalid" with
+  a request-new-link button on load rather than the form. Test user cleaned up afterward.
 
 ## Keeping this file current
 
