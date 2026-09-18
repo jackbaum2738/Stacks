@@ -4,6 +4,13 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+6.19.1 -- 2026-09-18
+--------------------
+- Hid the site footer (`SiteFooter`, PR #35) below the `sm` breakpoint -- Jack reported it after testing the mobile nav shell (PR #41) live: on a phone the footer's Stacks logo/version/copyright line just added clutter under a page that already ends with the fixed bottom tab bar, with no real content of its own to justify the extra scroll. Desktop is unaffected.
+- Fixed the Library page's phone-width row cards (PR #41): the bulk-select checkbox and cover thumbnail were top-aligned instead of vertically centered in the row (the row's flex container had no `items-center`, so a fixed-height cover next to a variable-height text block sat at the top by default), and the reserve/delete icon buttons were stacked below the title/author/shelf text instead of sitting under the Available/Reserved status pill. Restructured the row into three columns -- checkbox, cover, then a flexible title/author/shelf/reservation block -- plus a fourth fixed-width right-hand column holding the status pill with the reserve and delete icons stacked underneath it (`flex-col items-end`), and added `items-center` to the row so the checkbox and cover align to the row's vertical center regardless of how many lines the text block wraps to. Desktop's table-based list view was never affected -- HTML table cells vertically center by default, which is why this only ever showed up on phone.
+- Verified with a live local Playwright run (17/17 checks, folded into the existing mobile-nav regression): footer hidden on phone and still visible on desktop, checkbox and cover measured as vertically centered in the row via real `getBoundingClientRect()` comparisons against the row's own center, and the reserve/delete icons measured as sitting below and right-aligned with the status pill rather than under the text block.
+
+
 6.19.0 -- 2026-09-18
 --------------------
 - Reworded the "Reserved" screen's subtitle (PR #42) to a plain "A running list of every active reservation, ready to edit or release" -- Jack asked for the postage/"whole point" framing removed entirely rather than reworded, since it read as over-explaining the feature every time the screen opened; picked from three one-line options offered.

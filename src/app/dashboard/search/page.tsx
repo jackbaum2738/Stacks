@@ -359,12 +359,12 @@ export default function LibraryBrowsePage() {
             <div
               key={row.id}
               onClick={() => router.push(`/dashboard/copies/${row.id}`)}
-              className={`flex cursor-pointer gap-3 border border-line bg-surface p-3 ${
+              className={`flex cursor-pointer items-center gap-3 border border-line bg-surface p-3 ${
                 selected.has(row.id) ? "bg-row-hover" : ""
               }`}
             >
               {canEdit && (
-                <div onClick={(e) => e.stopPropagation()} className="flex flex-shrink-0 items-start pt-1">
+                <div onClick={(e) => e.stopPropagation()} className="flex flex-shrink-0 items-center">
                   <input
                     type="checkbox"
                     checked={selected.has(row.id)}
@@ -392,10 +392,7 @@ export default function LibraryBrowsePage() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="truncate font-display text-[15px] font-medium text-ink">{row.book.title}</p>
-                  <StatusPill status={row.status} />
-                </div>
+                <p className="truncate font-display text-[15px] font-medium text-ink">{row.book.title}</p>
                 <p className="truncate font-sans text-xs text-ink-soft">
                   {row.book.authors.join(", ") || "Unknown author"}
                 </p>
@@ -407,8 +404,11 @@ export default function LibraryBrowsePage() {
                     Reserved — {row.reservation.person?.name ?? "someone no longer in your directory"}
                   </p>
                 )}
+              </div>
+              <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
+                <StatusPill status={row.status} />
                 {canEdit && (
-                  <div onClick={(e) => e.stopPropagation()} className="mt-2 flex items-center gap-1">
+                  <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => openRowReserve(row)}
