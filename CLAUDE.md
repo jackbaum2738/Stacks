@@ -1078,6 +1078,20 @@ not just the PR they were stated in:
   temporary debug line dumped the generated HTML for a screenshot, then was reverted; test
   accounts/library cleaned up from the local DB afterward). Rebased onto `main` after PR #36,
   #40, #41, and #43 all merged ahead of it the same day.
+- **PR #45** (`claude/project-thread-yqofnc`) — two follow-ups Jack raised right after PR #42
+  (the Reservations-into-People fold) shipped. First, the "Reserved" overlay's closing behavior:
+  it used to call the People page's full `loadPeople()` on close, refetching and re-rendering
+  every row even though releasing or reassigning a reservation only ever changes one or two
+  people's counts. `ReservedOverlay` now snapshots per-person reservation counts on open, diffs
+  them against its current state on close, and reports only the `{personId, count}` pairs that
+  changed; `PeoplePage` patches just those rows' "N active" pill instead of reloading. Second,
+  the subtitle text under "Reserved" — Jack asked for the postage/"whole point" framing removed
+  entirely (not reworded) since it re-explained the feature's rationale every time the screen
+  opened; picked "A running list of every active reservation, ready to edit or release" from
+  three one-line options offered in the project thread. Verified with a live local Playwright
+  run: releasing a reservation and closing the screen patches only that person's row with zero
+  `GET /api/people` requests fired, an unrelated person's row stays untouched, and the existing
+  18-check Reserved-screen regression suite still passes in full.
 
 ## Keeping this file current
 

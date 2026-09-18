@@ -153,8 +153,7 @@ export function ReservedOverlay({
           </button>
         </div>
         <p className="mb-4 max-w-[56ch] font-sans text-sm leading-[1.55] text-ink-soft">
-          Held for someone until it&rsquo;s worth the postage to send &mdash; reserving a few books for the same person
-          before mailing them together is the whole point. Release one if plans change.
+          A running list of every active reservation, ready to edit or release.
         </p>
 
         <div className="mb-4 flex items-center gap-[10px] border border-line-strong bg-surface px-[15px] py-[13px]">
