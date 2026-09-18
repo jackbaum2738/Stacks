@@ -4,9 +4,14 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
-6.12.1 -- 2026-09-18
+6.12.2 -- 2026-09-18
 --------------------
 - Made the footer's Stacks mark a link back to `/dashboard`, matching the header logo's behavior, and sized it up from 16px to 22px (the header's own size) since it read as too small next to the rest of the footer -- it had shipped in PR #35 as plain unlinked text.
+
+
+6.12.1 -- 2026-09-18
+--------------------
+- Reordered the dashboard tab bar to Overview, Scan, Library, People, Shelves, Reservations, Settings (previously Overview, Scan, Shelves, Library, Reservations, People, Settings) -- Library and People are used far more often day to day than Shelves or Reservations, so Jack asked to move them up right after Scan. `src/components/nav-tabs.tsx`'s `NAV_LINKS` array drives rendering order directly with no other order-dependent logic anywhere else in the app, so this was a pure reorder of that array.
 
 
 6.12.0 -- 2026-09-18
