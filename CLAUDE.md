@@ -60,7 +60,7 @@ it didn't, for a while).
   (OS-driven dark, unless overridden to light), and `:root[data-theme="dark"]`
   (explicit dark, regardless of OS) — same variable list duplicated across
   the last two. Tailwind's own `dark:` variant (rare in this codebase —
-  `book-cover.tsx` is the only user) defaults to OS-preference-only in v4, so
+  `book-cover.tsx` and `full-logo.tsx` are the only users) defaults to OS-preference-only in v4, so
   it's redefined via `@custom-variant dark` at the top of `globals.css` to
   also respect the `data-theme` attribute — don't add a `dark:` class
   anywhere without checking that redefinition still covers it.
@@ -75,16 +75,36 @@ it didn't, for a while).
   paper" box-shadow (`.paper-shadow-*` classes, no blur) on cards/stat tiles are
   the signature. Shared form-field styling lives in `src/lib/form-styles.ts`
   (`formLabelClass`/`formInputClass`) — reuse it for any new form rather than
-  redefining the underline-input look inline. Logo mark + favicon are generated
-  SVG/PNG (see `src/components/mark.tsx`, `src/app/icon.svg`), not hand-drawn.
-- **Site footer** (`src/components/site-footer.tsx`, PR #35) is wired into the root
-  `layout.tsx`, not the dashboard layout, so it renders on every page including the logged-out
-  landing page, login/register, and `/join/[code]` — every top-level page wrapper in this
-  codebase already carries `flex-1` (a deliberate existing pattern), so a global footer sibling
-  after `{children}` sits at the bottom of short pages without any per-page change. Shows the
-  mark, a `/privacy` link, a copyright line, and the running version, read straight from
-  `package.json` via a JSON import (`resolveJsonModule` is already on in `tsconfig.json`) rather
-  than hand-maintained — bump the version there as usual and the footer follows automatically.
+  redefining the underline-input look inline. Favicon is generated SVG/PNG
+  (`src/app/icon.svg`), not hand-drawn. The icon-only `Mark` (`src/components/mark.tsx`)
+  still exists for standalone-icon spots (the privacy page, `MarkLoader`'s animated bars) but
+  **the icon+"Stacks" wordmark lockup is a single flattened PNG, not live SVG+text** — see
+  "Full logo asset" below (PR #44).
+- **Full logo asset** (`src/components/full-logo.tsx`'s `FullLogo`, PR #44) is the *only* place
+  the site header, dashboard header, site footer, the `Wordmark` component (auth pages), and
+  the transactional email template get the "Stacks" icon+wordmark lockup from — each of those
+  five previously recreated `<Mark size={N} /> Stacks` inline, by hand, which is exactly why a
+  footer icon-size bump (PR #36) could leave the text stuck at its old size next to it, and why
+  the email's separately-hand-built div/table version could drift out of sync (wrong font,
+  wrong layout) without anyone touching the app's own header at all. Jack produced the
+  replacement asset himself in Claude Design (light-background and dark-background PNG
+  variants, `public/logo-full-light.png` / `logo-full-dark.png`) and approved it before it was
+  wired in. `FullLogo` picks the right variant via the same `dark:` custom variant the rest of
+  the app uses (`book-cover.tsx` was the only other user before this) — **if you ever add a
+  sixth place this lockup should appear, use `<FullLogo height={N} />`, never rebuild it from
+  `Mark` + text again.** The email template (`src/lib/emails/shared.ts`) always uses the light
+  variant via a plain `<img>` tag, since email stays light-only (see the email design note
+  below) and a real image sidesteps the email-client CSS inconsistencies that caused the Gmail
+  bug in the first place.
+- **Site footer** (`src/components/site-footer.tsx`, PR #35, logo swapped to `FullLogo` in
+  PR #44) is wired into the root `layout.tsx`, not the dashboard layout, so it renders on every
+  page including the logged-out landing page, login/register, and `/join/[code]` — every
+  top-level page wrapper in this codebase already carries `flex-1` (a deliberate existing
+  pattern), so a global footer sibling after `{children}` sits at the bottom of short pages
+  without any per-page change. Shows the logo (linked to `/dashboard`), a `/privacy` link, a
+  copyright line, and the running version, read straight from `package.json` via a JSON import
+  (`resolveJsonModule` is already on in `tsconfig.json`) rather than hand-maintained — bump the
+  version there as usual and the footer follows automatically.
 - **Mobile navigation shell** (`src/components/mobile-nav.tsx`, PR #41) — below the `sm`
   breakpoint the desktop top tab strip (`nav-tabs.tsx`) and the header's name text
   (`profile-menu.tsx`) are hidden (`hidden sm:flex`/`hidden sm:inline`) and replaced by a fixed
@@ -451,16 +471,21 @@ email/username matched an account, to avoid account enumeration.
 **Every transactional email is hand-written table-based, inline-styled HTML** in
 `src/lib/emails/`, not the app's normal Tailwind/CSS-variable styling and not Brevo's own
 drag-and-drop template builder — email clients don't reliably support external stylesheets,
-CSS custom properties, flexbox/grid, or inline SVG (the logo mark is rebuilt from colored
-`<div>`s, not `mark.tsx`'s SVG). `src/lib/emails/shared.ts`'s header (logo lockup) and footer
-(matching the real site footer's "Privacy" link and "© {year} Jack Baum" copyright, not a
-separate wording) are a shared layout every future transactional email should render through
-— Jack was explicit this must stay visually consistent across email types, not be
-re-derived per template. The logo lockup went through two "still too small" rounds against a
-mockup (https://claude.ai/artifact/WFB3B9RWc4e6iZiLyYKVwa) before he signed off on the final
-size. No email dark-mode support (light theme only) — a deliberate scope cut, since
-`prefers-color-scheme` support in email clients is inconsistent and most strip `<style>`
-blocks anyway; revisit only if Jack asks.
+CSS custom properties, flexbox/grid, or inline SVG. `src/lib/emails/shared.ts`'s header (logo)
+and footer (matching the real site footer's "Privacy" link and "© {year} Jack Baum" copyright,
+not a separate wording) are a shared layout every future transactional email should render
+through — Jack was explicit this must stay visually consistent across email types, not be
+re-derived per template. **The logo went through two design iterations, not just sizing**:
+originally a div/table-built lockup (bars + a separate wordmark `<div>`, two "still too small"
+rounds against a mockup at https://claude.ai/artifact/WFB3B9RWc4e6iZiLyYKVwa before Jack signed
+off on the size) — that rendered wrong in real Gmail (bars centered above the wordmark, wrong
+font; email clients just don't apply this kind of CSS consistently), so PR #44 replaced it with
+a plain `<img>` pointing at `public/logo-full-light.png`, the same flattened PNG asset the site
+header/footer/Wordmark now all use via `FullLogo` (see "Full logo asset" above) — a real image
+has no div/table layout to get wrong. No email dark-mode support (light theme only) — a
+deliberate scope cut, since `prefers-color-scheme` support in email clients is inconsistent and
+most strip `<style>` blocks anyway; revisit only if Jack asks. (This is also why the email
+always uses the light-background PNG variant, never the dark one.)
 
 ## Working agreements (how the user wants sessions to run)
 
@@ -1031,6 +1056,28 @@ not just the PR they were stated in:
   missing token both show "Link invalid" immediately with no form rendered, a fresh link shows
   the real form, and revisiting the same link after a successful reset shows "Link invalid" with
   a request-new-link button on load rather than the form. Test user cleaned up afterward.
+- **PR #44** (`claude/project-thread-3t01nt`, open) — replaced the live SVG mark + text
+  lockup with a single approved logo PNG everywhere it appears (see "Full logo asset" under
+  "Tech stack" above for the full design). Two independently-reported bugs from separate
+  project threads turned out to share one root cause: the footer icon-size bump (PR #36,
+  merged the same day, three rounds: 16px -> 28px -> 36px) left the "Stacks" text next to it
+  stuck at its old size, and the email template's div/table-built bars rendered wrong in real
+  Gmail (bars centered above the wordmark, wrong font) — both were symptoms of the same
+  icon+wordmark lockup being hand-recreated separately in five places with no way to guarantee
+  they'd match. Fixed at the root by having Jack produce one flattened logo (light- and
+  dark-background PNG variants) in Claude Design — Claude wrote him an exact prompt describing
+  the current mark's bar coordinates/colors and the Newsreader wordmark spec so the recreation
+  would match precisely — approving it before any code changed, then building `FullLogo`
+  (`src/components/full-logo.tsx`) as the one component every call site (site header, dashboard
+  header, footer, `Wordmark`, email template) now renders through, replacing PR #36's
+  Mark-size-36-plus-13px-text footer markup entirely (that PR's own useful addition, linking the
+  footer logo to `/dashboard`, was carried forward). Verified with a live local Playwright run:
+  homepage and dashboard header/footer in both light and dark color schemes (confirming the
+  `dark:` variant correctly swaps the PNG), the `Wordmark` component on the login page, and the
+  real password-reset email HTML rendered end to end through `/api/auth/forgot-password` (a
+  temporary debug line dumped the generated HTML for a screenshot, then was reverted; test
+  accounts/library cleaned up from the local DB afterward). Rebased onto `main` after PR #36,
+  #40, #41, and #43 all merged ahead of it the same day.
 
 ## Keeping this file current
 

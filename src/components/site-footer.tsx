@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mark } from "@/components/mark";
+import { FullLogo } from "@/components/full-logo";
 import packageJson from "../../package.json";
 
 export function SiteFooter() {
@@ -8,12 +8,8 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-line">
       <div className="mx-auto flex w-full max-w-[920px] flex-wrap items-center justify-between gap-3 px-6 py-4">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2 font-display text-[13px] font-semibold text-ink-soft hover:text-ink"
-        >
-          <Mark size={36} />
-          Stacks
+        <Link href="/dashboard" className="hover:opacity-80">
+          <FullLogo height={36} />
         </Link>
         <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-ink-faint">
           <Link
