@@ -144,7 +144,56 @@ export default function PeoplePage() {
       )}
 
       {!loading && sorted.length > 0 && (
-        <div className="overflow-x-auto border border-line bg-surface">
+        <div className="space-y-2 sm:hidden">
+          {sorted.map((person) => (
+            <div
+              key={person.id}
+              onClick={() => setModalPerson(person)}
+              className="flex cursor-pointer items-center gap-3 border border-line bg-surface p-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-sans font-semibold text-ink">{person.name}</p>
+                <p className={`truncate font-sans text-xs ${person.email ? "text-ink-soft" : "text-ink-faint italic"}`}>
+                  {person.email || "No email"}
+                </p>
+              </div>
+              {person.activeReservationCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReservedFor(person.name);
+                  }}
+                  className="flex-shrink-0 rounded-[2px] bg-[var(--pill-reserved-bg)] px-2 py-0.5 font-mono text-[10.5px] text-[var(--pill-reserved-fg)] underline underline-offset-2 hover:brightness-95"
+                >
+                  {person.activeReservationCount} active
+                </button>
+              ) : (
+                <span className="flex-shrink-0 rounded-[2px] bg-line-inner px-2 py-0.5 font-mono text-[10.5px] text-ink-faint">none</span>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(person);
+                  }}
+                  title="Remove person"
+                  aria-label={`Remove ${person.name}`}
+                  className="flex-shrink-0 rounded-[2px] p-1.5 text-ink-faint hover:bg-chip-hover hover:text-accent"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && sorted.length > 0 && (
+        <div className="hidden overflow-x-auto border border-line bg-surface sm:block">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink text-left">

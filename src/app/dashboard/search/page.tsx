@@ -354,7 +354,93 @@ export default function LibraryBrowsePage() {
       )}
 
       {!loading && rows.length > 0 && viewMode === "list" && (
-        <div className="overflow-x-auto border border-line bg-surface">
+        <div className="space-y-2 sm:hidden">
+          {pagedRows.map((row) => (
+            <div
+              key={row.id}
+              onClick={() => router.push(`/dashboard/copies/${row.id}`)}
+              className={`flex cursor-pointer gap-3 border border-line bg-surface p-3 ${
+                selected.has(row.id) ? "bg-row-hover" : ""
+              }`}
+            >
+              {canEdit && (
+                <div onClick={(e) => e.stopPropagation()} className="flex flex-shrink-0 items-start pt-1">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(row.id)}
+                    onChange={(e) => toggleSelect(row.id, e.target.checked)}
+                    aria-label={`Select ${row.book.title}`}
+                    className="accent-accent"
+                  />
+                </div>
+              )}
+              <div className="relative h-[60px] w-[42px] flex-shrink-0">
+                <BookCover src={row.book.coverUrl} alt={row.book.title} className="h-[60px] w-[42px]" />
+                {row.notes && (
+                  <button
+                    type="button"
+                    onClick={(e) => openNote(row, e)}
+                    title="Read note"
+                    aria-label={`Read note for ${row.book.title}`}
+                    className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 -rotate-[8deg] items-center justify-center rounded-[2px] border border-manila-line bg-manila text-manila-ink shadow-[0_2px_0_-1px_var(--manila-shadow)]"
+                  >
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-2.5 w-2.5">
+                      <path d="M4 4h9l3 3v9H4z" strokeLinejoin="round" />
+                      <path d="M13 4v3h3" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="truncate font-display text-[15px] font-medium text-ink">{row.book.title}</p>
+                  <StatusPill status={row.status} />
+                </div>
+                <p className="truncate font-sans text-xs text-ink-soft">
+                  {row.book.authors.join(", ") || "Unknown author"}
+                </p>
+                <p className="mt-1 font-mono text-[11px] text-ink-faint">
+                  {row.shelf?.name ?? "No shelf"} · {formatDate(row.addedAt)}
+                </p>
+                {row.reservation && (
+                  <p className="mt-1 truncate font-sans text-xs text-reserved-text">
+                    Reserved — {row.reservation.person?.name ?? "someone no longer in your directory"}
+                  </p>
+                )}
+                {canEdit && (
+                  <div onClick={(e) => e.stopPropagation()} className="mt-2 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openRowReserve(row)}
+                      title={row.reservation ? "Edit reservation" : "Reserve"}
+                      aria-label={`${row.reservation ? "Edit reservation for" : "Reserve"} ${row.book.title}`}
+                      className={`rounded-[2px] p-1.5 hover:bg-chip-hover ${row.reservation ? "text-pill-reserved-fg" : "text-ink-faint"}`}
+                    >
+                      <svg viewBox="0 0 24 24" fill={row.reservation ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="h-4 w-4">
+                        <path d="M7 4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16l-5-3.2L7 20V4z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteModal([row])}
+                      title="Remove from library"
+                      aria-label={`Remove ${row.book.title}`}
+                      className="rounded-[2px] p-1.5 text-ink-faint hover:bg-chip-hover hover:text-accent"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && rows.length > 0 && viewMode === "list" && (
+        <div className="hidden overflow-x-auto border border-line bg-surface sm:block">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink text-left">
