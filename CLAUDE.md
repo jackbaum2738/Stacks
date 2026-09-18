@@ -923,22 +923,51 @@ not just the PR they were stated in:
   password, old password rejected, a reused reset token rejected rather than silently
   accepted twice, and a nonexistent identifier still getting the same generic response as a
   real match (no account enumeration). Test user cleaned up from the local DB afterward.
-- **PR #40** (`claude/project-thread-pedcpo`, open) — added the mobile navigation shell and
+- **PR #40** (`claude/scan-shelf-typeahead`, merged) — reworked the Scan station's Shelf field
+  for barcode-driven scanning: moved it below the ISBN field (matching scan order) and
+  replaced the plain `<select>` with `src/components/shelf-combobox.tsx`, a type-ahead
+  combobox matching a shelf's name or code, modeled on `PersonCombobox` but resolving a
+  match on Enter (not just on click) since a shelf barcode scan ends with Enter and no
+  further click is possible. Chains the two Enters a barcode scanner sends: Enter after the
+  ISBN moves focus to Shelf, Enter after the shelf code resolves the match and submits in the
+  same keystroke; refocusing the Shelf field also selects its existing text so a new scan
+  overwrites instead of appending. Renamed "Go" to "Scan in"/"Scan out" and moved it beside
+  the Shelf field. Built from a project-thread request (Jack's dad assigns each shelf a code
+  like A1/B2 and scans it after the ISBN); mocked up twice as an interactive Artifact before
+  any code was touched (https://claude.ai/artifact/DHuEk1Mg9TfdtGWX5x3pAb — first the overall
+  interaction, then a desktop-layout pass after Jack asked for the button beside the Shelf
+  field instead of full-width below it). The camera icon's desktop visibility is deliberately
+  untouched here — that's a separate mobile-scan-layout thread. Caught and fixed a real bug
+  during Playwright verification: `ShelfCombobox`'s text-sync effect (copied from
+  `PersonCombobox`) reset the field to empty on every keystroke once a shelf was pre-selected,
+  because typing clears the parent's selection to `null` and the effect treated that as an
+  external deselect. `PersonCombobox` never hits this since nothing pre-selects a person
+  before typing, but the Scan page pre-selects the previous shelf as a convenience default —
+  exactly the case that triggers it; fixed by only syncing text on a truthy selection. If
+  `PersonCombobox` is ever given a similar pre-selected-default use case, check it for the
+  same bug. Verified with a live local Playwright run (23/23 checks): the full chained-Enter
+  sequence, matching by code and by name, the refocus-selects-existing-text behavior, manual
+  click-to-select, an unmatched shelf on Enter showing an inline error without submitting,
+  Remove mode's lone ISBN Enter still submitting directly, and both button labels rendering
+  correctly per mode.
+- **PR #41** (`claude/project-thread-pedcpo`, open) — added the mobile navigation shell and
   phone-width card layouts (see the "Mobile navigation shell" note under "Tech stack" above for
   the full design). Built from a project-thread ask, kept deliberately separate from sibling
   threads doing the nav-tab reorder, the reservations/people redesign, and the scan page's
-  shelf-field/barcode-keyboard rework. Diagnosed the header/nav overflow with real DOM
-  measurements (`scrollWidth` vs `clientWidth`) rather than eyeballing it, then mocked up three
-  distinct nav-shell options as an Artifact (https://claude.ai/artifact/8TiMjszXPNzXCAidmHuym5) —
-  Jack picked the bottom tab bar and separately flagged the iOS home-indicator/Android
-  gesture-bar collision risk before it was addressed, and confirmed the PWA-not-native-app
-  direction. Once he asked to see every page, not just the nav shell, built a full 8-screen
-  tappable prototype (https://claude.ai/artifact/BfWyBW8afzpUUqTXB4YTby) covering the nav plus
-  redesigned Library/People/Reservations screens, approved as-is ("Yes good"). Verified with a
-  live local Playwright run across iPhone-13 and 1440x900 viewports, 13 checks covering header
-  overflow, bottom bar + More sheet navigation, the camera-icon desktop/mobile split, the
-  Library table-vs-cards switch, Reservations having no horizontal overflow, and the profile
-  name's visibility split.
+  shelf-field/barcode-keyboard rework (PR #40 above, merged first — rebased the camera-icon
+  `sm:hidden` change onto its new Shelf-combobox/"Scan in" button layout rather than the old
+  plain row). Diagnosed the header/nav overflow with real DOM measurements (`scrollWidth` vs
+  `clientWidth`) rather than eyeballing it, then mocked up three distinct nav-shell options as
+  an Artifact (https://claude.ai/artifact/8TiMjszXPNzXCAidmHuym5) — Jack picked the bottom tab
+  bar and separately flagged the iOS home-indicator/Android gesture-bar collision risk before
+  it was addressed, and confirmed the PWA-not-native-app direction. Once he asked to see every
+  page, not just the nav shell, built a full 8-screen tappable prototype
+  (https://claude.ai/artifact/BfWyBW8afzpUUqTXB4YTby) covering the nav plus redesigned
+  Library/People/Reservations screens, approved as-is ("Yes good"). Verified with a live local
+  Playwright run across iPhone-13 and 1440x900 viewports, 13 checks covering header overflow,
+  bottom bar + More sheet navigation, the camera-icon desktop/mobile split, the Library
+  table-vs-cards switch, Reservations having no horizontal overflow, and the profile name's
+  visibility split — re-verified after rebasing onto PR #40's merged shelf-combobox rework.
 
 ## Keeping this file current
 

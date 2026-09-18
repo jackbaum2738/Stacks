@@ -7,11 +7,7 @@ import { BookCover } from "@/components/book-cover";
 import { playErrorSound, playSuccessSound } from "@/lib/feedback-sound";
 import { formLabelClass } from "@/lib/form-styles";
 import { useLibraryRole } from "@/components/library-role-context";
-
-interface Shelf {
-  id: string;
-  name: string;
-}
+import { ShelfCombobox, type ShelfSummary } from "@/components/shelf-combobox";
 
 interface ScanResult {
   ok: boolean;
@@ -25,20 +21,21 @@ interface ScanResult {
 export default function ScanStationPage() {
   const { canEdit } = useLibraryRole();
   const [mode, setMode] = useState<"add" | "remove">("add");
-  const [shelves, setShelves] = useState<Shelf[]>([]);
-  const [shelfId, setShelfId] = useState("");
+  const [shelves, setShelves] = useState<ShelfSummary[]>([]);
+  const [selectedShelf, setSelectedShelf] = useState<ShelfSummary | null>(null);
   const [isbn, setIsbn] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const shelfInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/shelves")
       .then((res) => res.json())
       .then((data) => {
         setShelves(data.shelves ?? []);
-        if (data.shelves?.length) setShelfId((current) => current || data.shelves[0].id);
+        setSelectedShelf((current) => current ?? data.shelves?.[0] ?? null);
       });
   }, []);
 
@@ -46,9 +43,10 @@ export default function ScanStationPage() {
     inputRef.current?.focus();
   }, [mode]);
 
-  async function submitIsbn(rawIsbn: string) {
+  async function submitIsbn(rawIsbn: string, shelfOverride?: ShelfSummary | null) {
     if (!rawIsbn.trim() || busy) return;
-    if (mode === "add" && !shelfId) {
+    const shelf = shelfOverride !== undefined ? shelfOverride : selectedShelf;
+    if (mode === "add" && !shelf) {
       setResult({ ok: false, message: "Choose a shelf first." });
       playErrorSound();
       return;
@@ -61,7 +59,7 @@ export default function ScanStationPage() {
       const res = await fetch(mode === "add" ? "/api/copies/scan-in" : "/api/copies/scan-out", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mode === "add" ? { isbn: rawIsbn, shelfId } : { isbn: rawIsbn }),
+        body: JSON.stringify(mode === "add" ? { isbn: rawIsbn, shelfId: shelf!.id } : { isbn: rawIsbn }),
       });
       const data = await res.json();
 
@@ -130,57 +128,78 @@ export default function ScanStationPage() {
         ))}
       </div>
 
-      {mode === "add" && (
-        <div className="space-y-1">
-          <label htmlFor="shelf" className={formLabelClass}>
-            Shelf
-          </label>
-          <select
-            id="shelf"
-            value={shelfId}
-            onChange={(e) => setShelfId(e.target.value)}
-            className="w-full border border-line-strong bg-surface px-3 py-2 font-sans text-ink"
-          >
-            {shelves.map((shelf) => (
-              <option key={shelf.id} value={shelf.id}>
-                {shelf.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       <form
         onSubmit={(e) => {
           e.preventDefault();
           submitIsbn(isbn);
         }}
-        className="flex gap-2"
+        className="space-y-4"
       >
-        <input
-          ref={inputRef}
-          value={isbn}
-          onChange={(e) => setIsbn(e.target.value)}
-          placeholder="Scan or type an ISBN"
-          autoComplete="off"
-          disabled={busy}
-          className="flex-1 border border-line-strong bg-surface px-3 py-3 font-mono text-lg text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
-        />
-        <button
-          type="button"
-          onClick={() => setShowCamera(true)}
-          className="inline-flex rounded-[2px] border border-line-strong px-3 py-3 hover:bg-chip-hover sm:hidden"
-          aria-label="Scan with camera"
-        >
-          📷
-        </button>
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-[2px] bg-accent px-4 py-3 font-sans font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
-        >
-          Go
-        </button>
+        <div className="space-y-1">
+          <label htmlFor="isbn" className={formLabelClass}>
+            ISBN
+          </label>
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              id="isbn"
+              value={isbn}
+              onChange={(e) => setIsbn(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                if (mode === "add") {
+                  e.preventDefault();
+                  shelfInputRef.current?.focus();
+                }
+              }}
+              placeholder="Scan or type an ISBN"
+              autoComplete="off"
+              disabled={busy}
+              className="flex-1 border border-line-strong bg-surface px-3 py-3 font-mono text-lg text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCamera(true)}
+              className="inline-flex rounded-[2px] border border-line-strong px-3 py-3 hover:bg-chip-hover sm:hidden"
+              aria-label="Scan with camera"
+            >
+              📷
+            </button>
+          </div>
+        </div>
+
+        {mode === "add" ? (
+          <div className="space-y-1">
+            <label htmlFor="shelf" className={formLabelClass}>
+              Shelf
+            </label>
+            <div className="flex items-start gap-2">
+              <ShelfCombobox
+                id="shelf"
+                ref={shelfInputRef}
+                shelves={shelves}
+                selected={selectedShelf}
+                onChange={setSelectedShelf}
+                onEnterResolved={(shelf) => submitIsbn(isbn, shelf)}
+              />
+              <button
+                type="submit"
+                disabled={busy}
+                className="flex-shrink-0 whitespace-nowrap rounded-[2px] bg-accent px-4 py-2.5 font-sans font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
+              >
+                Scan in
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-[2px] bg-accent px-4 py-3 font-sans font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
+          >
+            Scan out
+          </button>
+        )}
       </form>
 
       {showCamera && (
