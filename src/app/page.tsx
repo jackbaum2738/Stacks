@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { Mark } from "@/components/mark";
+import { FullLogo } from "@/components/full-logo";
 import { prisma } from "@/lib/prisma";
 
 export default async function Home() {
@@ -18,10 +18,7 @@ export default async function Home() {
     <div className="flex flex-1 flex-col bg-bg">
       <header className="border-b-2 border-ink bg-surface">
         <div className="mx-auto flex max-w-[920px] items-center justify-between px-8 py-[18px]">
-          <span className="flex items-center gap-2 font-display text-[22px] font-semibold text-ink">
-            <Mark size={26} />
-            Stacks
-          </span>
+          <FullLogo height={30} />
           <Link href="/login" className="font-sans text-sm font-medium text-accent">
             Sign in
           </Link>
