@@ -36,7 +36,7 @@ export function ProfileMenu({ name, username }: { name: string; username: string
         <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-full bg-accent font-sans text-xs font-bold text-on-accent">
           {initial}
         </span>
-        {name}
+        <span className="hidden sm:inline">{name}</span>
         <svg
           width="14"
           height="14"
