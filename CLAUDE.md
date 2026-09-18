@@ -933,7 +933,7 @@ not just the PR they were stated in:
   password, old password rejected, a reused reset token rejected rather than silently
   accepted twice, and a nonexistent identifier still getting the same generic response as a
   real match (no account enumeration). Test user cleaned up from the local DB afterward.
-- **PR #41** (`claude/project-thread-yqofnc`) -- folded Reservations into People and removed
+- **PR #42** (`claude/project-thread-yqofnc`) -- folded Reservations into People and removed
   the standalone tab (see the "Reservations folded into People" note under "Data model" above
   for the full design). Came from a project-thread ask to rethink the Reservations page;
   mocked up first as an Artifact over two rounds -- round one proposed three directions with a
