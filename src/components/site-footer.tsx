@@ -20,7 +20,7 @@ export function SiteFooter() {
             Privacy
           </Link>
           <span aria-hidden>·</span>
-          <span>&copy; {year} Jack</span>
+          <span>&copy; {year} Jack Baum</span>
           <span aria-hidden>·</span>
           <span>v{packageJson.version}</span>
         </div>

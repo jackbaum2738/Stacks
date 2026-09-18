@@ -858,9 +858,10 @@ not just the PR they were stated in:
   functional cookies, no analytics/tracking/ads/selling) and shared as a mockup, but Jack asked to
   ship just a "coming soon" placeholder at `/privacy` for now and track writing the real one as an
   idea -- see IDEAS.md's "Write the real privacy notice" entry for the draft's status and the
-  personal-use-exemption caveat. Copyright line reads "(c) {year} Jack" (first name, not "Stacks"
-  -- an unregistered, non-legal-entity name can't itself hold copyright; ownership sits with Jack
-  as the individual who created the work, automatically and regardless of any company registration).
+  personal-use-exemption caveat. Copyright line reads "(c) {year} Jack Baum" (his full name, not
+  "Stacks" -- an unregistered, non-legal-entity name can't itself hold copyright; ownership sits
+  with Jack as the individual who created the work, automatically and regardless of any company
+  registration; he confirmed he wanted his full name over just "Jack" once asked).
 
 ## Keeping this file current
 
