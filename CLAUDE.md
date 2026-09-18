@@ -407,6 +407,36 @@ two rounds — round one offered three directions (fold into People; an age-sort
 ship" queue, recommended at the time; a merged People/Reservations page with two views) before
 Jack corrected the batching premise and picked "option 1 with elements of 2."
 
+**Password reset & transactional email (Brevo) — key decisions if you touch this again:**
+Came out of buying stacksonline.com and setting it up for email deliverability (SPF, DKIM,
+DMARC, a branded `mail` subdomain) in a project-thread session — see that thread for the full
+Cloudflare/Brevo DNS setup if it ever needs redoing. `src/lib/brevo.ts` sends via Brevo's HTTP
+API (not SMTP) from `noreply@stacksonline.com`, reading `BREVO_API_KEY` from the environment;
+with no key set it logs the plain-text email body to the console instead of throwing, so local
+dev and the sandbox's Playwright runs can still follow a reset link without a real Brevo
+account. **`PasswordResetToken` stores only a SHA-256 hash of the raw token, never the token
+itself** — a database leak alone can't be replayed into an account takeover — with a 1-hour
+expiry and a `usedAt` marker rather than deleting the row on use (unlike the Reservation bug
+elsewhere in this file, there's no unique constraint here a leftover used row could ever
+block, since a fresh request always generates a fresh random token/hash). Requesting a new
+reset link deletes any other outstanding *unused* tokens for that user first, so only the most
+recently requested link is ever live — old used ones are left alone as a paper trail.
+`/api/auth/forgot-password` always returns the identical generic response whether or not the
+email/username matched an account, to avoid account enumeration.
+**Every transactional email is hand-written table-based, inline-styled HTML** in
+`src/lib/emails/`, not the app's normal Tailwind/CSS-variable styling and not Brevo's own
+drag-and-drop template builder — email clients don't reliably support external stylesheets,
+CSS custom properties, flexbox/grid, or inline SVG (the logo mark is rebuilt from colored
+`<div>`s, not `mark.tsx`'s SVG). `src/lib/emails/shared.ts`'s header (logo lockup) and footer
+(matching the real site footer's "Privacy" link and "© {year} Jack Baum" copyright, not a
+separate wording) are a shared layout every future transactional email should render through
+— Jack was explicit this must stay visually consistent across email types, not be
+re-derived per template. The logo lockup went through two "still too small" rounds against a
+mockup (https://claude.ai/artifact/WFB3B9RWc4e6iZiLyYKVwa) before he signed off on the final
+size. No email dark-mode support (light theme only) — a deliberate scope cut, since
+`prefers-color-scheme` support in email clients is inconsistent and most strip `<style>`
+blocks anyway; revisit only if Jack asks.
+
 ## Working agreements (how the user wants sessions to run)
 
 These were established explicitly mid-project and apply to all future work,
@@ -887,7 +917,23 @@ not just the PR they were stated in:
   "Stacks" -- an unregistered, non-legal-entity name can't itself hold copyright; ownership sits
   with Jack as the individual who created the work, automatically and regardless of any company
   registration; he confirmed he wanted his full name over just "Jack" once asked).
-- **PR #36** (`claude/project-thread-yqofnc`) -- folded Reservations into People and removed
+- **PR #39** (`claude/password-reset-email`, open) — added password reset by email and Brevo
+  as the transactional email provider (see the "Password reset & transactional email" note
+  under "Data model" above for the full design). Built from a project-thread session that
+  started with buying stacksonline.com on Cloudflare and setting up its DNS end to end (SPF,
+  DKIM, DMARC, a branded `mail` subdomain, Google Postmaster Tools, a Gmail "send mail as"
+  alias for `info@` routed through Brevo's SMTP relay) before any app code was touched, then
+  moved to the password-reset feature once the domain/email groundwork was solid. Mocked up
+  the email itself first as an Artifact, four rounds of feedback before any code was written
+  (username shown in brackets for deliverability; an inline "request a new one" link on the
+  expiry line; copyright/footer links added and reconciled against the real site footer's
+  wording; the logo lockup sized up twice, "still too small" each time, before Jack signed
+  off). Verified with a live local Playwright run: full round trip via the dev-console-logged
+  reset link (no real Brevo key in this sandbox) from request through sign-in with the new
+  password, old password rejected, a reused reset token rejected rather than silently
+  accepted twice, and a nonexistent identifier still getting the same generic response as a
+  real match (no account enumeration). Test user cleaned up from the local DB afterward.
+- **PR #41** (`claude/project-thread-yqofnc`) -- folded Reservations into People and removed
   the standalone tab (see the "Reservations folded into People" note under "Data model" above
   for the full design). Came from a project-thread ask to rethink the Reservations page;
   mocked up first as an Artifact over two rounds -- round one proposed three directions with a
