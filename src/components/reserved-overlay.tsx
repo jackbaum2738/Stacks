@@ -1,11 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookCover } from "@/components/book-cover";
 import { ReservationModal } from "@/components/reservation-modal";
 import { useLibraryRole } from "@/components/library-role-context";
 import { formatDate } from "@/lib/format-date";
 import type { PersonSummary } from "@/components/person-combobox";
+
+export interface ReservationCountChange {
+  personId: string;
+  activeReservationCount: number;
+}
+
+function countsByPerson(reservations: { person: PersonSummary | null }[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const r of reservations) {
+    if (!r.person) continue;
+    counts[r.person.id] = (counts[r.person.id] ?? 0) + 1;
+  }
+  return counts;
+}
 
 type SortKey = "book" | "person" | "shelf" | "date";
 
@@ -48,7 +62,13 @@ const HEADERS: { key: SortKey; label: string }[] = [
  * so clearing it browses every reservation at once -- the point of a "person" here is
  * batching a few books together before mailing them, not a per-person silo.
  */
-export function ReservedOverlay({ initialFilter, onClose }: { initialFilter: string; onClose: () => void }) {
+export function ReservedOverlay({
+  initialFilter,
+  onClose,
+}: {
+  initialFilter: string;
+  onClose: (changedCounts: ReservationCountChange[]) => void;
+}) {
   const { canEdit } = useLibraryRole();
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,12 +77,17 @@ export function ReservedOverlay({ initialFilter, onClose }: { initialFilter: str
   const [sortDir, setSortDir] = useState<1 | -1>(-1);
   const [editTarget, setEditTarget] = useState<ReservationRow | null>(null);
   const [releasingId, setReleasingId] = useState<string | null>(null);
+  const initialCountsRef = useRef<Record<string, number> | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
     return fetch("/api/reservations")
       .then((res) => res.json())
-      .then((data) => setReservations(data.reservations ?? []))
+      .then((data) => {
+        const rows: ReservationRow[] = data.reservations ?? [];
+        setReservations(rows);
+        if (!initialCountsRef.current) initialCountsRef.current = countsByPerson(rows);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -71,6 +96,18 @@ export function ReservedOverlay({ initialFilter, onClose }: { initialFilter: str
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  function handleClose() {
+    const before = initialCountsRef.current ?? {};
+    const after = countsByPerson(reservations);
+    const changed: ReservationCountChange[] = [];
+    for (const personId of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      const prevCount = before[personId] ?? 0;
+      const nextCount = after[personId] ?? 0;
+      if (prevCount !== nextCount) changed.push({ personId, activeReservationCount: nextCount });
+    }
+    onClose(changed);
+  }
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) setSortDir((d) => (d === 1 ? -1 : 1));
@@ -106,12 +143,12 @@ export function ReservedOverlay({ initialFilter, onClose }: { initialFilter: str
     <div
       id="reserved-overlay"
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[rgba(43,38,32,.45)] p-4 pt-10"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
       <div className="w-full max-w-[720px] rounded-[2px] border border-line-strong bg-surface p-[26px] shadow-[0_24px_44px_rgba(43,38,32,.3)]">
         <div className="mb-1 flex items-start justify-between gap-3">
           <h2 className="font-display text-2xl font-semibold text-ink">Reserved</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-2xl leading-none text-ink-soft hover:text-ink">
+          <button type="button" onClick={handleClose} aria-label="Close" className="text-2xl leading-none text-ink-soft hover:text-ink">
             &times;
           </button>
         </div>
