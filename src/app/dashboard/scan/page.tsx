@@ -18,6 +18,20 @@ interface ScanResult {
   copyId?: string;
 }
 
+interface ScanOutChoice {
+  id: string;
+  shelfName: string | null;
+  status: "AVAILABLE" | "RESERVED";
+  addedAt: string;
+  reservedForName: string | null;
+}
+
+interface ScanOutPicker {
+  isbn: string;
+  book: { title: string; authors: string[]; coverUrl: string | null };
+  choices: ScanOutChoice[];
+}
+
 export default function ScanStationPage() {
   const { canEdit } = useLibraryRole();
   const [mode, setMode] = useState<"add" | "remove">("add");
@@ -26,6 +40,7 @@ export default function ScanStationPage() {
   const [isbn, setIsbn] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [picker, setPicker] = useState<ScanOutPicker | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const shelfInputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +58,27 @@ export default function ScanStationPage() {
     inputRef.current?.focus();
   }, [mode]);
 
+  function applyScanOutCopy(data: {
+    copy: {
+      id: string;
+      book: { title: string; authors: string[]; coverUrl: string | null };
+      shelf: { name: string } | null;
+      reservation: { person: { name: string } | null } | null;
+    };
+  }) {
+    const shelfName = data.copy.shelf?.name ?? "your library";
+    setResult({
+      ok: true,
+      message: data.copy.reservation
+        ? `Removed from ${shelfName} — reservation for ${data.copy.reservation.person?.name ?? "someone no longer in your directory"} marked fulfilled.`
+        : `Removed from ${shelfName}.`,
+      title: data.copy.book.title,
+      authors: data.copy.book.authors,
+      coverUrl: data.copy.book.coverUrl,
+    });
+    playSuccessSound();
+  }
+
   async function submitIsbn(rawIsbn: string, shelfOverride?: ShelfSummary | null) {
     if (!rawIsbn.trim() || busy) return;
     const shelf = shelfOverride !== undefined ? shelfOverride : selectedShelf;
@@ -54,6 +90,7 @@ export default function ScanStationPage() {
 
     setBusy(true);
     setResult(null);
+    setPicker(null);
 
     try {
       const res = await fetch(mode === "add" ? "/api/copies/scan-in" : "/api/copies/scan-out", {
@@ -76,17 +113,10 @@ export default function ScanStationPage() {
           copyId: data.copy.id,
         });
         playSuccessSound();
+      } else if (data.choices) {
+        setPicker({ isbn: rawIsbn, book: data.book, choices: data.choices });
       } else {
-        setResult({
-          ok: true,
-          message: data.copy.reservation
-            ? `Removed — reservation for ${data.copy.reservation.person?.name ?? "someone no longer in your directory"} marked fulfilled.`
-            : "Removed from your library.",
-          title: data.copy.book.title,
-          authors: data.copy.book.authors,
-          coverUrl: data.copy.book.coverUrl,
-        });
-        playSuccessSound();
+        applyScanOutCopy(data);
       }
     } catch {
       setResult({ ok: false, message: "Network error — please try again." });
@@ -94,6 +124,34 @@ export default function ScanStationPage() {
     } finally {
       setBusy(false);
       setIsbn("");
+      inputRef.current?.focus();
+    }
+  }
+
+  async function removeChosenCopy(copyId: string) {
+    if (!picker || busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/copies/scan-out", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isbn: picker.isbn, copyId }),
+      });
+      const data = await res.json();
+      setPicker(null);
+
+      if (!res.ok) {
+        setResult({ ok: false, message: data.error ?? "Something went wrong" });
+        playErrorSound();
+      } else {
+        applyScanOutCopy(data);
+      }
+    } catch {
+      setPicker(null);
+      setResult({ ok: false, message: "Network error — please try again." });
+      playErrorSound();
+    } finally {
+      setBusy(false);
       inputRef.current?.focus();
     }
   }
@@ -118,6 +176,7 @@ export default function ScanStationPage() {
             onClick={() => {
               setMode(m);
               setResult(null);
+              setPicker(null);
             }}
             className={`flex-1 px-4 py-2 font-sans font-medium ${
               mode === m ? "bg-ink text-surface" : "text-ink-muted hover:bg-chip-hover"
@@ -239,6 +298,71 @@ export default function ScanStationPage() {
               Edit details
             </Link>
           )}
+        </div>
+      )}
+
+      {picker && (
+        <div className="paper-shadow-sm rounded-[2px] border border-line-strong bg-surface p-4">
+          <div className="flex gap-3 border-b border-line pb-3">
+            <BookCover src={picker.book.coverUrl} alt={picker.book.title} className="h-14 w-10 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="font-display font-medium text-ink">{picker.book.title}</p>
+              {picker.book.authors.length > 0 && (
+                <p className="font-sans text-sm text-ink-soft">{picker.book.authors.join(", ")}</p>
+              )}
+              <p className="mt-1 font-sans text-sm text-ink-soft">
+                {picker.choices.length} copies of this book are in your library. Pick the one you&apos;re holding.
+              </p>
+            </div>
+          </div>
+
+          <ul>
+            {picker.choices.map((choice) => (
+              <li key={choice.id} className="flex items-center gap-3 border-b border-line py-3 last:border-b-0">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 font-mono text-sm font-medium text-ink">
+                    <span>{choice.shelfName ?? "No shelf"}</span>
+                    <span
+                      className={`rounded-[2px] px-1.5 py-0.5 font-mono text-[10.5px] font-medium ${
+                        choice.status === "AVAILABLE"
+                          ? "bg-pill-available-bg text-pill-available-fg"
+                          : "bg-pill-reserved-bg text-pill-reserved-fg"
+                      }`}
+                    >
+                      {choice.status === "AVAILABLE" ? "Available" : "Reserved"}
+                    </span>
+                  </div>
+                  {choice.status === "RESERVED" ? (
+                    <p className="mt-0.5 font-sans text-xs text-pill-reserved-fg">
+                      Removing this releases the reservation for {choice.reservedForName ?? "someone no longer in your directory"}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 font-sans text-xs text-ink-faint">
+                      Added {new Date(choice.addedAt).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => removeChosenCopy(choice.id)}
+                  className={`flex-shrink-0 rounded-[2px] border px-3 py-1.5 font-sans text-sm font-medium hover:bg-chip-hover disabled:opacity-50 ${
+                    choice.status === "RESERVED" ? "border-accent text-accent" : "border-line-strong text-ink"
+                  }`}
+                >
+                  Remove this
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <button
+            type="button"
+            onClick={() => setPicker(null)}
+            className="mt-1 w-full border-t border-line pt-3 text-center font-sans text-sm text-ink-soft underline decoration-line-strong underline-offset-2 hover:text-ink"
+          >
+            Cancel
+          </button>
         </div>
       )}
     </div>
