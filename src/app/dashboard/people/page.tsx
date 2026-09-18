@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLibraryRole } from "@/components/library-role-context";
 import { PersonModal, type PersonRecord } from "@/components/person-modal";
 import { DeletePersonModal } from "@/components/delete-person-modal";
-import { ReservedOverlay } from "@/components/reserved-overlay";
+import { ReservedOverlay, type ReservationCountChange } from "@/components/reserved-overlay";
 import { formatDate } from "@/lib/format-date";
 
 type SortKey = "name" | "email" | "phone" | "location" | "birthday" | "reservations";
@@ -293,9 +293,16 @@ export default function PeoplePage() {
       {reservedFor && (
         <ReservedOverlay
           initialFilter={reservedFor}
-          onClose={() => {
+          onClose={(changedCounts: ReservationCountChange[]) => {
             setReservedFor(null);
-            loadPeople();
+            if (changedCounts.length > 0) {
+              setPeople((prev) =>
+                prev.map((p) => {
+                  const change = changedCounts.find((c) => c.personId === p.id);
+                  return change ? { ...p, activeReservationCount: change.activeReservationCount } : p;
+                })
+              );
+            }
           }}
         />
       )}
