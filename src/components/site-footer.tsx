@@ -12,7 +12,7 @@ export function SiteFooter() {
           href="/dashboard"
           className="flex items-center gap-2 font-display text-[13px] font-semibold text-ink-soft hover:text-ink"
         >
-          <Mark size={22} />
+          <Mark size={28} />
           Stacks
         </Link>
         <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-ink-faint">
