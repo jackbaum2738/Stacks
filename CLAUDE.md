@@ -205,12 +205,42 @@ touch this again:**
   and confirmed with the user before building rather than assumed either way. Export stays
   available to Member (not View Only) since it's read-only content-wise, even though it does
   write `Library.lastBackupAt`/`lastBackupByUserId` as a side effect.
-- **Three invite links, not one** — `inviteCodeAdmin`/`inviteCodeMember`/`inviteCodeViewOnly`
-  on `Library`, each independently generated/regenerated from Settings. There is deliberately
-  no invite link for Owner; the only way anyone becomes Owner is the transfer-ownership
-  endpoint. `src/lib/invite-code.ts`'s `findLibraryByInviteCode` checks all three columns and
-  returns which role a given code grants — always go through it rather than querying a
-  specific column, since a code's owning column can be any of the three.
+- **Superseded by emailed invites (see below) as of PR #50.** The three
+  per-role invite-link columns this bullet originally described (`inviteCodeAdmin`/
+  `inviteCodeMember`/`inviteCodeViewOnly`, `src/lib/invite-code.ts`) are gone — kept this note
+  only so a stale reference to those names elsewhere in history makes sense.
+
+**Emailed library invites (replaces the per-role invite links above) — key decisions if you
+touch this again:** a `LibraryInvite` row (`libraryId`+`email` unique, `role`, `token`,
+`lastSentAt`) replaces the three columns. An Admin+ enters one email and picks Admin/Member/
+View Only from the new Open Invitations tab in Settings (`src/components/members-section.tsx`,
+`send-invite-form.tsx`, `open-invite-row.tsx`); Stacks emails a one-time `/invite/[token]` link
+via Brevo (`src/lib/emails/library-invite.ts`), reading "{inviter's username} invited you to
+join {library}" per Jack's explicit wording. There is still deliberately no invite path to
+Owner — transfer-ownership remains the only way anyone becomes Owner.
+- **A row's mere existence *is* "open."** Cancel (`DELETE /api/library/invites/[id]`) and a
+  successful Accept both delete the row outright rather than flagging it — same delete-not-flag
+  pattern as Reservation release (see "Bugs found and fixed" below) — so a cancelled or
+  already-accepted link immediately shows the existing "This link is no longer valid" message
+  with nothing left to clean up later, and the Open Invitations tab is simply "every row here."
+  Resend re-sends the same link and is rate-limited to once per 60 seconds *per invite*,
+  enforced in `POST /api/library/invites/[id]/resend` itself (429), not just disabled in the
+  UI, since two admins racing the button client-side wouldn't be caught otherwise.
+- **Accepting is always a separate confirmation step after signing in, never instant on
+  opening the link** — explicit spec from Jack. `/invite/[token]` sends a signed-out visitor to
+  the existing sign-in/create-account choice; a signed-in visitor is redirected straight to
+  `/dashboard?invite=token`. `InviteAcceptOverlay` reads that query param (via
+  `useSearchParams()`, since a layout — unlike a page — never receives `searchParams` as a
+  prop) and renders the "Join {library} as {role}?" popup two ways: as a dimmed backdrop *over*
+  the normal dashboard for an existing account (`variant="overlay"`, mounted in the dashboard
+  layout's has-library branch), or in place of the "create your first library" prompt for a
+  brand-new account that registered through the same link (`variant="inline"`, via
+  `ZeroLibraryContent` in the zero-membership branch) — per Jack's explicit "instead of the new
+  library popup" instruction. This is why **registering via an invite no longer auto-joins**:
+  `POST /api/auth/register` with an `inviteCode` just confirms the invite is still live and
+  creates the account library-less on purpose, so the same accept popup (and the same
+  `POST /api/invite/[token]/accept`, which creates the membership and deletes the invite in one
+  transaction) handles a brand-new account exactly like an existing one clicking the link.
 - **A `Membership` row with role OWNER can never be deleted or have its role changed** through
   the regular member-management endpoints (`/api/library/members/[id]`) — enforced
   server-side (409), not just hidden in the UI. The only way to stop being Owner is
@@ -1092,6 +1122,21 @@ not just the PR they were stated in:
   run: releasing a reservation and closing the screen patches only that person's row with zero
   `GET /api/people` requests fired, an unrelated person's row stays untouched, and the existing
   18-check Reserved-screen regression suite still passes in full.
+- **PR #50** (`claude/project-thread-yej69l`) — replaced the three per-role invite links with an
+  emailed invite system (see the "Emailed library invites" note under "Data model" above for
+  the full design). Built from a project-thread request with a detailed spec from Jack up
+  front (email-first invites, a confirmation popup always shown after sign-in rather than
+  instant joining, an Open Invitations tab with cancel/resend and a 60s cooldown); mocked up
+  the email itself first as an Artifact before any code was touched, since it's the one
+  new-to-users piece of UI — approved after two rounds of copy tweaks (dropped the "if you
+  weren't expecting this" reassurance line entirely, and simplified the sign-in/sign-up line to
+  "Sign in or create a Stacks account to accept the invitation."). Verified with a live local
+  Playwright run (16/16 checks) covering the full loop for both a brand-new account and an
+  existing one, plus cancel and dead-link behavior — see the CHANGELOG's 7.0.0 entry for the
+  full list. Coordinated with two sibling threads working the same day: the members-table
+  changes (Make Owner in the role dropdown, a Save button, branded Remove dialog) and the
+  mandatory create-a-library popup after sign-up were both left alone — this PR only touches
+  the Members section's invite half and the pre-existing zero-membership dashboard state.
 
 ## Keeping this file current
 

@@ -32,6 +32,7 @@ model User {
   reservations        Reservation[]        @relation("ReservationCreatedBy")
   backupsTaken        Library[]            @relation("LibraryLastBackupBy")
   passwordResetTokens PasswordResetToken[]
+  invitesSent         LibraryInvite[]      @relation("LibraryInviteSentBy")
 }
 
 /// A one-time, short-lived token emailed to a user who requested a password reset. Stores
@@ -57,12 +58,6 @@ model Library {
   id                 String         @id @default(cuid())
   name               String
   slug               String         @unique
-  /// Three separate invite links (never one for OWNER -- transfer is the only way to become
-  /// Owner) so whoever shares a link controls what the joiner can do, without a transactional
-  /// email provider to target an invite at a specific person's role individually.
-  inviteCodeAdmin    String?        @unique
-  inviteCodeMember   String?        @unique
-  inviteCodeViewOnly String?        @unique
   createdAt          DateTime       @default(now())
   lastBackupAt       DateTime?
   lastBackupByUserId String?
@@ -71,7 +66,33 @@ model Library {
   copies             Copy[]
   bookOverrides      BookOverride[]
   people             Person[]
+  invites            LibraryInvite[]
   lastBackupBy       User?          @relation("LibraryLastBackupBy", fields: [lastBackupByUserId], references: [id], onDelete: SetNull)
+}
+
+/// A pending emailed invite to join a library at a specific role (never OWNER -- transfer is
+/// the only way to become Owner). Replaces the old per-role invite-link columns: instead of a
+/// generic link anyone could use, an Admin enters a specific email and Stacks sends it a
+/// one-time acceptance link (see src/lib/emails/library-invite.ts). A row's mere existence
+/// *is* "open" -- Cancel and a successful Accept both delete it outright (no cancelledAt/
+/// acceptedAt flag) so the Open Invitations tab is just "every row here", same delete-not-flag
+/// pattern used for Reservation release (see CLAUDE.md's Bugs Found section) -- there's no
+/// unique constraint here a leftover row could ever block, but there's also no reason to keep
+/// a dead row around once it's resolved. `lastSentAt` gates the 60s resend cooldown.
+model LibraryInvite {
+  id           String   @id @default(cuid())
+  libraryId    String
+  email        String
+  role         Role
+  token        String   @unique
+  invitedById  String?
+  createdAt    DateTime @default(now())
+  lastSentAt   DateTime @default(now())
+  library      Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  invitedBy    User?    @relation("LibraryInviteSentBy", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([libraryId, email])
+  @@index([libraryId])
 }
 
 /// Links a user to a library with a role, so a library can eventually be shared/co-managed.
