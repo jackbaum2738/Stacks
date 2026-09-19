@@ -253,9 +253,9 @@ function MemberList({
 }
 
 /**
- * Wraps the role-editing member list in a Members / Open invitations tab pair -- only for
- * Admin+, who are the only ones who could do anything on the second tab anyway. A Member/View
- * Only viewer just gets the plain list, same as before this existed.
+ * Wraps the role-editing member list in a Members / Invitations tab pair -- only for Admin+,
+ * who are the only ones who could do anything on the second tab anyway. A Member/View Only
+ * viewer just gets the plain list, same as before this existed.
  */
 export function MembersSection({
   members,
@@ -303,7 +303,7 @@ export function MembersSection({
             tab === "invites" ? "border-b-2 border-ink text-ink" : "text-ink-soft hover:text-ink"
           }`}
         >
-          Open invitations{invites.length > 0 ? ` (${invites.length})` : ""}
+          Invitations{invites.length > 0 ? ` (${invites.length})` : ""}
         </button>
       </div>
 
@@ -313,7 +313,7 @@ export function MembersSection({
         <div className="space-y-4 border border-line bg-surface p-4">
           <SendInviteForm onSent={(invite) => setInvites((prev) => [invite, ...prev])} />
           {invites.length === 0 ? (
-            <p className="font-sans text-sm text-ink-soft">No open invitations.</p>
+            <p className="font-sans text-sm text-ink-soft">No invitations.</p>
           ) : (
             <ul className="divide-y divide-line-inner">
               {invites.map((invite) => (

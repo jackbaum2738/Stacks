@@ -29,7 +29,7 @@ const schema = z.object({
 /**
  * Sends a new emailed invite. Admin+ only, same tier the old per-role invite links required.
  * Rejects an email that's already a member (nothing to invite) or already has an open invite
- * for this library (the Open Invitations tab's Cancel/Resend cover that case instead of
+ * for this library (the Invitations tab's Cancel/Resend cover that case instead of
  * silently creating a second one, which the libraryId+email unique constraint would reject
  * anyway).
  */
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   });
   if (existingInvite) {
     return NextResponse.json(
-      { error: "There's already an open invitation for that email — cancel or resend it from Open Invitations" },
+      { error: "There's already an open invitation for that email — cancel or resend it from Invitations" },
       { status: 409 }
     );
   }
