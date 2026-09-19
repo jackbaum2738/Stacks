@@ -22,49 +22,95 @@ export interface BookLookupResult {
   source: string;
 }
 
+export type LookupOutcome = "success" | "no-match" | "http-error" | "network-error";
+
+/** Per-provider diagnostics for one lookup attempt, meant to be persisted via BookLookupLog. */
+export interface ProviderAttempt {
+  called: boolean;
+  outcome: LookupOutcome | null;
+  detail: string | null;
+}
+
+export interface LookupDiagnostics {
+  googleBooks: ProviderAttempt;
+  openLibrary: ProviderAttempt;
+}
+
 const OPEN_LIBRARY_HEADERS = {
   "User-Agent": `Stacks/1.0 (${process.env.OPEN_LIBRARY_CONTACT ?? "contact@example.com"})`,
 };
 
-async function fetchJson(url: string, init?: RequestInit) {
+interface FetchResult {
+  data: unknown;
+  outcome: LookupOutcome;
+  detail: string | null;
+}
+
+async function fetchJson(url: string, init?: RequestInit): Promise<FetchResult> {
   try {
     const res = await fetch(url, { ...init, signal: AbortSignal.timeout(10000) });
     if (!res.ok) {
       console.error(`[books] ${url} responded ${res.status}`);
-      return null;
+      return { data: null, outcome: "http-error", detail: `HTTP ${res.status}` };
     }
-    return await res.json();
+    return { data: await res.json(), outcome: "success", detail: null };
   } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
     console.error(`[books] fetch failed for ${url}:`, err);
-    return null;
+    return { data: null, outcome: "network-error", detail };
   }
 }
 
-async function lookupGoogleBooks(isbn: string) {
+interface GoogleBooksData {
+  title: string | null;
+  authors: string[] | null;
+  description: string | null;
+  publisher: string | null;
+  publishedDate: string | null;
+  pageCount: number | null;
+  coverUrl: string | null;
+}
+
+async function lookupGoogleBooks(
+  isbn: string
+): Promise<{ result: GoogleBooksData | null } & ProviderAttempt> {
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}${key ? `&key=${key}` : ""}`;
-  const data = await fetchJson(url);
-  const info = data?.items?.[0]?.volumeInfo;
-  if (!info) return null;
+  const { data, outcome, detail } = await fetchJson(url);
+  if (outcome !== "success") return { result: null, called: true, outcome, detail };
+
+  const info = (data as { items?: Array<{ volumeInfo?: Record<string, unknown> }> })?.items?.[0]
+    ?.volumeInfo;
+  if (!info) return { result: null, called: true, outcome: "no-match", detail: null };
 
   return {
-    title: (info.title as string) ?? null,
-    authors: (info.authors as string[]) ?? null,
-    description: (info.description as string) ?? null,
-    publisher: (info.publisher as string) ?? null,
-    publishedDate: (info.publishedDate as string) ?? null,
-    pageCount: (info.pageCount as number) ?? null,
-    coverUrl: info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail ?? null,
+    result: {
+      title: (info.title as string) ?? null,
+      authors: (info.authors as string[]) ?? null,
+      description: (info.description as string) ?? null,
+      publisher: (info.publisher as string) ?? null,
+      publishedDate: (info.publishedDate as string) ?? null,
+      pageCount: (info.pageCount as number) ?? null,
+      coverUrl:
+        (info.imageLinks as { thumbnail?: string; smallThumbnail?: string } | undefined)
+          ?.thumbnail ??
+        (info.imageLinks as { thumbnail?: string; smallThumbnail?: string } | undefined)
+          ?.smallThumbnail ??
+        null,
+    },
+    called: true,
+    outcome: "success",
+    detail: null,
   };
 }
 
 async function lookupOpenLibraryAuthorName(authorKey: string): Promise<string | null> {
   const authorId = authorKey.split("/").pop();
   if (!authorId) return null;
-  const data = await fetchJson(`https://openlibrary.org/authors/${authorId}.json`, {
+  const { data } = await fetchJson(`https://openlibrary.org/authors/${authorId}.json`, {
     headers: OPEN_LIBRARY_HEADERS,
   });
-  return data?.name ?? null;
+  return (data as { name?: string } | null)?.name ?? null;
 }
 
 function extractDescription(value: unknown): string | null {
@@ -76,11 +122,34 @@ function extractDescription(value: unknown): string | null {
   return null;
 }
 
-async function lookupOpenLibrary(isbn: string, needAuthors: boolean) {
-  const book = await fetchJson(`https://openlibrary.org/isbn/${isbn}.json`, {
+interface OpenLibraryData {
+  title: string | null;
+  authors: string[] | null;
+  description: string | null;
+  publisher: string | null;
+  publishedDate: string | null;
+  pageCount: number | null;
+  coverUrl: string | null;
+}
+
+async function lookupOpenLibrary(
+  isbn: string,
+  needAuthors: boolean
+): Promise<{ result: OpenLibraryData | null } & ProviderAttempt> {
+  const { data, outcome, detail } = await fetchJson(`https://openlibrary.org/isbn/${isbn}.json`, {
     headers: OPEN_LIBRARY_HEADERS,
   });
-  if (!book) return null;
+  if (outcome !== "success") return { result: null, called: true, outcome, detail };
+
+  const book = data as {
+    title?: string;
+    authors?: Array<{ key?: string }>;
+    description?: unknown;
+    publishers?: string[];
+    publish_date?: string;
+    number_of_pages?: number;
+    works?: Array<{ key?: string }>;
+  };
 
   let authors: string[] | null = null;
   if (needAuthors && Array.isArray(book.authors) && book.authors[0]?.key) {
@@ -91,54 +160,84 @@ async function lookupOpenLibrary(isbn: string, needAuthors: boolean) {
   let description = extractDescription(book.description);
   if (!description && Array.isArray(book.works) && book.works[0]?.key) {
     const workId = book.works[0].key.split("/").pop();
-    const work = await fetchJson(`https://openlibrary.org/works/${workId}.json`, {
+    const { data: work } = await fetchJson(`https://openlibrary.org/works/${workId}.json`, {
       headers: OPEN_LIBRARY_HEADERS,
     });
-    description = extractDescription(work?.description);
+    description = extractDescription((work as { description?: unknown } | null)?.description);
   }
 
   return {
-    title: book.title ?? null,
-    authors,
-    description,
-    publisher: Array.isArray(book.publishers) ? book.publishers[0] : null,
-    publishedDate: book.publish_date ?? null,
-    pageCount: book.number_of_pages ?? null,
-    coverUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`,
+    result: {
+      title: book.title ?? null,
+      authors,
+      description,
+      publisher: Array.isArray(book.publishers) ? book.publishers[0] : null,
+      publishedDate: book.publish_date ?? null,
+      pageCount: book.number_of_pages ?? null,
+      coverUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false`,
+    },
+    called: true,
+    outcome: "success",
+    detail: null,
   };
 }
 
 /**
  * Looks up a book by ISBN using Google Books first, then fills any gaps
  * (title/authors/description/cover) from Open Library, mirroring the
- * cascading lookup from the original Apps Script.
+ * cascading lookup from the original Apps Script. Returns diagnostics for
+ * each provider actually called, so callers can persist a BookLookupLog row.
  */
-export async function lookupBookByIsbn(rawIsbn: string): Promise<BookLookupResult | null> {
+export async function lookupBookByIsbn(
+  rawIsbn: string
+): Promise<{ result: BookLookupResult | null; diagnostics: LookupDiagnostics }> {
   const isbn = cleanIsbn(rawIsbn);
   const isbn13 = toIsbn13(isbn);
 
-  const google = await lookupGoogleBooks(isbn13);
+  const googleAttempt = await lookupGoogleBooks(isbn13);
+  const google = googleAttempt.result;
 
   const needsFallback =
     !google || !google.title || !google.authors || !google.description || !google.coverUrl;
 
-  const openLibrary = needsFallback
+  const openLibraryAttempt = needsFallback
     ? await lookupOpenLibrary(isbn13, !google?.authors)
-    : null;
+    : { result: null, called: false, outcome: null, detail: null };
+  const openLibrary = openLibraryAttempt.result;
+
+  const diagnostics: LookupDiagnostics = {
+    googleBooks: {
+      called: googleAttempt.called,
+      outcome: googleAttempt.outcome,
+      detail: googleAttempt.detail,
+    },
+    openLibrary: {
+      called: openLibraryAttempt.called,
+      outcome: openLibraryAttempt.outcome,
+      detail: openLibraryAttempt.detail,
+    },
+  };
 
   const title = google?.title ?? openLibrary?.title;
-  if (!title) return null;
+  if (!title) return { result: null, diagnostics };
 
   return {
-    isbn13,
-    isbn10: isbn.length === 10 ? isbn : null,
-    title,
-    authors: google?.authors ?? openLibrary?.authors ?? [],
-    publisher: google?.publisher ?? openLibrary?.publisher ?? null,
-    publishedDate: google?.publishedDate ?? openLibrary?.publishedDate ?? null,
-    pageCount: google?.pageCount ?? openLibrary?.pageCount ?? null,
-    description: google?.description ?? openLibrary?.description ?? null,
-    coverUrl: google?.coverUrl ?? openLibrary?.coverUrl ?? null,
-    source: google ? (openLibrary ? "google-books+open-library" : "google-books") : "open-library",
+    result: {
+      isbn13,
+      isbn10: isbn.length === 10 ? isbn : null,
+      title,
+      authors: google?.authors ?? openLibrary?.authors ?? [],
+      publisher: google?.publisher ?? openLibrary?.publisher ?? null,
+      publishedDate: google?.publishedDate ?? openLibrary?.publishedDate ?? null,
+      pageCount: google?.pageCount ?? openLibrary?.pageCount ?? null,
+      description: google?.description ?? openLibrary?.description ?? null,
+      coverUrl: google?.coverUrl ?? openLibrary?.coverUrl ?? null,
+      source: google
+        ? openLibrary
+          ? "google-books+open-library"
+          : "google-books"
+        : "open-library",
+    },
+    diagnostics,
   };
 }
