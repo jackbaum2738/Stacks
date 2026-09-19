@@ -661,6 +661,34 @@ not just the PR they were stated in:
   over Vercel's network path specifically. Fixed by widening the per-call
   timeout to 10s and the route's `maxDuration` to 45s, and adding real
   `console.error` logging (errors were previously swallowed silently).
+- **Open Library lookups aborting with `AbortError: This operation was aborted`
+  in real-world use (fixed in PR #55, 2026-09-19)**, surfaced once the new
+  `BookLookupLog` (PR #53) gave Jack visibility into failures. Diagnosed with
+  Jack in a project thread: first ruled out Open Library rate-limiting (their
+  Covers API caps at 100 req/5min per IP, and wants a real contact email in the
+  User-Agent, which is what `OPEN_LIBRARY_CONTACT` is for) — the exact error
+  text confirmed it was our own client-side `AbortSignal.timeout(10000)`
+  firing, not anything Open Library sent back. Root cause: `lookupOpenLibrary`
+  ran its two *optional* enrichment calls — resolving an author-key reference
+  to a name, and fetching a work's description when the edition record has
+  none — sequentially, one `await` after the other. Combined with the
+  always-required ISBN lookup and Google Books' own call ahead of it, a
+  worst-case lookup (Google Books thin on data, needing both Open Library
+  extras) chained up to four sequential 10s-capped fetches against the route's
+  45s `maxDuration` — very little margin, so one slow response could blow the
+  whole request past budget before later calls even started. Since the two
+  optional calls don't depend on each other's results, they now run
+  concurrently via `Promise.all` instead, dropping the worst case to
+  effectively three calls and freeing real headroom under the 45s budget —
+  same data fetched, same fallback behavior. This was compounded at the time
+  by Jack's Google Books calls returning `HTTP 429` from the daily anonymous
+  quota (see "ISBN lookup diagnostic log" below) — every lookup was falling
+  through to the Open Library worst case until he set up a real Google Cloud
+  project/key. **General lesson**: when chaining several timeout-capped
+  network calls inside one `maxDuration` budget, check whether any of them are
+  actually independent before assuming they must run in series — sequential
+  `await`s "just because that's how the code reads" quietly eats the budget
+  meant for the whole request.
 - **Failed ISBN lookups were cached forever** as `source: "manual-unresolved"`
   books, with no retry. Fixed: scan-in now retries the lookup if the existing
   book row has that source.
@@ -1162,6 +1190,20 @@ not just the PR they were stated in:
   (12/12 checks) against the real Google Books and Open Library APIs (not mocked) — see the
   CHANGELOG's 7.3.0 entry for the full list, including a genuine Google Books quota-exhaustion
   429 this sandbox hit during the run, logged exactly as the feature is meant to capture.
+- **PR #55** (`claude/project-thread-cp2mpn`, merged) — fixed Open Library ISBN lookups
+  aborting with client-side timeouts in real-world use, found via the new `BookLookupLog`
+  from PR #53 (see the "Open Library lookups aborting" entry under "Bugs found and fixed"
+  above for the full root cause and fix). From a project-thread session: Jack first thought
+  it was a Google Books quota problem, which led to walking him through setting up a real
+  Google Cloud project/key (operational, no code change) and confirming `OPEN_LIBRARY_CONTACT`
+  for Open Library's API etiquette; once that was live the remaining errors' exact text
+  (`AbortError: This operation was aborted`) pointed at our own timeout instead of either
+  provider. Verified with a direct `lookupBookByIsbn` script against the real APIs (Google
+  Books quota-exhausted in this sandbox, forcing full Open Library fallback on every ISBN,
+  confirming both sub-calls still resolve correctly running in parallel) plus a live local
+  Playwright run through the real Scan station confirming an end-to-end scan-in resolves
+  title/author with no abort surfaced in the UI. Test account and library cleaned up from the
+  local database afterward.
 
 ## Keeping this file current
 
