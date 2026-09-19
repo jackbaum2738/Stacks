@@ -25,7 +25,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
   const [submitting, setSubmitting] = useState(false);
 
   const [inviteLibraryName, setInviteLibraryName] = useState<string | null>(null);
-  const [inviterName, setInviterName] = useState<string | null>(null);
+  const [inviterUsername, setInviterUsername] = useState<string | null>(null);
   const [inviteRole, setInviteRole] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
@@ -35,7 +35,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
         setInviteLibraryName(data.libraryName);
-        setInviterName(data.inviterName);
+        setInviterUsername(data.inviterUsername);
         setInviteRole(data.role);
       })
       .catch(() => setInviteError("This link is no longer valid — contact the library owner to request a new one."));
@@ -77,7 +77,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(inviteCode ? `/dashboard?invite=${inviteCode}` : "/dashboard");
     router.refresh();
   }
 
@@ -101,12 +101,12 @@ export default function RegisterPage(props: PageProps<"/register">) {
         <div>
           <h1 className="font-display text-2xl leading-tight font-semibold text-ink">
             {inviteLibraryName
-              ? `${inviterName || "Someone"} invited you to ${inviteLibraryName}`
+              ? `${inviterUsername || "Someone"} invited you to ${inviteLibraryName}`
               : "Create your account"}
           </h1>
           <p className="mt-1 font-sans text-sm text-ink-soft">
             {inviteCode
-              ? `Set up your own account to join this shared library${inviteRole ? ` as ${roleLabel[inviteRole] ?? inviteRole}` : ""}.`
+              ? `Create your account, then confirm to join this shared library${inviteRole ? ` as ${roleLabel[inviteRole] ?? inviteRole}` : ""}.`
               : "Set up your account, then you'll create your library on the next step."}
           </p>
         </div>
@@ -203,7 +203,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
           disabled={submitting || !canSubmit}
           className="w-full rounded-[2px] bg-accent py-3 font-sans text-[15px] font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
         >
-          {submitting ? "Creating…" : inviteLibraryName ? `Join ${inviteLibraryName}` : "Create account"}
+          {submitting ? "Creating…" : "Create account"}
         </button>
 
         <p className="text-center font-sans text-sm text-ink-soft">

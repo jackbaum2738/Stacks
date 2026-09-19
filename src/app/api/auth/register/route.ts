@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionCookie } from "@/lib/auth";
-import { findLibraryByInviteCode } from "@/lib/invite-code";
 import { isPasswordValid, isValidEmailShape, isValidUsername, normalizeUsername } from "@/lib/account-validation";
-import type { InvitableRole } from "@/lib/permissions";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -23,10 +21,11 @@ const schema = z.object({
 });
 
 /**
- * Sign-up only ever collects account details now -- no library name here. A non-invite signup
- * lands the new user with zero memberships; the dashboard's CreateFirstLibraryModal then gates
- * everything else until they create one (see that component for why it's a persistent modal
- * rather than a one-time step here).
+ * Sign-up only ever collects account details now -- no library name here, and every account
+ * (invited or not) is created with zero memberships. A non-invite signup is gated by the
+ * dashboard's CreateFirstLibraryModal until a library exists; an invite signup instead confirms
+ * the invite token is still live and leaves the actual join to InviteAcceptOverlay after
+ * sign-in, same as an already-registered user accepting the same link.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -46,30 +45,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That username is already taken" }, { status: 409 });
   }
 
-  let invitedLibrary: { id: string } | null = null;
-  let invitedRole: InvitableRole | null = null;
   if (inviteCode) {
-    const found = await findLibraryByInviteCode(inviteCode);
-    if (!found) {
+    // Just confirm the invite is still live -- the actual join happens as its own confirmation
+    // step after sign-in, via InviteAcceptOverlay, same as an existing account accepting the
+    // same link. This account is created library-less on purpose (see the dashboard layout's
+    // zero-membership branch), not auto-joined here.
+    const invite = await prisma.libraryInvite.findUnique({ where: { token: inviteCode } });
+    if (!invite) {
       return NextResponse.json({ error: "This link is no longer valid — contact the library owner to request a new one." }, { status: 404 });
     }
-    invitedLibrary = { id: found.library.id };
-    invitedRole = found.role;
   }
 
   const passwordHash = await hashPassword(password);
 
-  const user = await prisma.user.create({
-    data: {
-      name,
-      username,
-      email,
-      passwordHash,
-      ...(invitedLibrary
-        ? { memberships: { create: { role: invitedRole!, libraryId: invitedLibrary.id } } }
-        : {}),
-    },
-  });
+  const user = await prisma.user.create({ data: { name, username, email, passwordHash } });
 
   await createSessionCookie(user.id);
 

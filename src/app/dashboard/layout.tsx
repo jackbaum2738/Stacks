@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser, getCurrentLibrary } from "@/lib/auth";
 import { ProfileMenu } from "@/components/profile-menu";
 import { LibrarySwitcher } from "@/components/library-switcher";
 import { CreateFirstLibraryModal } from "@/components/create-first-library-modal";
+import { ZeroLibraryContent } from "@/components/zero-library-content";
+import { InviteAcceptOverlay } from "@/components/invite-accept-overlay";
 import { FullLogo } from "@/components/full-logo";
 import { NavTabs } from "@/components/nav-tabs";
 import { MobileNav } from "@/components/mobile-nav";
@@ -14,6 +17,25 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect("/login");
 
   if (user.memberships.length === 0) {
+    // The blocking library-creation popup lives inside this fallback (not as an unconditional
+    // sibling) so it never layers over ZeroLibraryContent's inline invite-accept card below --
+    // an invite link takes over this screen entirely, in place of the new-library popup.
+    const noLibraryPrompt = (
+      <>
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-ink">
+            You&apos;re not in a library right now
+          </h1>
+          <p className="mt-1 text-sm text-ink-soft">
+            Someone may have removed you from a shared library, or you just created your account.
+            Create a library in the popup to get started, or ask for a new invite link if you meant to
+            join one.
+          </p>
+        </div>
+        <CreateFirstLibraryModal />
+      </>
+    );
+
     return (
       <div className="flex flex-1 flex-col bg-bg">
         <header className="border-b-2 border-ink bg-surface">
@@ -23,18 +45,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </header>
         <main className="mx-auto flex w-full max-w-[920px] flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-          <div>
-            <h1 className="font-display text-2xl font-semibold text-ink">
-              You&apos;re not in a library right now
-            </h1>
-            <p className="mt-1 text-sm text-ink-soft">
-              Someone may have removed you from a shared library, or you just created your account.
-              Create a library in the popup to get started, or ask for a new invite link if you meant to
-              join one.
-            </p>
-          </div>
+          <Suspense fallback={noLibraryPrompt}>
+            <ZeroLibraryContent fallback={noLibraryPrompt} />
+          </Suspense>
         </main>
-        <CreateFirstLibraryModal />
       </div>
     );
   }
@@ -64,6 +78,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {children}
         </main>
         <MobileNav />
+        <Suspense fallback={null}>
+          <InviteAcceptOverlay variant="overlay" />
+        </Suspense>
       </div>
     </LibraryRoleProvider>
   );
