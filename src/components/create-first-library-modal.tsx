@@ -12,10 +12,12 @@ import { LibraryLoadingOverlay } from "@/components/library-loading-overlay";
  * is required before anything else in the dashboard is reachable, so this reappears on every
  * sign-in/visit (e.g. if the tab was closed right after account creation) until one is created.
  *
- * The backdrop is `absolute inset-0` scoped to the dashboard layout's `relative` <main>, not
- * `fixed` to the viewport -- the header (profile menu) and site footer sit outside that container
- * and stay fully reachable behind the dimmed content area, since the popup itself never blocks
- * account settings or the privacy link. Deliberately has no explicit z-index: ProfileMenu's
+ * The backdrop is `absolute inset-0` scoped to the nested `(library)` route group's `relative`
+ * wrapper div (see that layout), not `fixed` to the viewport -- the header (profile menu) and
+ * site footer sit outside that container and stay fully reachable behind the dimmed content
+ * area, since the popup itself never blocks account settings or the privacy link, and
+ * `/dashboard/profile` (outside that route group) is unaffected entirely. Deliberately has no
+ * explicit z-index: ProfileMenu's
  * dropdown (`z-10`) needs to paint above this when both are open, and this backdrop doesn't need
  * to out-rank anything since it no longer competes with page-level chrome.
  */

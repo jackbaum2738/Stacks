@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, getCurrentLibrary } from "@/lib/auth";
 import { ProfileMenu } from "@/components/profile-menu";
 import { LibrarySwitcher } from "@/components/library-switcher";
-import { CreateFirstLibraryModal } from "@/components/create-first-library-modal";
-import { ZeroLibraryContent } from "@/components/zero-library-content";
 import { InviteAcceptOverlay } from "@/components/invite-accept-overlay";
 import { FullLogo } from "@/components/full-logo";
 import { NavTabs } from "@/components/nav-tabs";
@@ -17,27 +15,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect("/login");
 
   if (user.memberships.length === 0) {
-    // The blocking library-creation popup lives inside this fallback (not as an unconditional
-    // sibling) so it never layers over ZeroLibraryContent's inline invite-accept card below --
-    // an invite link takes over this screen entirely, in place of the new-library popup.
-    const noLibraryPrompt = <CreateFirstLibraryModal />;
-
+    // Chrome only -- the create-library/invite-accept gate itself lives in the nested
+    // `(library)` route group's layout, not here, so that `/dashboard/profile` (outside that
+    // group) always renders its real content instead of being swallowed by the gate too.
     return (
       <div className="flex flex-1 flex-col bg-bg">
         <header className="border-b-2 border-ink bg-surface">
           <div className="mx-auto flex max-w-[920px] items-center justify-between gap-4 px-6 py-[13px]">
-            <FullLogo height={26} />
+            <Link href="/dashboard">
+              <FullLogo height={36} />
+            </Link>
             <ProfileMenu name={user.name ?? user.email} username={user.username} />
           </div>
         </header>
-        {/* `relative` scopes CreateFirstLibraryModal's `absolute inset-0` backdrop to this content
-            area, so it dims only here -- the header above (profile menu) and the site footer
-            below stay outside the dimmed region and fully clickable behind the popup. */}
-        <main className="relative mx-auto flex w-full max-w-[920px] flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-          <Suspense fallback={noLibraryPrompt}>
-            <ZeroLibraryContent fallback={noLibraryPrompt} />
-          </Suspense>
-        </main>
+        <main className="relative mx-auto w-full max-w-[920px] flex-1 px-6 py-[30px]">{children}</main>
       </div>
     );
   }

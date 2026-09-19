@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
@@ -57,8 +58,13 @@ export async function getSessionUserId(): Promise<string | null> {
   }
 }
 
-/** Current user plus their library memberships, or null if not signed in. */
-export async function getCurrentUser() {
+/**
+ * Current user plus their library memberships, or null if not signed in. Wrapped in React's
+ * `cache()` since the dashboard layout and its nested `(library)` gate layout (see that
+ * layout's own comment) both need this on every request -- dedupes to one query per request
+ * instead of two.
+ */
+export const getCurrentUser = cache(async function getCurrentUser() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
@@ -71,7 +77,7 @@ export async function getCurrentUser() {
       },
     },
   });
-}
+});
 
 /** Marks which library a user with multiple memberships is currently working in. */
 export async function setActiveLibraryCookie(libraryId: string) {
