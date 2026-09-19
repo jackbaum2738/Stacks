@@ -3,9 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionCookie } from "@/lib/auth";
 import { uniqueSlug } from "@/lib/library";
-import { findLibraryByInviteCode } from "@/lib/invite-code";
 import { isPasswordValid, isValidEmailShape, isValidUsername, normalizeUsername } from "@/lib/account-validation";
-import type { InvitableRole } from "@/lib/permissions";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -42,31 +40,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That username is already taken" }, { status: 409 });
   }
 
-  let invitedLibrary: { id: string } | null = null;
-  let invitedRole: InvitableRole | null = null;
   if (inviteCode) {
-    const found = await findLibraryByInviteCode(inviteCode);
-    if (!found) {
+    // Just confirm the invite is still live -- the actual join happens as its own confirmation
+    // step after sign-in, via InviteAcceptOverlay, same as an existing account accepting the
+    // same link. This account is created library-less on purpose (see the dashboard layout's
+    // zero-membership branch), not auto-joined here.
+    const invite = await prisma.libraryInvite.findUnique({ where: { token: inviteCode } });
+    if (!invite) {
       return NextResponse.json({ error: "This link is no longer valid — contact the library owner to request a new one." }, { status: 404 });
     }
-    invitedLibrary = { id: found.library.id };
-    invitedRole = found.role;
   } else if (!libraryName) {
     return NextResponse.json({ error: "Library name is required" }, { status: 400 });
   }
 
   const passwordHash = await hashPassword(password);
 
-  const user = invitedLibrary
-    ? await prisma.user.create({
-        data: {
-          name,
-          username,
-          email,
-          passwordHash,
-          memberships: { create: { role: invitedRole!, libraryId: invitedLibrary.id } },
-        },
-      })
+  const user = inviteCode
+    ? await prisma.user.create({ data: { name, username, email, passwordHash } })
     : await prisma.user.create({
         data: {
           name,

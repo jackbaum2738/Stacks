@@ -10,10 +10,10 @@ export default function LoginPage(props: PageProps<"/login">) {
   const router = useRouter();
   const searchParams = use(props.searchParams);
   const next = typeof searchParams.next === "string" ? searchParams.next : null;
-  // The only "next" this app ever sends here is /join/{code}, from the invite
-  // flow's "Sign in" link — recover the code so switching to sign-up doesn't
+  // The only "next" this app ever sends here is /invite/{token}, from the invite
+  // flow's "Sign in" link — recover the token so switching to sign-up doesn't
   // lose it.
-  const inviteCode = next?.match(/^\/join\/([^/]+)$/)?.[1] ?? null;
+  const inviteCode = next?.match(/^\/invite\/([^/]+)$/)?.[1] ?? null;
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
