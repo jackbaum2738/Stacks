@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { CreateShelfForm } from "@/components/create-shelf-form";
 import { ShelfManageRow } from "@/components/shelf-manage-row";
 import { MembersSection } from "@/components/members-section";
-import { InviteLinkManager } from "@/components/invite-link-manager";
 import { DangerZoneSection } from "@/components/danger-zone-section";
 import { BackupImportSection } from "@/components/backup-import-section";
 import { canEditLibrary, canManageLibrarySettings, isOwner } from "@/lib/permissions";
@@ -20,7 +19,7 @@ export default async function SettingsPage() {
   const ownerIsMe = isOwner(context.membership.role);
   const showDangerZone = canManage || ownerIsMe; // canManage (Admin+) can wipe; only Owner can delete.
 
-  const [shelves, members, backupInfo, wipeCounts] = await Promise.all([
+  const [shelves, members, invites, backupInfo, wipeCounts] = await Promise.all([
     prisma.shelf.findMany({
       where: { libraryId: context.library.id },
       include: { _count: { select: { copies: { where: { status: { not: "REMOVED" } } } } } },
@@ -31,6 +30,9 @@ export default async function SettingsPage() {
       include: { user: { select: { id: true, name: true, email: true } } },
       orderBy: { createdAt: "asc" },
     }),
+    canManage
+      ? prisma.libraryInvite.findMany({ where: { libraryId: context.library.id }, orderBy: { createdAt: "desc" } })
+      : Promise.resolve([]),
     prisma.library.findUnique({
       where: { id: context.library.id },
       select: { lastBackupAt: true, lastBackupBy: { select: { name: true, email: true } } },
@@ -96,16 +98,18 @@ export default async function SettingsPage() {
       <section className="space-y-3">
         <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Members</h2>
         <MembersSection
-          initialMembers={members.map((m) => ({
-            id: m.id,
-            role: m.role,
-            user: m.user,
-            isSelf: m.userId === context.user.id,
-          }))}
+          members={members.map((m) => ({ id: m.id, userId: m.userId, role: m.role, user: m.user }))}
           canManage={canManage}
           isOwnerViewer={ownerIsMe}
+          selfUserId={context.user.id}
+          initialInvites={invites.map((i) => ({
+            id: i.id,
+            email: i.email,
+            role: i.role as "ADMIN" | "MEMBER" | "VIEW_ONLY",
+            createdAt: i.createdAt.toISOString(),
+            lastSentAt: i.lastSentAt.toISOString(),
+          }))}
         />
-        {canManage && <InviteLinkManager />}
       </section>
 
       {(canImport || canExport) && (
