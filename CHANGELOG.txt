@@ -4,6 +4,13 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+7.2.2 -- 2026-09-19
+--------------------
+- Fixed the blocking "Create your library" popup (7.2.0 below) so it no longer traps the account -- it used to be a `fixed inset-0` backdrop covering the entire viewport, which silently blocked the header's profile menu (so a library-less account had no way to reach Profile to change their details) and the site footer's Privacy link underneath it too. It's now `absolute inset-0` scoped to the dashboard layout's `<main>` (given `relative` positioning to contain it), so the dimmed backdrop only covers the content area between the header and footer, leaving both fully clickable behind the popup. Caught a z-index conflict from this while testing: the popup's own `z-20` was still beating `ProfileMenu`'s dropdown (`z-10`), so the dropdown opened but its menu items weren't clickable -- fixed by dropping the popup's z-index entirely, since it no longer needs to out-rank page-level chrome now that it's scoped to `<main>`.
+- Simplified the popup's own copy per Jack's direct feedback: removed the small "LIBRARY" eyebrow label above the "Create your library" heading and the "Library name" label above the input (the placeholder text already says what it's for), and removed the "You're not in a library right now" / "Someone may have removed you from a shared library..." text that used to render in the background behind the (non-dismissible) popup -- half-hidden text nobody could read past a popup they can't close, and misleading for the common case of a brand-new account that was never removed from anything.
+- Verified with a live local Playwright run (12/12 checks): none of the removed labels/background text render; the input keeps an accessible name via `aria-label`; the header's profile menu opens and its Profile link actually navigates while the popup is still up; the footer's Privacy link is visible and actually navigates too; and creating a library through the popup still works end to end. Also re-ran the existing 24-check popup/invite regression suite to confirm nothing else regressed. Test data cleaned up from the local database afterward.
+
+
 7.2.1 -- 2026-09-19
 --------------------
 - Renamed the Settings > Members "Open Invitations" tab to "Invitations" (and its empty-state copy to "No invitations."), per Jack's follow-up feedback right after PR #50 shipped the emailed invite system.

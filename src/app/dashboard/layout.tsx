@@ -20,21 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // The blocking library-creation popup lives inside this fallback (not as an unconditional
     // sibling) so it never layers over ZeroLibraryContent's inline invite-accept card below --
     // an invite link takes over this screen entirely, in place of the new-library popup.
-    const noLibraryPrompt = (
-      <>
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-ink">
-            You&apos;re not in a library right now
-          </h1>
-          <p className="mt-1 text-sm text-ink-soft">
-            Someone may have removed you from a shared library, or you just created your account.
-            Create a library in the popup to get started, or ask for a new invite link if you meant to
-            join one.
-          </p>
-        </div>
-        <CreateFirstLibraryModal />
-      </>
-    );
+    const noLibraryPrompt = <CreateFirstLibraryModal />;
 
     return (
       <div className="flex flex-1 flex-col bg-bg">
@@ -44,7 +30,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <ProfileMenu name={user.name ?? user.email} username={user.username} />
           </div>
         </header>
-        <main className="mx-auto flex w-full max-w-[920px] flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+        {/* `relative` scopes CreateFirstLibraryModal's `absolute inset-0` backdrop to this content
+            area, so it dims only here -- the header above (profile menu) and the site footer
+            below stay outside the dimmed region and fully clickable behind the popup. */}
+        <main className="relative mx-auto flex w-full max-w-[920px] flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
           <Suspense fallback={noLibraryPrompt}>
             <ZeroLibraryContent fallback={noLibraryPrompt} />
           </Suspense>
