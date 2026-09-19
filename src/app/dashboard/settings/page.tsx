@@ -3,7 +3,7 @@ import { getCurrentLibrary } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CreateShelfForm } from "@/components/create-shelf-form";
 import { ShelfManageRow } from "@/components/shelf-manage-row";
-import { MemberRow } from "@/components/member-row";
+import { MembersSection } from "@/components/members-section";
 import { InviteLinkManager } from "@/components/invite-link-manager";
 import { DangerZoneSection } from "@/components/danger-zone-section";
 import { BackupImportSection } from "@/components/backup-import-section";
@@ -95,17 +95,16 @@ export default async function SettingsPage() {
 
       <section className="space-y-3">
         <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Members</h2>
-        <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
-          {members.map((m) => (
-            <MemberRow
-              key={m.id}
-              member={{ id: m.id, role: m.role, user: m.user }}
-              canManage={canManage}
-              isOwnerViewer={ownerIsMe}
-              isSelf={m.userId === context.user.id}
-            />
-          ))}
-        </ul>
+        <MembersSection
+          initialMembers={members.map((m) => ({
+            id: m.id,
+            role: m.role,
+            user: m.user,
+            isSelf: m.userId === context.user.id,
+          }))}
+          canManage={canManage}
+          isOwnerViewer={ownerIsMe}
+        />
         {canManage && <InviteLinkManager />}
       </section>
 
