@@ -27,8 +27,11 @@ export default async function SettingsPage() {
     }),
     prisma.membership.findMany({
       where: { libraryId: context.library.id },
-      include: { user: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: "asc" },
+      include: { user: { select: { id: true, name: true, email: true, username: true } } },
+      // Role enum is declared OWNER/ADMIN/MEMBER/VIEW_ONLY in schema.prisma, and Postgres native
+      // enums sort by that declaration order, not alphabetically -- so `role: "asc"` already
+      // gives Owner -> Admin -> Member -> View Only for free.
+      orderBy: [{ role: "asc" }, { user: { username: "asc" } }],
     }),
     canManage
       ? prisma.libraryInvite.findMany({ where: { libraryId: context.library.id }, orderBy: { createdAt: "desc" } })
