@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, getCurrentLibrary } from "@/lib/auth";
 import { ProfileMenu } from "@/components/profile-menu";
 import { LibrarySwitcher } from "@/components/library-switcher";
-import { CreateFirstLibraryForm } from "@/components/create-first-library-form";
+import { CreateFirstLibraryModal } from "@/components/create-first-library-modal";
 import { FullLogo } from "@/components/full-logo";
 import { NavTabs } from "@/components/nav-tabs";
 import { MobileNav } from "@/components/mobile-nav";
@@ -28,12 +28,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
               You&apos;re not in a library right now
             </h1>
             <p className="mt-1 text-sm text-ink-soft">
-              Someone may have removed you from a shared library. Create your own to get started, or ask
-              for a new invite link if you meant to be part of one.
+              Someone may have removed you from a shared library, or you just created your account.
+              Create a library in the popup to get started, or ask for a new invite link if you meant to
+              join one.
             </p>
           </div>
-          <CreateFirstLibraryForm />
         </main>
+        <CreateFirstLibraryModal />
       </div>
     );
   }
