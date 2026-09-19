@@ -151,19 +151,24 @@ async function lookupOpenLibrary(
     works?: Array<{ key?: string }>;
   };
 
-  let authors: string[] | null = null;
-  if (needAuthors && Array.isArray(book.authors) && book.authors[0]?.key) {
-    const name = await lookupOpenLibraryAuthorName(book.authors[0].key);
-    if (name) authors = [name];
-  }
-
+  const needsAuthorLookup = needAuthors && Array.isArray(book.authors) && !!book.authors[0]?.key;
   let description = extractDescription(book.description);
-  if (!description && Array.isArray(book.works) && book.works[0]?.key) {
-    const workId = book.works[0].key.split("/").pop();
-    const { data: work } = await fetchJson(`https://openlibrary.org/works/${workId}.json`, {
-      headers: OPEN_LIBRARY_HEADERS,
-    });
-    description = extractDescription((work as { description?: unknown } | null)?.description);
+  const needsWorkLookup = !description && Array.isArray(book.works) && !!book.works[0]?.key;
+
+  const [authorName, workData] = await Promise.all([
+    needsAuthorLookup ? lookupOpenLibraryAuthorName(book.authors![0].key!) : Promise.resolve(null),
+    needsWorkLookup
+      ? fetchJson(`https://openlibrary.org/works/${book.works![0].key!.split("/").pop()}.json`, {
+          headers: OPEN_LIBRARY_HEADERS,
+        })
+      : Promise.resolve(null),
+  ]);
+
+  const authors = authorName ? [authorName] : null;
+  if (workData) {
+    description = extractDescription(
+      (workData.data as { description?: unknown } | null)?.description
+    );
   }
 
   return {
