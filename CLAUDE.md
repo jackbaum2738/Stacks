@@ -205,7 +205,7 @@ touch this again:**
   and confirmed with the user before building rather than assumed either way. Export stays
   available to Member (not View Only) since it's read-only content-wise, even though it does
   write `Library.lastBackupAt`/`lastBackupByUserId` as a side effect.
-- **Superseded by emailed invites (see below) as of PR: emailed invite system.** The three
+- **Superseded by emailed invites (see below) as of PR #50.** The three
   per-role invite-link columns this bullet originally described (`inviteCodeAdmin`/
   `inviteCodeMember`/`inviteCodeViewOnly`, `src/lib/invite-code.ts`) are gone — kept this note
   only so a stale reference to those names elsewhere in history makes sense.
@@ -1122,6 +1122,21 @@ not just the PR they were stated in:
   run: releasing a reservation and closing the screen patches only that person's row with zero
   `GET /api/people` requests fired, an unrelated person's row stays untouched, and the existing
   18-check Reserved-screen regression suite still passes in full.
+- **PR #50** (`claude/project-thread-yej69l`) — replaced the three per-role invite links with an
+  emailed invite system (see the "Emailed library invites" note under "Data model" above for
+  the full design). Built from a project-thread request with a detailed spec from Jack up
+  front (email-first invites, a confirmation popup always shown after sign-in rather than
+  instant joining, an Open Invitations tab with cancel/resend and a 60s cooldown); mocked up
+  the email itself first as an Artifact before any code was touched, since it's the one
+  new-to-users piece of UI — approved after two rounds of copy tweaks (dropped the "if you
+  weren't expecting this" reassurance line entirely, and simplified the sign-in/sign-up line to
+  "Sign in or create a Stacks account to accept the invitation."). Verified with a live local
+  Playwright run (16/16 checks) covering the full loop for both a brand-new account and an
+  existing one, plus cancel and dead-link behavior — see the CHANGELOG's 7.0.0 entry for the
+  full list. Coordinated with two sibling threads working the same day: the members-table
+  changes (Make Owner in the role dropdown, a Save button, branded Remove dialog) and the
+  mandatory create-a-library popup after sign-up were both left alone — this PR only touches
+  the Members section's invite half and the pre-existing zero-membership dashboard state.
 
 ## Keeping this file current
 
