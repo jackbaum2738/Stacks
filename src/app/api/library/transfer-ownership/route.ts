@@ -11,6 +11,10 @@ const schema = z.object({ membershipId: z.string().trim().min(1) });
  * Owner, since a Membership.role of OWNER can't otherwise be removed or changed (see
  * members/[id]/route.ts). An Owner who wants to leave the library entirely transfers
  * first, then removes their own (now Admin) membership like anyone else.
+ *
+ * The target must already be an Admin -- the Settings members UI only ever offers "Make
+ * owner" on Admin rows, and this is enforced here too rather than just hidden in the UI,
+ * matching how the Owner-row protections elsewhere in this file are enforced server-side.
  */
 export async function POST(request: Request) {
   const { context, response } = await requireLibraryContext();
@@ -30,6 +34,9 @@ export async function POST(request: Request) {
   if (!target) return NextResponse.json({ error: "Member not found" }, { status: 404 });
   if (target.id === context.membership.id) {
     return NextResponse.json({ error: "You're already the owner" }, { status: 409 });
+  }
+  if (target.role !== "ADMIN") {
+    return NextResponse.json({ error: "Only an Admin can be made owner -- promote them to Admin first" }, { status: 409 });
   }
 
   await prisma.$transaction([
