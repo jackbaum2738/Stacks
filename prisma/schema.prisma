@@ -67,6 +67,7 @@ model Library {
   bookOverrides      BookOverride[]
   people             Person[]
   invites            LibraryInvite[]
+  bookLookupLogs     BookLookupLog[]
   lastBackupBy       User?          @relation("LibraryLastBackupBy", fields: [lastBackupByUserId], references: [id], onDelete: SetNull)
 }
 
@@ -207,6 +208,38 @@ model Reservation {
   copy        Copy      @relation(fields: [copyId], references: [id], onDelete: Cascade)
   person      Person?   @relation(fields: [personId], references: [id])
   createdBy   User?     @relation("ReservationCreatedBy", fields: [createdById], references: [id])
+}
+
+/// One attempt to resolve an ISBN against the external book catalogs (Google Books, Open
+/// Library), written by scan-in and the manual "look up this ISBN" button -- never by CSV
+/// import, which deliberately never calls either API (see CLAUDE.md). Exists so a real
+/// failure (a provider timing out, returning an error, or genuinely not having the ISBN) can
+/// be diagnosed after the fact without relying on Vercel's own function logs, which only
+/// retain briefly on the Hobby plan and aren't queryable by ISBN. Jack reads this directly in
+/// Neon -- there's deliberately no in-app viewer for it, since he asked to just read the table
+/// himself rather than have one built.
+model BookLookupLog {
+  id                 String   @id @default(cuid())
+  libraryId          String
+  isbn13             String
+  /// "scan-in" (new ISBN) | "scan-in-retry" (re-resolving a manual-unresolved book on a
+  /// later scan) | "manual-button" (the edit page's "look up this ISBN" button).
+  triggeredBy        String
+  googleBooksCalled  Boolean
+  /// "success" | "no-match" | "http-error" | "network-error"
+  googleBooksOutcome String
+  googleBooksDetail  String?
+  openLibraryCalled  Boolean
+  /// Same outcome values as googleBooksOutcome, or null when openLibraryCalled is false
+  /// (Google Books alone already had everything, so Open Library was never called).
+  openLibraryOutcome String?
+  openLibraryDetail  String?
+  /// Whether this attempt ended with a usable title, regardless of which provider supplied it.
+  resolved           Boolean
+  createdAt          DateTime @default(now())
+  library            Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  @@index([libraryId, createdAt])
 }
 
 /// Someone books get reserved for, in a library-scoped directory (PR: People tab). Only

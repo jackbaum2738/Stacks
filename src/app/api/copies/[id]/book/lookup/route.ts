@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireLibraryContext } from "@/lib/api-context";
 import { applyBookOverride } from "@/lib/book-view";
 import { lookupBookByIsbn, MAX_MANUAL_LOOKUP_ATTEMPTS } from "@/lib/books";
+import { logBookLookupAttempt } from "@/lib/book-lookup-log";
 
 // Mirrors scan-in's own budget for a lookup that can chain several external calls.
 export const maxDuration = 45;
@@ -44,7 +45,14 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/copies/[id
     return NextResponse.json({ error: "No manual lookups left for this book" }, { status: 409 });
   }
 
-  const looked = await lookupBookByIsbn(copy.book.isbn13);
+  const { result: looked, diagnostics } = await lookupBookByIsbn(copy.book.isbn13);
+  await logBookLookupAttempt({
+    libraryId,
+    isbn13: copy.book.isbn13,
+    triggeredBy: "manual-button",
+    diagnostics,
+    resolved: !!looked,
+  });
 
   if (!looked) {
     const updated = await prisma.book.update({
