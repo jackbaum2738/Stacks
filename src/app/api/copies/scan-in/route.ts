@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireLibraryContext } from "@/lib/api-context";
 import { lookupBookByIsbn } from "@/lib/books";
+import { logBookLookupAttempt } from "@/lib/book-lookup-log";
 import { cleanIsbn, isValidIsbn, toIsbn13 } from "@/lib/isbn";
 import { applyBookOverride } from "@/lib/book-view";
 import { generateUniqueCopyCode } from "@/lib/copy-code";
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
   let lookupFailed = false;
 
   if (!book) {
-    const looked = await lookupBookByIsbn(isbn13);
+    const { result: looked, diagnostics } = await lookupBookByIsbn(isbn13);
     if (looked) {
       book = await prisma.book.create({ data: looked });
     } else {
@@ -55,15 +56,29 @@ export async function POST(request: Request) {
         },
       });
     }
+    await logBookLookupAttempt({
+      libraryId: context.library.id,
+      isbn13,
+      triggeredBy: "scan-in",
+      diagnostics,
+      resolved: !!looked,
+    });
   } else if (book.source === "manual-unresolved") {
     // A previous scan couldn't resolve this ISBN (e.g. a transient API
     // failure) — retry now instead of permanently reusing the placeholder.
-    const looked = await lookupBookByIsbn(isbn13);
+    const { result: looked, diagnostics } = await lookupBookByIsbn(isbn13);
     if (looked) {
       book = await prisma.book.update({ where: { id: book.id }, data: looked });
     } else {
       lookupFailed = true;
     }
+    await logBookLookupAttempt({
+      libraryId: context.library.id,
+      isbn13,
+      triggeredBy: "scan-in-retry",
+      diagnostics,
+      resolved: !!looked,
+    });
   }
 
   const existingAvailable = await prisma.copy.count({

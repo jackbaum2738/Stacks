@@ -517,6 +517,21 @@ deliberate scope cut, since `prefers-color-scheme` support in email clients is i
 most strip `<style>` blocks anyway; revisit only if Jack asks. (This is also why the email
 always uses the light-background PNG variant, never the dark one.)
 
+**ISBN lookup diagnostic log (`BookLookupLog`) — key decisions if you touch this again:** came
+from Jack noticing real scans failing to find book details and wanting to see why, in a
+project-thread session. His first idea was a plain text log file; declined because Stacks runs
+on Vercel, where each function invocation gets its own ephemeral filesystem wiped on every
+redeploy and never shared across concurrent instances -- a file would constantly lose data.
+Logs to Postgres instead: one `BookLookupLog` row per lookup attempt (ISBN, library, what
+triggered it, whether each of Google Books/Open Library was called and that call's outcome plus
+real detail -- an HTTP status or exception message -- and whether the attempt resolved a title).
+`src/lib/books.ts`'s `lookupBookByIsbn` returns these diagnostics alongside its existing result;
+the three call sites that ever invoke it (scan-in's new-ISBN path, scan-in's manual-unresolved
+retry path, and the edit page's manual "Look up this ISBN" button) each persist a row via
+`src/lib/book-lookup-log.ts`. CSV import never calls either API, so it never logs.
+**Deliberately no in-app viewer** -- Jack has direct Neon access and asked to just query the
+table himself rather than have a viewer page built and maintained.
+
 ## Working agreements (how the user wants sessions to run)
 
 These were established explicitly mid-project and apply to all future work,
@@ -1137,6 +1152,16 @@ not just the PR they were stated in:
   changes (Make Owner in the role dropdown, a Save button, branded Remove dialog) and the
   mandatory create-a-library popup after sign-up were both left alone — this PR only touches
   the Members section's invite half and the pre-existing zero-membership dashboard state.
+- **PR #53** (`claude/project-thread-zusr4i`) — added the `BookLookupLog` diagnostic table for
+  ISBN lookups (see the "ISBN lookup diagnostic log" note under "Data model" above for the full
+  design). From a project-thread ask: Jack noticed real scans failing to find book details and
+  proposed a text-file log; the proposal Claude sent back before writing any code recommended a
+  Postgres table instead, since Vercel's per-invocation ephemeral filesystem would just lose a
+  file's contents on every redeploy — Jack agreed, and separately said no in-app viewer was
+  needed since he'd rather query Neon directly. Verified with a live local Playwright run
+  (12/12 checks) against the real Google Books and Open Library APIs (not mocked) — see the
+  CHANGELOG's 7.3.0 entry for the full list, including a genuine Google Books quota-exhaustion
+  429 this sandbox hit during the run, logged exactly as the feature is meant to capture.
 
 ## Keeping this file current
 
