@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { formLabelClass, formInputClass } from "@/lib/form-styles";
+import { formInputClass } from "@/lib/form-styles";
 import { LibraryLoadingOverlay } from "@/components/library-loading-overlay";
 
 /**
@@ -11,6 +11,13 @@ import { LibraryLoadingOverlay } from "@/components/library-loading-overlay";
  * user removed from every library they were in. No backdrop-click or Escape dismissal: a library
  * is required before anything else in the dashboard is reachable, so this reappears on every
  * sign-in/visit (e.g. if the tab was closed right after account creation) until one is created.
+ *
+ * The backdrop is `absolute inset-0` scoped to the dashboard layout's `relative` <main>, not
+ * `fixed` to the viewport -- the header (profile menu) and site footer sit outside that container
+ * and stay fully reachable behind the dimmed content area, since the popup itself never blocks
+ * account settings or the privacy link. Deliberately has no explicit z-index: ProfileMenu's
+ * dropdown (`z-10`) needs to paint above this when both are open, and this backdrop doesn't need
+ * to out-rank anything since it no longer competes with page-level chrome.
  */
 export function CreateFirstLibraryModal() {
   const router = useRouter();
@@ -41,22 +48,19 @@ export function CreateFirstLibraryModal() {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,38,32,.45)] p-4">
+      <div className="absolute inset-0 flex items-center justify-center bg-[rgba(43,38,32,.45)] p-4">
         <div className="w-full max-w-[400px] rounded-[2px] border border-line-strong bg-surface p-[26px] shadow-[0_24px_44px_rgba(43,38,32,.3)]">
-          <div className="mb-2 font-mono text-[11px] tracking-[.14em] text-accent-2 uppercase">Library</div>
           <h2 className="mb-1 font-display text-2xl font-semibold text-ink">Create your library</h2>
           <p className="mb-5 font-sans text-sm text-ink-soft">
             Every account needs a library to scan books into. Give yours a name to get started.
           </p>
           <form onSubmit={onSubmit} className="space-y-3">
             <div className="space-y-1">
-              <label htmlFor="firstLibraryName" className={formLabelClass}>
-                Library name
-              </label>
               <input
                 id="firstLibraryName"
                 autoFocus
                 required
+                aria-label="Library name"
                 placeholder="e.g. Dad's Library"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
