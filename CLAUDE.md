@@ -205,12 +205,42 @@ touch this again:**
   and confirmed with the user before building rather than assumed either way. Export stays
   available to Member (not View Only) since it's read-only content-wise, even though it does
   write `Library.lastBackupAt`/`lastBackupByUserId` as a side effect.
-- **Three invite links, not one** — `inviteCodeAdmin`/`inviteCodeMember`/`inviteCodeViewOnly`
-  on `Library`, each independently generated/regenerated from Settings. There is deliberately
-  no invite link for Owner; the only way anyone becomes Owner is the transfer-ownership
-  endpoint. `src/lib/invite-code.ts`'s `findLibraryByInviteCode` checks all three columns and
-  returns which role a given code grants — always go through it rather than querying a
-  specific column, since a code's owning column can be any of the three.
+- **Superseded by emailed invites (see below) as of PR: emailed invite system.** The three
+  per-role invite-link columns this bullet originally described (`inviteCodeAdmin`/
+  `inviteCodeMember`/`inviteCodeViewOnly`, `src/lib/invite-code.ts`) are gone — kept this note
+  only so a stale reference to those names elsewhere in history makes sense.
+
+**Emailed library invites (replaces the per-role invite links above) — key decisions if you
+touch this again:** a `LibraryInvite` row (`libraryId`+`email` unique, `role`, `token`,
+`lastSentAt`) replaces the three columns. An Admin+ enters one email and picks Admin/Member/
+View Only from the new Open Invitations tab in Settings (`src/components/members-section.tsx`,
+`send-invite-form.tsx`, `open-invite-row.tsx`); Stacks emails a one-time `/invite/[token]` link
+via Brevo (`src/lib/emails/library-invite.ts`), reading "{inviter's username} invited you to
+join {library}" per Jack's explicit wording. There is still deliberately no invite path to
+Owner — transfer-ownership remains the only way anyone becomes Owner.
+- **A row's mere existence *is* "open."** Cancel (`DELETE /api/library/invites/[id]`) and a
+  successful Accept both delete the row outright rather than flagging it — same delete-not-flag
+  pattern as Reservation release (see "Bugs found and fixed" below) — so a cancelled or
+  already-accepted link immediately shows the existing "This link is no longer valid" message
+  with nothing left to clean up later, and the Open Invitations tab is simply "every row here."
+  Resend re-sends the same link and is rate-limited to once per 60 seconds *per invite*,
+  enforced in `POST /api/library/invites/[id]/resend` itself (429), not just disabled in the
+  UI, since two admins racing the button client-side wouldn't be caught otherwise.
+- **Accepting is always a separate confirmation step after signing in, never instant on
+  opening the link** — explicit spec from Jack. `/invite/[token]` sends a signed-out visitor to
+  the existing sign-in/create-account choice; a signed-in visitor is redirected straight to
+  `/dashboard?invite=token`. `InviteAcceptOverlay` reads that query param (via
+  `useSearchParams()`, since a layout — unlike a page — never receives `searchParams` as a
+  prop) and renders the "Join {library} as {role}?" popup two ways: as a dimmed backdrop *over*
+  the normal dashboard for an existing account (`variant="overlay"`, mounted in the dashboard
+  layout's has-library branch), or in place of the "create your first library" prompt for a
+  brand-new account that registered through the same link (`variant="inline"`, via
+  `ZeroLibraryContent` in the zero-membership branch) — per Jack's explicit "instead of the new
+  library popup" instruction. This is why **registering via an invite no longer auto-joins**:
+  `POST /api/auth/register` with an `inviteCode` just confirms the invite is still live and
+  creates the account library-less on purpose, so the same accept popup (and the same
+  `POST /api/invite/[token]/accept`, which creates the membership and deletes the invite in one
+  transaction) handles a brand-new account exactly like an existing one clicking the link.
 - **A `Membership` row with role OWNER can never be deleted or have its role changed** through
   the regular member-management endpoints (`/api/library/members/[id]`) — enforced
   server-side (409), not just hidden in the UI. The only way to stop being Owner is
