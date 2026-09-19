@@ -21,12 +21,27 @@ type InvitePreview = { libraryName: string; inviterUsername: string | null; role
  * "inline" is for the zero-library state, where there's no dashboard chrome behind it to sit
  * over -- it replaces the "create your first library" prompt entirely for a brand-new account
  * that signed up via this invite, per Jack's "instead of the new library popup" instruction.
+ *
+ * `token` is optional: when omitted (the "overlay" use), the token comes from the `?invite=`
+ * URL param as before. `ZeroLibraryContent` passes it explicitly instead, since its token can
+ * come from a server-side pending-invite lookup with no URL param to match -- `onDismiss` is
+ * how "Not now" is reported back in that case, since there's then no `?invite=` for this
+ * component to strip from the URL itself.
  */
-export function InviteAcceptOverlay({ variant }: { variant: "overlay" | "inline" }) {
+export function InviteAcceptOverlay({
+  variant,
+  token: tokenProp,
+  onDismiss,
+}: {
+  variant: "overlay" | "inline";
+  token?: string;
+  onDismiss?: () => void;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const token = searchParams.get("invite");
+  const urlToken = searchParams.get("invite");
+  const token = tokenProp ?? urlToken;
 
   const [preview, setPreview] = useState<InvitePreview | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -45,11 +60,14 @@ export function InviteAcceptOverlay({ variant }: { variant: "overlay" | "inline"
   }, [token]);
 
   const dismiss = useCallback(() => {
-    const params = new URLSearchParams(searchParams);
-    params.delete("invite");
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname);
-  }, [pathname, router, searchParams]);
+    if (urlToken) {
+      const params = new URLSearchParams(searchParams);
+      params.delete("invite");
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    }
+    onDismiss?.();
+  }, [pathname, router, searchParams, urlToken, onDismiss]);
 
   async function accept() {
     if (!token) return;
