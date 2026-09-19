@@ -7,6 +7,7 @@ import { Wordmark } from "@/components/wordmark";
 import { formLabelClass, formInputClass } from "@/lib/form-styles";
 import { isPasswordValid, isValidEmailShape } from "@/lib/account-validation";
 import { PasswordChecklist } from "@/components/password-checklist";
+import { PasswordEye } from "@/components/password-eye";
 
 export default function RegisterPage(props: PageProps<"/register">) {
   const router = useRouter();
@@ -16,10 +17,10 @@ export default function RegisterPage(props: PageProps<"/register">) {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [emailConfirm, setEmailConfirm] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [libraryName, setLibraryName] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [passwordConfirmVisible, setPasswordConfirmVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,17 +45,16 @@ export default function RegisterPage(props: PageProps<"/register">) {
 
   const emailShapeOk = isValidEmailShape(email);
   const emailShapeError = email.length > 0 && !emailShapeOk;
-  const emailMismatch = emailConfirm.length > 0 && email !== emailConfirm;
   const passwordOk = isPasswordValid(password);
+  const passwordMismatch = passwordConfirm.length > 0 && password !== passwordConfirm;
 
   const canSubmit =
     name.trim().length > 0 &&
     username.trim().length > 0 &&
     emailShapeOk &&
-    emailConfirm.length > 0 &&
-    !emailMismatch &&
     passwordOk &&
-    (inviteCode ? true : libraryName.trim().length > 0) &&
+    passwordConfirm.length > 0 &&
+    !passwordMismatch &&
     !inviteError;
 
   async function onSubmit(e: React.FormEvent) {
@@ -66,7 +66,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(
-        inviteCode ? { name, username, email, password, inviteCode } : { name, username, email, password, libraryName }
+        inviteCode ? { name, username, email, password, inviteCode } : { name, username, email, password }
       ),
     });
 
@@ -89,7 +89,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
         className="paper-shadow-md w-full max-w-[360px] space-y-4 border border-line bg-surface p-7"
       >
         <div className="border-b border-line pb-[10px] font-mono text-[10px] tracking-[.16em] text-ink-soft uppercase">
-          {inviteCode ? "Invitation" : "Create a library"}
+          {inviteCode ? "Invitation" : "Create an account"}
         </div>
 
         {inviteCode && (
@@ -102,12 +102,12 @@ export default function RegisterPage(props: PageProps<"/register">) {
           <h1 className="font-display text-2xl leading-tight font-semibold text-ink">
             {inviteLibraryName
               ? `${inviterUsername || "Someone"} invited you to ${inviteLibraryName}`
-              : "Create your library"}
+              : "Create your account"}
           </h1>
           <p className="mt-1 font-sans text-sm text-ink-soft">
             {inviteCode
               ? `Create your account, then confirm to join this shared library${inviteRole ? ` as ${roleLabel[inviteRole] ?? inviteRole}` : ""}.`
-              : "Set up an account and a library to start scanning books into."}
+              : "Set up your account, then you'll create your library on the next step."}
           </p>
         </div>
 
@@ -159,22 +159,7 @@ export default function RegisterPage(props: PageProps<"/register">) {
             onChange={(e) => setEmail(e.target.value)}
             className={formInputClass}
           />
-        </div>
-
-        <div className="space-y-1">
-          <label htmlFor="emailConfirm" className={formLabelClass}>
-            Confirm email
-          </label>
-          <input
-            id="emailConfirm"
-            type="email"
-            required
-            value={emailConfirm}
-            onChange={(e) => setEmailConfirm(e.target.value)}
-            className={formInputClass}
-          />
           {emailShapeError && <p className="font-mono text-xs text-accent">Enter a valid email.</p>}
-          {!emailShapeError && emailMismatch && <p className="font-mono text-xs text-accent">Emails don&apos;t match.</p>}
         </div>
 
         <div className="space-y-1">
@@ -190,43 +175,35 @@ export default function RegisterPage(props: PageProps<"/register">) {
               onChange={(e) => setPassword(e.target.value)}
               className={`${formInputClass} pr-7`}
             />
-            <button
-              type="button"
-              onClick={() => setPasswordVisible((v) => !v)}
-              aria-label={passwordVisible ? "Hide password" : "Show password"}
-              className="absolute top-1/2 right-0 -translate-y-1/2 p-1 text-ink-faint hover:text-ink"
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </button>
+            <PasswordEye visible={passwordVisible} onToggle={() => setPasswordVisible((v) => !v)} />
           </div>
           <PasswordChecklist password={password} />
         </div>
 
-        {!inviteCode && (
-          <div className="space-y-1">
-            <label htmlFor="libraryName" className={formLabelClass}>
-              Library name
-            </label>
+        <div className="space-y-1">
+          <label htmlFor="passwordConfirm" className={formLabelClass}>
+            Confirm password
+          </label>
+          <div className="relative">
             <input
-              id="libraryName"
+              id="passwordConfirm"
+              type={passwordConfirmVisible ? "text" : "password"}
               required
-              placeholder="e.g. Dad's Library"
-              value={libraryName}
-              onChange={(e) => setLibraryName(e.target.value)}
-              className={formInputClass}
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              className={`${formInputClass} pr-7`}
             />
+            <PasswordEye visible={passwordConfirmVisible} onToggle={() => setPasswordConfirmVisible((v) => !v)} />
           </div>
-        )}
+          {passwordMismatch && <p className="font-mono text-xs text-accent">Passwords don&apos;t match.</p>}
+        </div>
 
         <button
           type="submit"
           disabled={submitting || !canSubmit}
           className="w-full rounded-[2px] bg-accent py-3 font-sans text-[15px] font-medium text-on-accent hover:brightness-95 disabled:opacity-50"
         >
-          {submitting ? "Creating…" : inviteCode ? "Create account" : "Create library"}
+          {submitting ? "Creating…" : "Create account"}
         </button>
 
         <p className="text-center font-sans text-sm text-ink-soft">

@@ -5,26 +5,11 @@ import { useRouter } from "next/navigation";
 import { formLabelClass, formInputClass } from "@/lib/form-styles";
 import { isPasswordValid, isValidEmailShape } from "@/lib/account-validation";
 import { PasswordChecklist } from "@/components/password-checklist";
+import { PasswordEye } from "@/components/password-eye";
 import { ReauthModal } from "@/components/reauth-modal";
 
 type Field = "name" | "username" | "email" | "password";
 type PendingAction = { field: Field; payload: Record<string, string> } | null;
-
-function PasswordEye({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label={visible ? "Hide password" : "Show password"}
-      className="absolute top-1/2 right-0 -translate-y-1/2 p-1 text-ink-faint hover:text-ink"
-    >
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
-    </button>
-  );
-}
 
 export function ProfileForm({
   initialName,
@@ -66,7 +51,6 @@ export function ProfileForm({
 
   // Email
   const [emailInput, setEmailInput] = useState("");
-  const [emailConfirmInput, setEmailConfirmInput] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
 
   // Password
@@ -89,7 +73,6 @@ export function ProfileForm({
     }
     if (field === "email") {
       setEmailInput("");
-      setEmailConfirmInput("");
       setEmailError(null);
     }
     if (field === "password") {
@@ -186,8 +169,7 @@ export function ProfileForm({
 
   const emailShapeOk = isValidEmailShape(emailInput);
   const emailShapeError = emailInput.length > 0 && !emailShapeOk;
-  const emailMismatch = emailConfirmInput.length > 0 && emailInput !== emailConfirmInput;
-  const emailSaveDisabled = !(emailShapeOk && emailConfirmInput.length > 0 && !emailMismatch);
+  const emailSaveDisabled = !emailShapeOk;
 
   const pw1Valid = isPasswordValid(pw1);
   const pwMismatch = pw2.length > 0 && pw1 !== pw2;
@@ -307,20 +289,7 @@ export function ProfileForm({
                 onChange={(e) => setEmailInput(e.target.value)}
                 className={formInputClass}
               />
-            </div>
-            <div>
-              <label htmlFor="email-confirm-input" className={formLabelClass}>
-                Confirm new email
-              </label>
-              <input
-                id="email-confirm-input"
-                type="email"
-                value={emailConfirmInput}
-                onChange={(e) => setEmailConfirmInput(e.target.value)}
-                className={formInputClass}
-              />
               {emailShapeError && <p className="mt-1 font-mono text-xs text-accent">Enter a valid email.</p>}
-              {!emailShapeError && emailMismatch && <p className="mt-1 font-mono text-xs text-accent">Emails don&apos;t match.</p>}
               {emailError && <p className="mt-1 font-mono text-xs text-accent">{emailError}</p>}
             </div>
             <div className="flex gap-2.5">
