@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionCookie } from "@/lib/auth";
-import { uniqueSlug } from "@/lib/library";
 import { isPasswordValid, isValidEmailShape, isValidUsername, normalizeUsername } from "@/lib/account-validation";
 
 const schema = z.object({
@@ -18,17 +17,23 @@ const schema = z.object({
   password: z.string().refine(isPasswordValid, {
     message: "Password must be at least 8 characters and include a number and a special character",
   }),
-  libraryName: z.string().trim().max(100).optional(),
   inviteCode: z.string().trim().min(1).optional(),
 });
 
+/**
+ * Sign-up only ever collects account details now -- no library name here, and every account
+ * (invited or not) is created with zero memberships. A non-invite signup is gated by the
+ * dashboard's CreateFirstLibraryModal until a library exists; an invite signup instead confirms
+ * the invite token is still live and leaves the actual join to InviteAcceptOverlay after
+ * sign-in, same as an already-registered user accepting the same link.
+ */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
-  const { name, email, password, libraryName, inviteCode } = parsed.data;
+  const { name, email, password, inviteCode } = parsed.data;
   const username = normalizeUsername(parsed.data.username);
 
   const existingEmail = await prisma.user.findUnique({ where: { email } });
@@ -49,34 +54,11 @@ export async function POST(request: Request) {
     if (!invite) {
       return NextResponse.json({ error: "This link is no longer valid — contact the library owner to request a new one." }, { status: 404 });
     }
-  } else if (!libraryName) {
-    return NextResponse.json({ error: "Library name is required" }, { status: 400 });
   }
 
   const passwordHash = await hashPassword(password);
 
-  const user = inviteCode
-    ? await prisma.user.create({ data: { name, username, email, passwordHash } })
-    : await prisma.user.create({
-        data: {
-          name,
-          username,
-          email,
-          passwordHash,
-          memberships: {
-            create: {
-              role: "OWNER",
-              library: {
-                create: {
-                  name: libraryName!,
-                  slug: await uniqueSlug(libraryName!),
-                  shelves: { create: [{ name: "Unsorted" }] },
-                },
-              },
-            },
-          },
-        },
-      });
+  const user = await prisma.user.create({ data: { name, username, email, passwordHash } });
 
   await createSessionCookie(user.id);
 
