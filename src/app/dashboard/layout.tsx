@@ -43,7 +43,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="mx-auto flex max-w-[920px] items-center justify-between gap-4 px-6 py-[13px]">
             <div className="flex items-center gap-6">
               <Link href="/dashboard">
-                <FullLogo height={26} />
+                <FullLogo height={36} />
               </Link>
               <LibrarySwitcher
                 libraries={context.user.memberships.map((m) => m.library)}
