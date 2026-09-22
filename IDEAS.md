@@ -25,19 +25,6 @@ bare `people.csv` -- same shape as the file inside the zip, just without the
 books half or the zip wrapper. Raised as an open question during the People
 directory build and left for later rather than assumed.
 
-## Transactional email
-
-There's currently no email provider set up (see CLAUDE.md) — invites are link-only,
-not emailed, and there's no email verification on signup. If that's ever wanted:
-
-- **Resend** is the best fit for this app's scale — built for Next.js/Vercel, simple
-  API, and its free tier (3,000 emails/month, 100/day) is far more than a personal
-  family library app would ever need. Requires a verified sending domain for
-  anything beyond their shared test domain.
-- Alternatives if Resend doesn't fit: **Brevo** (300/day free, no Next.js-specific
-  tooling) or **AWS SES** (near-free per email, but more setup friction — sandbox
-  mode and domain verification before it can send to arbitrary addresses).
-
 ## Write the real privacy notice
 
 The footer (added the same session this idea was recorded) links to `/privacy`, but
@@ -76,15 +63,3 @@ block, since Gmail's signature editor doesn't support either. Worth building
 right after the shared email header/footer partial lands, so the hosted logo
 asset and the real Privacy Policy URL only need to be produced once and reused
 in both places.
-
-## Delete your own account
-
-The Profile screen (PR #28) covers changing your name, username, email, and
-password, but not deleting the account itself — deferred deliberately so that
-PR stayed focused. Needs a safety check: if you're the only member of a
-library (checked per library you belong to), deleting your account would
-orphan it, so the confirmation must say the library will be deleted too, and
-only on confirming does it delete the user and that library together. If you
-belong to a library with other members, your account can just be removed
-from it (existing membership-removal semantics) without touching the library.
-
