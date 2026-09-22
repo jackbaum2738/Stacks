@@ -1212,6 +1212,34 @@ not just the PR they were stated in:
   title/author with no abort surfaced in the UI. Test account and library cleaned up from the
   local database afterward.
 
+- **PR #57** (`claude/settings-refresh`) — four small settings/header changes bundled into one PR
+  since they all touch the Settings page and parallel threads here reliably collide on it: the
+  dashboard header logo matched to the footer's size (26px -> 36px, the zero-library header was
+  already fixed in PR #54), the Shelves list made a collapsed-by-default disclosure with a
+  name filter (Jack's dad has ~30 shelves), Backup & Import split into two tabs with the old
+  single "Download backup" button replaced by three cards (Full backup / Library only / People
+  only — see "Backup/import as a zip of two files" under "Data model" for the export machinery
+  this reuses), and "Wipe library" renamed to "Empty library" with shelves no longer cleared by
+  it (only books/reservations/book corrections). Mocked up first as an Artifact, several rounds
+  of Jack's feedback per section before any code was touched — the Backup tab specifically was
+  shown two layouts side by side (three cards vs. a single dropdown, since Jack said he was open
+  to alternatives) and he picked cards, then asked to drop the per-card filename captions, move
+  "Last taken by" into the Full backup card specifically, and put Backup before Import. The
+  Empty-library rename also renamed the underlying identifiers to match (`/api/library/wipe` ->
+  `/api/library/empty`, `WipeCounts`/`canWipe` -> `EmptyCounts`/`canEmpty` in
+  `danger-zone-section.tsx`) rather than leaving old internal names under new UI text, and reuses
+  `LibraryLoadingOverlay` with the exact same "Returning every book" hint Delete library already
+  uses, per Jack's explicit ask for the same text rather than new copy. Verified with a live
+  local Playwright run (29/29 checks): header/footer logo heights match exactly; the shelf list
+  stays collapsed until toggled and its filter narrows/keeps the right rows; the Backup tab is
+  selected by default with three cards and no filename text, Library-only and People-only
+  downloads produce the correct single CSV each (checked actual file contents) without touching
+  the backup-taken marker while a Full backup download does update it; "Empty library" (not
+  "Wipe library") shows a Books/Active-reservations-only confirmation grid, the reused loading
+  hint appears while it runs, and — the actual point of the change — shelves created before
+  emptying are still there afterward. Test accounts/libraries cleaned up from the local database
+  afterward.
+
 ## Keeping this file current
 
 Update this file when: a new working agreement is established, a non-obvious

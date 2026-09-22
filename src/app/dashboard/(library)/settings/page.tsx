@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentLibrary } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { CreateShelfForm } from "@/components/create-shelf-form";
-import { ShelfManageRow } from "@/components/shelf-manage-row";
+import { ShelvesSection } from "@/components/shelves-section";
 import { MembersSection } from "@/components/members-section";
 import { DangerZoneSection } from "@/components/danger-zone-section";
 import { BackupImportSection } from "@/components/backup-import-section";
@@ -17,9 +16,9 @@ export default async function SettingsPage() {
   const canImport = canManage; // Admin+ only -- Member is excluded so they can't create shelves indirectly via import.
   const canExport = canEditLibrary(context.membership.role); // View Only excluded -- export writes a lastBackup marker.
   const ownerIsMe = isOwner(context.membership.role);
-  const showDangerZone = canManage || ownerIsMe; // canManage (Admin+) can wipe; only Owner can delete.
+  const showDangerZone = canManage || ownerIsMe; // canManage (Admin+) can empty; only Owner can delete.
 
-  const [shelves, members, invites, backupInfo, wipeCounts] = await Promise.all([
+  const [shelves, members, invites, backupInfo, emptyCounts] = await Promise.all([
     prisma.shelf.findMany({
       where: { libraryId: context.library.id },
       include: { _count: { select: { copies: { where: { status: { not: "REMOVED" } } } } } },
@@ -43,15 +42,8 @@ export default async function SettingsPage() {
     showDangerZone && canManage
       ? Promise.all([
           prisma.copy.count({ where: { libraryId: context.library.id } }),
-          prisma.shelf.count({ where: { libraryId: context.library.id } }),
           prisma.reservation.count({ where: { releasedAt: null, copy: { libraryId: context.library.id } } }),
-          prisma.bookOverride.count({ where: { libraryId: context.library.id } }),
-        ]).then(([copies, shelfCount, reservations, bookOverrides]) => ({
-          copies,
-          shelves: shelfCount,
-          reservations,
-          bookOverrides,
-        }))
+        ]).then(([books, reservations]) => ({ books, reservations }))
       : Promise.resolve(null),
   ]);
 
@@ -86,15 +78,9 @@ export default async function SettingsPage() {
       {canManage && (
         <section className="space-y-3">
           <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Shelves</h2>
-          <CreateShelfForm />
-          <ul className="divide-y divide-line-inner border border-line bg-surface px-4">
-            {shelves.map((shelf) => (
-              <ShelfManageRow
-                key={shelf.id}
-                shelf={{ id: shelf.id, name: shelf.name, copyCount: shelf._count.copies }}
-              />
-            ))}
-          </ul>
+          <ShelvesSection
+            shelves={shelves.map((shelf) => ({ id: shelf.id, name: shelf.name, copyCount: shelf._count.copies }))}
+          />
         </section>
       )}
 
@@ -127,9 +113,9 @@ export default async function SettingsPage() {
           <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Danger zone</h2>
           <DangerZoneSection
             libraryName={context.library.name}
-            canWipe={canManage}
+            canEmpty={canManage}
             canDelete={ownerIsMe}
-            wipeCounts={wipeCounts}
+            emptyCounts={emptyCounts}
           />
         </section>
       )}

@@ -4,34 +4,35 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { LibraryLoadingOverlay } from "@/components/library-loading-overlay";
 
-type WipeCounts = { copies: number; shelves: number; reservations: number; bookOverrides: number };
+type EmptyCounts = { books: number; reservations: number };
 
 /**
- * Wipe and delete, folded into one bordered section instead of two settings rows -- see
- * CLAUDE.md's "wipe library" note for why they share a component and confirmation pattern.
+ * Empty and delete, folded into one bordered section instead of two settings rows -- see
+ * CLAUDE.md's "wipe library" note (predates the rename to "Empty library") for why they
+ * share a component and confirmation pattern.
  */
 export function DangerZoneSection({
   libraryName,
-  canWipe,
+  canEmpty,
   canDelete,
-  wipeCounts,
+  emptyCounts,
 }: {
   libraryName: string;
-  canWipe: boolean;
+  canEmpty: boolean;
   canDelete: boolean;
-  wipeCounts: WipeCounts | null;
+  emptyCounts: EmptyCounts | null;
 }) {
-  if (!canWipe && !canDelete) return null;
+  if (!canEmpty && !canDelete) return null;
 
   return (
     <div className="divide-y divide-line-inner border border-line-strong bg-surface">
-      {canWipe && wipeCounts && <WipeLibraryAction libraryName={libraryName} counts={wipeCounts} />}
+      {canEmpty && emptyCounts && <EmptyLibraryAction libraryName={libraryName} counts={emptyCounts} />}
       {canDelete && <DeleteLibraryAction libraryName={libraryName} />}
     </div>
   );
 }
 
-function WipeLibraryAction({ libraryName, counts }: { libraryName: string; counts: WipeCounts }) {
+function EmptyLibraryAction({ libraryName, counts }: { libraryName: string; counts: EmptyCounts }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
@@ -43,7 +44,7 @@ function WipeLibraryAction({ libraryName, counts }: { libraryName: string; count
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/library/wipe", {
+    const res = await fetch("/api/library/empty", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ confirmName }),
@@ -61,11 +62,12 @@ function WipeLibraryAction({ libraryName, counts }: { libraryName: string; count
 
   return (
     <div className="space-y-3 p-4">
+      {busy && <LibraryLoadingOverlay message={`Emptying ${libraryName}…`} hint="Returning every book" />}
       <div>
-        <h2 className="font-mono text-[11px] tracking-[.16em] text-accent-2 uppercase">Wipe library</h2>
+        <h2 className="font-mono text-[11px] tracking-[.16em] text-accent-2 uppercase">Empty library</h2>
         <p className="mt-1 font-sans text-sm text-ink-soft">
-          Clears out every shelf, copy, and reservation so {libraryName}&apos;s catalog starts empty.
-          Members, roles, and invite links are untouched. This can&apos;t be undone.
+          Clears out every book and reservation so {libraryName}&apos;s shelves start empty. Shelves, members,
+          roles, and invite links are untouched. This can&apos;t be undone.
         </p>
       </div>
 
@@ -75,28 +77,20 @@ function WipeLibraryAction({ libraryName, counts }: { libraryName: string; count
           onClick={() => setOpen(true)}
           className="rounded-[2px] border border-line-strong px-4 py-2 font-sans text-sm text-ink hover:bg-row-hover"
         >
-          Wipe library&hellip;
+          Empty library&hellip;
         </button>
       )}
 
       {open && !done && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-px border border-line-inner bg-line-inner sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-px border border-line-inner bg-line-inner">
             <div className="bg-surface px-3.5 py-3">
-              <div className="font-mono text-xl text-ink tabular-nums">{counts.copies}</div>
-              <div className="mt-0.5 text-[12.5px] text-ink-soft">Copies</div>
-            </div>
-            <div className="bg-surface px-3.5 py-3">
-              <div className="font-mono text-xl text-ink tabular-nums">{counts.shelves}</div>
-              <div className="mt-0.5 text-[12.5px] text-ink-soft">Shelves</div>
+              <div className="font-mono text-xl text-ink tabular-nums">{counts.books}</div>
+              <div className="mt-0.5 text-[12.5px] text-ink-soft">Books</div>
             </div>
             <div className="bg-surface px-3.5 py-3">
               <div className="font-mono text-xl text-ink tabular-nums">{counts.reservations}</div>
               <div className="mt-0.5 text-[12.5px] text-ink-soft">Active reservations</div>
-            </div>
-            <div className="bg-surface px-3.5 py-3">
-              <div className="font-mono text-xl text-ink tabular-nums">{counts.bookOverrides}</div>
-              <div className="mt-0.5 text-[12.5px] text-ink-soft">Book corrections</div>
             </div>
           </div>
           <form onSubmit={onSubmit} className="flex flex-wrap items-center gap-2">
@@ -111,7 +105,7 @@ function WipeLibraryAction({ libraryName, counts }: { libraryName: string; count
               disabled={busy || confirmName !== libraryName}
               className="rounded-[2px] bg-accent-2 px-4 py-2 font-sans text-sm font-medium text-on-accent hover:brightness-95 disabled:opacity-40"
             >
-              Wipe library
+              Empty library
             </button>
           </form>
           {error && <p className="font-mono text-xs text-accent">{error}</p>}
@@ -120,7 +114,7 @@ function WipeLibraryAction({ libraryName, counts }: { libraryName: string; count
 
       {done && (
         <p className="font-mono text-xs text-reserved-text">
-          ✓ {libraryName} wiped &mdash; 0 shelves, 0 copies, 0 reservations remain.
+          ✓ {libraryName} emptied &mdash; 0 books, 0 reservations remain.
         </p>
       )}
     </div>

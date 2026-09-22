@@ -1,19 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireLibraryContext } from "@/lib/api-context";
-import { applyBookOverride } from "@/lib/book-view";
 import { BOOKS_EXPORT_COLUMNS, PEOPLE_EXPORT_COLUMNS, toCsv } from "@/lib/csv";
 import { createZip } from "@/lib/backup-zip";
-
-const STATUS_LABEL: Record<string, string> = {
-  AVAILABLE: "Available",
-  RESERVED: "Reserved",
-  REMOVED: "Removed",
-};
-
-function formatBirthday(birthday: Date | null): string {
-  return birthday ? birthday.toISOString().slice(0, 10) : "";
-}
+import { buildBookExportRows, buildPeopleExportRows } from "@/lib/library-export";
 
 /**
  * A full backup of everything currently in the library, as a zip of two CSVs (books.csv +
@@ -22,53 +12,17 @@ function formatBirthday(birthday: Date | null): string {
  * cleanly. Two files rather than one: a person-per-copy-row export can only ever list
  * people who currently hold a book, so anyone with zero reservations would be silently
  * dropped from a single combined file. people.csv lists every person regardless. Records
- * who took the backup and when, shown on the Settings page.
+ * who took the backup and when, shown on the Settings page -- the single-file exports at
+ * export/books and export/people are lighter-weight siblings that skip that bookkeeping,
+ * since "last backup" specifically tracks the full one.
  */
 export async function GET() {
   const { context, response } = await requireLibraryContext({ require: "edit" });
   if (!context) return response;
 
-  const [copies, people] = await Promise.all([
-    prisma.copy.findMany({
-      where: { libraryId: context.library.id, status: { not: "REMOVED" } },
-      include: {
-        book: { include: { overrides: { where: { libraryId: context.library.id } } } },
-        shelf: true,
-        reservation: { include: { person: true } },
-      },
-      orderBy: { addedAt: "asc" },
-    }),
-    prisma.person.findMany({
-      where: { libraryId: context.library.id },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-
-  const bookRows = copies.map((copy) => {
-    const book = applyBookOverride(copy.book, copy.book.overrides[0]);
-    return [
-      copy.code,
-      copy.book.isbn13,
-      book.title,
-      book.authors.join("; "),
-      book.publisher,
-      copy.shelf?.name ?? "",
-      STATUS_LABEL[copy.status] ?? copy.status,
-      copy.reservation?.person?.name ?? "",
-      copy.reservation?.person?.code ?? "",
-      copy.notes,
-      copy.bookCrossingId,
-      copy.addedAt.toISOString().slice(0, 10),
-    ];
-  });
-
-  const peopleRows = people.map((person) => [
-    person.code,
-    person.name,
-    person.email ?? "",
-    person.phone ?? "",
-    person.location ?? "",
-    formatBirthday(person.birthday),
+  const [bookRows, peopleRows] = await Promise.all([
+    buildBookExportRows(context.library.id),
+    buildPeopleExportRows(context.library.id),
   ]);
 
   const booksCsv = toCsv([[...BOOKS_EXPORT_COLUMNS], ...bookRows]);

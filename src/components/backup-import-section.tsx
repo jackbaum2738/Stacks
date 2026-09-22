@@ -251,6 +251,7 @@ export function BackupImportSection({
   canExport: boolean;
 }) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"backup" | "import">("backup");
   const [stage, setStage] = useState<Stage>("idle");
   const [dragOver, setDragOver] = useState(false);
   const [dropError, setDropError] = useState<string | null>(null);
@@ -263,6 +264,10 @@ export function BackupImportSection({
   const [downloadBusy, setDownloadBusy] = useState(false);
   const [downloadConfirm, setDownloadConfirm] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(false);
+  const [booksExportBusy, setBooksExportBusy] = useState(false);
+  const [booksExportConfirm, setBooksExportConfirm] = useState(false);
+  const [peopleExportBusy, setPeopleExportBusy] = useState(false);
+  const [peopleExportConfirm, setPeopleExportConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Live import progress. Rows are revealed one at a time from a queue fed by whichever
@@ -382,6 +387,25 @@ export function BackupImportSection({
     setDownloadConfirm(true);
     setTimeout(() => setDownloadConfirm(false), 2600);
     router.refresh();
+  }
+
+  async function handleSingleFileExport(
+    kind: "books" | "people",
+    setBusy2: (v: boolean) => void,
+    setConfirm: (v: boolean) => void,
+    fallbackName: string
+  ) {
+    setBusy2(true);
+    const res = await fetch(`/api/library/export/${kind}`);
+    setBusy2(false);
+    if (!res.ok) {
+      setError(`Couldn't export ${kind === "books" ? "the library" : "people"} — please try again.`);
+      return;
+    }
+    const blob = await res.blob();
+    downloadBlob(blob, filenameFromDisposition(res.headers.get("Content-Disposition"), fallbackName));
+    setConfirm(true);
+    setTimeout(() => setConfirm(false), 2600);
   }
 
   async function handleTemplateDownload() {
@@ -686,42 +710,111 @@ export function BackupImportSection({
       ? null // zip: self-evident, no caption needed
       : `Matched by Person ID only, same rule as Copy ID — a row with no ID, or one that doesn't match, always creates a new person rather than guessing by name or email.`;
 
+  const showTabs = canImport && canExport;
+  const effectiveTab: "backup" | "import" = showTabs ? activeTab : canExport ? "backup" : "import";
+
   return (
     <>
-      <div className="border border-line bg-surface">
-        {canExport && (
-          <>
-            <div className="px-4 pt-3 font-sans text-[12.5px] font-semibold text-ink-soft">Backup</div>
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <p className="font-sans text-sm text-ink-soft">
-                {lastBackup ? (
-                  <>
-                    Last backup taken by <span className="text-ink">{lastBackup.byName}</span>
-                    <br />
-                    <span className="font-mono text-xs text-ink-faint">{lastBackup.atLabel}</span>
-                  </>
-                ) : (
-                  "No backup taken yet"
-                )}
-              </p>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={handleBackupDownload} disabled={downloadBusy} className={btnPrimary}>
-                  {downloadBusy ? "Preparing…" : "Download backup"}
-                </button>
-                {downloadConfirm && (
-                  <span className="font-sans text-sm font-semibold text-ok">&#10003; Downloaded</span>
-                )}
-              </div>
-            </div>
-          </>
+      <div>
+        {showTabs && (
+          <div className="-mb-px flex gap-0.5" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              onClick={() => setActiveTab("backup")}
+              aria-selected={effectiveTab === "backup"}
+              className={`border border-b-0 px-4 py-2.5 font-mono text-[11.5px] font-semibold tracking-[.06em] uppercase ${
+                effectiveTab === "backup"
+                  ? "border-line-strong bg-surface text-ink"
+                  : "border-line bg-bg text-ink-soft hover:text-ink"
+              }`}
+            >
+              Backup
+            </button>
+            <button
+              type="button"
+              role="tab"
+              onClick={() => setActiveTab("import")}
+              aria-selected={effectiveTab === "import"}
+              className={`border border-b-0 px-4 py-2.5 font-mono text-[11.5px] font-semibold tracking-[.06em] uppercase ${
+                effectiveTab === "import"
+                  ? "border-line-strong bg-surface text-ink"
+                  : "border-line bg-bg text-ink-soft hover:text-ink"
+              }`}
+            >
+              Import
+            </button>
+          </div>
         )}
 
-        {canImport && (
-          <>
-            <div className={`px-4 pt-3 font-sans text-[12.5px] font-semibold text-ink-soft ${canExport ? "border-t border-line-inner" : ""}`}>
-              Import
+        <div className="border border-line bg-surface">
+          {effectiveTab === "backup" && canExport && (
+            <div className="p-4">
+              <p className="mb-3 font-sans text-[12.5px] font-semibold text-ink-soft">Choose what to export</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="flex flex-col gap-2 border border-line bg-surface-raised p-3.5">
+                  <p className="font-display text-base font-semibold text-ink">Full backup</p>
+                  <p className="flex-1 font-sans text-[12.5px] text-ink-soft">Everything — books and people — in one zip.</p>
+                  <p className="font-sans text-xs text-ink-soft">
+                    {lastBackup ? (
+                      <>
+                        Last taken by <span className="text-ink">{lastBackup.byName}</span>
+                        <br />
+                        <span className="font-mono text-[11px] text-ink-faint">{lastBackup.atLabel}</span>
+                      </>
+                    ) : (
+                      "Never taken"
+                    )}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={handleBackupDownload} disabled={downloadBusy} className={btnPrimary}>
+                      {downloadBusy ? "Preparing…" : "Download"}
+                    </button>
+                    {downloadConfirm && <span className="font-sans text-xs font-semibold text-ok">&#10003; Downloaded</span>}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 border border-line bg-surface-raised p-3.5">
+                  <p className="font-display text-base font-semibold text-ink">Library only</p>
+                  <p className="flex-1 font-sans text-[12.5px] text-ink-soft">
+                    Just the catalog — every copy, its shelf, status, and who it&rsquo;s reserved for.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSingleFileExport("books", setBooksExportBusy, setBooksExportConfirm, "library.csv")}
+                      disabled={booksExportBusy}
+                      className={btnGhost}
+                    >
+                      {booksExportBusy ? "Preparing…" : "Download"}
+                    </button>
+                    {booksExportConfirm && <span className="font-sans text-xs font-semibold text-ok">&#10003; Downloaded</span>}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 border border-line bg-surface-raised p-3.5">
+                  <p className="font-display text-base font-semibold text-ink">People only</p>
+                  <p className="flex-1 font-sans text-[12.5px] text-ink-soft">
+                    The full People directory, independent of who currently has a book reserved.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSingleFileExport("people", setPeopleExportBusy, setPeopleExportConfirm, "people.csv")}
+                      disabled={peopleExportBusy}
+                      className={btnGhost}
+                    >
+                      {peopleExportBusy ? "Preparing…" : "Download"}
+                    </button>
+                    {peopleExportConfirm && <span className="font-sans text-xs font-semibold text-ok">&#10003; Downloaded</span>}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="px-4 pb-4">
+          )}
+
+          {effectiveTab === "import" && canImport && (
+            <div className="p-4">
               <p className="mb-2 font-sans text-sm text-ink-soft">
                 Import a Stacks backup .zip, or a books.csv/people.csv on its own. Rows match an existing copy by
                 Copy ID and an existing person by Person ID &mdash; anything with no match, or one that
@@ -772,8 +865,8 @@ export function BackupImportSection({
                 )}
               </div>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
       {stage === "mapping" && parsed && currentFile && (
