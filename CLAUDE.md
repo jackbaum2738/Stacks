@@ -121,6 +121,13 @@ it didn't, for a while).
   for now, with a native wrapper only a possible future option. Don't assume every page has a
   mobile-specific layout yet — only Library, People, and the shared `CopyRow` (Shelf detail) got
   phone-width card layouts in PR #41; other pages just reflow within the new nav shell.
+- **Standard loading takeover** (`LibraryLoadingOverlay` + `MarkLoader`, PR #34) is the one
+  loading UI for any operation that does real server-side work with no per-step progress to
+  show — library switch/create/delete today, account deletion next. Reuse it rather than
+  inventing a new spinner or animation; only the `message`/`hint` text changes per case
+  (Jack confirmed this explicitly when reviewing the delete-account mockup). CSV import's
+  progress bar (see below) is the one exception, for the one case that has real per-batch
+  progress to report — everything else without that gets this takeover instead.
 - **Deployment**: Vercel + Postgres on Neon. `package.json`'s `build` script runs
   `prisma migrate deploy && next build`; `postinstall` runs `prisma generate`.
 
