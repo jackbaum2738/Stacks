@@ -50,7 +50,7 @@ export default async function DashboardPage() {
             </Link>
           )}
           <Link
-            href="/dashboard/search"
+            href="/dashboard/library"
             className="rounded-[2px] border border-ink px-5 py-[11px] font-sans text-[15px] font-medium text-ink hover:bg-chip-hover"
           >
             Browse library

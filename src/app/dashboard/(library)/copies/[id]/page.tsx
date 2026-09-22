@@ -25,7 +25,7 @@ export default async function CopyDetailPage(props: PageProps<"/dashboard/copies
   return (
     <div className="space-y-6">
       <Link
-        href="/dashboard/search"
+        href="/dashboard/library"
         className="inline-flex items-center gap-1 font-mono text-[12px] tracking-[.10em] text-accent uppercase hover:underline"
       >
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-[14px] w-[14px]">

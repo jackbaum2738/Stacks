@@ -170,7 +170,7 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
         <DeleteCopiesModal
           copies={[modalCopy]}
           onClose={() => setDeleteModal(false)}
-          onDone={() => router.push("/dashboard/search")}
+          onDone={() => router.push("/dashboard/library")}
         />
       )}
     </div>

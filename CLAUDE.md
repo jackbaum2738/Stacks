@@ -169,7 +169,7 @@ and its `PATCH /api/copies/[id]` endpoint existed since the CSV import/export wo
 (PR #12) but sat unused in the UI until PR #19 gave it a manila-notecard UI
 (`src/components/copy-notecard.tsx` on the book detail page,
 `src/components/note-popup.tsx` for the quick-read/edit popup opened from the
-corner tag on grid tiles and list rows in `/dashboard/search`). The manila color
+corner tag on grid tiles and list rows in `/dashboard/library`). The manila color
 tokens and the `.notecard-tape`/`.notecard-fold` pseudo-element classes live in
 `globals.css` alongside the other signature look-and-feel classes — reuse them
 rather than redefining the tape/fold effect if this UI grows.
@@ -439,7 +439,7 @@ again:**
 **Library list pagination — key decisions if you touch this again:** `/api/search` used to
 truncate its response (50 rows for a text query, 300 for browsing everything) before any
 pagination existed; that cap is now removed entirely — the route returns every matching
-row and `src/app/dashboard/search/page.tsx` slices it into pages client-side, the same
+row and `src/app/dashboard/(library)/library/page.tsx` slices it into pages client-side, the same
 place it already does client-side sorting/filtering over the one fetched result set. A
 picker (25/50/100/200, default 25) sits above the list/grid; a Prev/Next + numbered pager
 (windowed around the current page, not every page number) appears below the results only
@@ -739,7 +739,8 @@ not just the PR they were stated in:
 ## Scope notes
 
 - The richer list/grid/detail/bulk-action treatment (PR #2) is **only** on the
-  Library page (`/dashboard/search`). The Shelf detail page intentionally still
+  Library page (`/dashboard/library`, renamed from `/dashboard/search` in a later session to
+  match its tab name — see PR history). The Shelf detail page intentionally still
   uses the older, simpler `CopyRow` component — that wasn't part of what was
   mocked up or asked for. Don't assume it should be unified across pages
   without checking with the user first. (The standalone Reservations page this

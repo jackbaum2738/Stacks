@@ -42,6 +42,7 @@ export function DeleteAccountSection({ username, libraries }: { username: string
   const [reauthError, setReauthError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [overlay, setOverlay] = useState<{ message: string; hint: string } | null>(null);
 
   const blocking = libraries.filter((l) => l.outcome === "transfer");
   const canDelete = confirmInput === username && blocking.length === 0;
@@ -51,18 +52,23 @@ export function DeleteAccountSection({ username, libraries }: { username: string
     setReauthOpen(true);
   }
 
-  async function switchAndOpenSettings(libraryId: string) {
-    await fetch("/api/library/switch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ libraryId }),
+  function switchAndOpenSettings(libraryId: string, libraryName: string) {
+    setOverlay({ message: `Switching to ${libraryName}…`, hint: "Dusting off the shelves" });
+    startTransition(async () => {
+      await fetch("/api/library/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ libraryId }),
+      });
+      router.push("/dashboard/settings");
+      router.refresh();
     });
-    router.push("/dashboard/settings");
   }
 
   function confirmReauth(currentPassword: string) {
     setReauthOpen(false);
     setError(null);
+    setOverlay({ message: "Closing your account…", hint: "Returning your library card" });
     startTransition(async () => {
       const res = await fetch("/api/account/delete", {
         method: "DELETE",
@@ -91,7 +97,7 @@ export function DeleteAccountSection({ username, libraries }: { username: string
 
   return (
     <div className="border border-line-strong bg-surface">
-      {isPending && <LibraryLoadingOverlay message="Closing your account…" hint="Returning your library card" />}
+      {isPending && overlay && <LibraryLoadingOverlay message={overlay.message} hint={overlay.hint} />}
 
       <div className="space-y-3 p-4">
         <div>
@@ -146,7 +152,7 @@ export function DeleteAccountSection({ username, libraries }: { username: string
                           </p>
                           <button
                             type="button"
-                            onClick={() => switchAndOpenSettings(lib.id)}
+                            onClick={() => switchAndOpenSettings(lib.id, lib.name)}
                             className="mt-1.5 font-sans text-[12.5px] font-semibold text-accent-2 hover:underline"
                           >
                             Transfer ownership in Settings &rarr;
