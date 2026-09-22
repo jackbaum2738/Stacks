@@ -77,6 +77,36 @@ right after the shared email header/footer partial lands, so the hosted logo
 asset and the real Privacy Policy URL only need to be produced once and reused
 in both places.
 
+## Monetisation: a donation link, and whether to run ads
+
+Jack wants to eventually support Stacks financially now that it's growing beyond his own
+household (see the "Write the real privacy notice" idea above for the same wider-rollout
+context). Since Stacks isn't a registered company, any money has to go to Jack personally,
+not a business account. Talked through in a project thread on 2026-09-22:
+
+- **Donations: Buy Me a Coffee, not Ko-fi.** Both were compared on fee structure before
+  deciding — Ko-fi's free "Standard" tier actually charges the same 5% platform fee as Buy Me
+  a Coffee (0% only comes with Ko-fi's $12/month "Gold" tier, confirmed against Ko-fi's own
+  pricing page rather than third-party blog summaries, which turned out to be stale). With
+  cost equal at the free tier, Jack picked Buy Me a Coffee for its clearer, more
+  internationally self-explanatory name — better suited to his dad's non-technical,
+  worldwide book-sharing contacts than the "Ko-fi" brand. Implementation would just be a
+  "Support Stacks" link out to Jack's Buy Me a Coffee page (footer or Settings), no in-app
+  payment handling. Ko-fi Gold's $12/month would only start paying for itself once monthly
+  donations clear roughly £200+, so not worth reconsidering unless this genuinely takes off.
+  Worth a reminder if it ever generates real, regular money: casual/occasional donations read
+  as gifts for UK tax purposes, but the UK's £1,000/year trading allowance is the threshold
+  past which Jack would need to register for Self Assessment and declare it as income.
+- **Advertising: not pursuing it for now.** The idea was a desktop sidebar ad (there's a lot
+  of unused horizontal whitespace on wide screens), but Stacks is a private, logged-in tool
+  for a small network of people Jack's dad personally knows, not a content site with the kind
+  of anonymous traffic volume ad networks need to pay meaningfully — realistic revenue at
+  this scale would be negligible. It would also pull forward work that isn't needed yet: UK
+  GDPR/PECR requires cookie consent for ad-tracking cookies, and `/privacy` is still just a
+  placeholder (see the idea above). Revisit only if the user base becomes genuinely large and
+  public rather than "people Jack knows" — which is also the point the privacy notice needs
+  finishing anyway, so the two ideas move together.
+
 ## Delete your own account
 
 The Profile screen (PR #28) covers changing your name, username, email, and
