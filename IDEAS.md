@@ -70,3 +70,16 @@ not a business account. Talked through in a project thread on 2026-09-22:
   placeholder (see the idea above). Revisit only if the user base becomes genuinely large and
   public rather than "people Jack knows" — which is also the point the privacy notice needs
   finishing anyway, so the two ideas move together.
+
+## Rename a library
+
+There's currently no way to change a `Library.name` after creation -- Settings has no
+rename field, and `POST /api/library` only ever sets the name once, at creation. Jack
+flagged this is coming eventually (raised in a project thread on 2026-09-23 while
+discussing putting a library identifier in the URL for shareable links -- see the "L-XXXXXX"
+library code idea below, chosen as a stable random code specifically *because* it doesn't
+derive from the name, unlike the existing `Library.slug` field, so this rename won't break
+it). Needs its own pass: at minimum a Settings field + `PATCH /api/library` (Owner/Admin,
+same tier as other settings mutations), and a decision on whether `Library.slug` (currently
+only used in backup export filenames) should regenerate on rename or stay frozen from
+creation.
