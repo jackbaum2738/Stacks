@@ -7,12 +7,13 @@ export function ShelfManageRow({
   shelf,
   code,
 }: {
-  shelf: { id: string; name: string; copyCount: number };
+  shelf: { id: string; name: string; code: string | null; copyCount: number };
   code: string;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(shelf.name);
+  const [shelfCode, setShelfCode] = useState(shelf.code ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -24,7 +25,7 @@ export function ShelfManageRow({
     const res = await fetch(`/api/${code}/shelves/${shelf.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, code: shelfCode.trim() || null }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -60,6 +61,12 @@ export function ShelfManageRow({
             onChange={(e) => setName(e.target.value)}
             className="flex-1 border-b border-line-strong bg-transparent px-0.5 py-1.5 font-sans text-sm text-ink focus-visible:border-accent focus-visible:outline-none"
           />
+          <input
+            value={shelfCode}
+            onChange={(e) => setShelfCode(e.target.value)}
+            placeholder="Code"
+            className="w-[90px] border-b border-line-strong bg-transparent px-0.5 py-1.5 font-sans text-sm text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
+          />
           <button
             type="submit"
             disabled={busy}
@@ -81,6 +88,11 @@ export function ShelfManageRow({
       <div className="flex items-center justify-between">
         <div>
           <span className="font-display font-medium text-ink">{shelf.name}</span>
+          {shelf.code && (
+            <span className="ml-2 rounded-[2px] border border-line bg-chip-hover px-1.5 py-0.5 font-mono text-[11px] font-semibold text-accent-2">
+              {shelf.code}
+            </span>
+          )}
           <span className="ml-2 font-mono text-sm text-ink-soft">
             {shelf.copyCount} {shelf.copyCount === 1 ? "book" : "books"}
           </span>

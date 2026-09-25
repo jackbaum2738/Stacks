@@ -44,14 +44,12 @@ export async function POST(request: Request, { params }: RouteContext<"/api/[lib
   const { name, phone, location, birthday } = parsed.data;
   const email = parsed.data.email ? parsed.data.email.toLowerCase() : null;
 
-  if (email) {
-    const clash = await prisma.person.findFirst({ where: { libraryId: context.library.id, email } });
-    if (clash) {
-      return NextResponse.json(
-        { error: `This email already belongs to ${clash.name}`, conflictingPersonId: clash.id },
-        { status: 409 }
-      );
-    }
+  const clash = await prisma.person.findFirst({ where: { libraryId: context.library.id, name } });
+  if (clash) {
+    return NextResponse.json(
+      { error: `A person named "${clash.name}" already exists`, conflictingPersonId: clash.id },
+      { status: 409 }
+    );
   }
 
   const code = await generateUniquePersonCode(prisma, context.library.id);

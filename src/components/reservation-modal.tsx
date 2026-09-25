@@ -19,8 +19,11 @@ function commonPerson(copies: ModalCopy[]): PersonSummary | null {
 
 /**
  * Handles both creating a new reservation and editing existing ones, for a single copy
- * or a whole selection at once. In "edit" mode, targets are narrowed to the copies that
- * are actually reserved (so a mixed selection is handled sensibly).
+ * or a whole selection at once. "Edit reservations" is always available regardless of
+ * whether the selection is currently reserved -- in edit mode, targets are the *whole*
+ * selection (not narrowed to already-reserved copies), so saving can reserve
+ * previously-unreserved copies in the same selection too, and Remove reservation(s) only
+ * ever touches the ones that actually have one.
  */
 export function ReservationModal({
   mode,
@@ -36,8 +39,9 @@ export function ReservationModal({
   onDone: () => void;
 }) {
   const router = useRouter();
-  const targets = mode === "edit" ? copies.filter((c) => c.reservation) : copies;
+  const targets = copies;
   const bulk = targets.length > 1;
+  const reservedTargets = targets.filter((c) => c.reservation);
 
   const [person, setPerson] = useState<PersonSummary | null>(mode === "edit" ? commonPerson(targets) : null);
   const [busy, setBusy] = useState(false);
@@ -82,15 +86,13 @@ export function ReservationModal({
     setBusy(true);
     setError(null);
     const results = await Promise.allSettled(
-      targets
-        .filter((c) => c.reservation)
-        .map((c) =>
-          fetch(`/api/${code}/reservations/${c.reservation!.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ release: true }),
-          })
-        )
+      reservedTargets.map((c) =>
+        fetch(`/api/${code}/reservations/${c.reservation!.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ release: true }),
+        })
+      )
     );
     setBusy(false);
     const failed = results.some((r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok));
@@ -112,11 +114,15 @@ export function ReservationModal({
 
   const subheading =
     mode === "edit"
-      ? bulk
-        ? `Editing ${targets.length} reservations${
-            person ? ` — all currently for ${person.name}` : " for different people"
-          }. Saving applies the person below to all of them.`
-        : `Change who “${targets[0].book.title}” is reserved for, or remove the reservation.`
+      ? !bulk
+        ? `Change who “${targets[0].book.title}” is reserved for, or remove the reservation.`
+        : reservedTargets.length === 0
+          ? `${targets.length} books selected — none reserved yet. Choose someone below to reserve all ${targets.length} to them.`
+          : reservedTargets.length === targets.length
+            ? `Editing ${targets.length} reservations${
+                person ? ` — all currently for ${person.name}` : " for different people"
+              }. Saving applies the person below to all of them.`
+            : `${targets.length} books selected — ${reservedTargets.length} already reserved. Choose someone below to reserve all ${targets.length} to them.`
       : `Hold ${bulk ? "these books" : "this book"} for a specific person until you're ready to send ${bulk ? "them" : "it"}.`;
 
   return (
@@ -150,15 +156,15 @@ export function ReservationModal({
 
         {error && <p className="mb-3 font-mono text-xs text-accent">{error}</p>}
 
-        <div className={`flex items-center ${mode === "edit" ? "justify-between" : "justify-end"} gap-2`}>
-          {mode === "edit" && (
+        <div className={`flex items-center ${mode === "edit" && reservedTargets.length > 0 ? "justify-between" : "justify-end"} gap-2`}>
+          {mode === "edit" && reservedTargets.length > 0 && (
             <button
               type="button"
               onClick={removeReservations}
               disabled={busy}
               className="font-sans text-sm font-medium text-accent hover:underline"
             >
-              Remove reservation{bulk ? "s" : ""}
+              Remove reservation{reservedTargets.length > 1 ? "s" : ""}
             </button>
           )}
           <div className="flex gap-2">

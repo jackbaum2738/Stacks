@@ -21,7 +21,26 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/[libra
   const shelf = await prisma.shelf.findFirst({ where: { id, libraryId: context.library.id } });
   if (!shelf) return NextResponse.json({ error: "Shelf not found" }, { status: 404 });
 
-  const updated = await prisma.shelf.update({ where: { id }, data: parsed.data });
+  if (parsed.data.name !== undefined) {
+    const nameClash = await prisma.shelf.findFirst({
+      where: { libraryId: context.library.id, name: parsed.data.name, id: { not: id } },
+    });
+    if (nameClash) {
+      return NextResponse.json({ error: "A shelf with that name already exists" }, { status: 409 });
+    }
+  }
+
+  const code = parsed.data.code !== undefined ? parsed.data.code?.trim() || null : undefined;
+  if (code) {
+    const codeClash = await prisma.shelf.findFirst({
+      where: { libraryId: context.library.id, code, id: { not: id } },
+    });
+    if (codeClash) {
+      return NextResponse.json({ error: `Code "${code}" is already used by "${codeClash.name}"` }, { status: 409 });
+    }
+  }
+
+  const updated = await prisma.shelf.update({ where: { id }, data: { ...parsed.data, ...(code !== undefined ? { code } : {}) } });
   return NextResponse.json({ shelf: updated });
 }
 

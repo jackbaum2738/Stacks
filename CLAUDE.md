@@ -204,10 +204,12 @@ in something tab-scoped by nature — the URL — not patch the cookie approach 
 were replaced by `Reservation.personId` pointing at a library-scoped `Person`
 (`id, libraryId, name, email?, phone?, location?, birthday?, code`) — see
 `src/components/person-combobox.tsx`/`person-modal.tsx`/`delete-person-modal.tsx` and
-`/dashboard/people`. Only `name` is required; `email` is the **sole** field unique
-per-library (`@@unique([libraryId, email])`, safe because nullable columns never collide
-with each other in Postgres), so duplicate names are fully expected and never merged
-automatically. `Person.code` ("P-XXXXXX", `src/lib/person-code.ts`) is the CSV
+`/dashboard/people`. **As of the move-shelf/reservations PR (2026-09-25), `name` is the
+field unique per-library instead of `email`** (`@@unique([libraryId, name])`, checked on
+both add and edit, error surfaced under the Name field) — the original email-uniqueness
+rule blocked two people sharing a household inbox (a couple, a family), which came up as a
+real problem in Jack's dad's network; duplicate names are no longer allowed, but two people
+can now share an email. `Person.code` ("P-XXXXXX", `src/lib/person-code.ts`) is the CSV
 round-tripping key, same idea as `Copy.code`. Deleting a Person is always allowed even
 mid-reservation (a Person isn't a user account) — any *active* reservation is released
 (copy back to AVAILABLE) and deleted first, inside the same transaction as the Person
@@ -532,6 +534,48 @@ IDEAS.md item and this screen only offers Release for now. Mocked up first as an
 two rounds — round one offered three directions (fold into People; an age-sorted "ready to
 ship" queue, recommended at the time; a merged People/Reservations page with two views) before
 Jack corrected the batching premise and picked "option 1 with elements of 2."
+
+**Move a copy's shelf, and a unified "Edit reservations" button (project thread, 2026-09-25) —
+key decisions if you touch this again:** a copy's shelf can now be changed from three places
+without going through the full "Edit details" form: the Library page's bulk selection bar
+("Move to shelf", works on any mixed selection), a standalone "Move shelf" button on the book
+detail page (next to Reserve, distinct from "Edit details"), and the shelf name itself in the
+Library page's rows/tiles, now a clickable underlined link that opens the same modal for just
+that one copy. `MoveShelfModal` (`src/components/move-shelf-modal.tsx`) reuses `ShelfCombobox`
+as-is (same exact-match-on-Enter resolution the Scan page already uses) and PATCHes each
+selected copy's existing `shelfId` field via `Promise.allSettled` — no new API route was
+needed, since `PATCH /api/{code}/copies/{id}` already accepted `shelfId`. Its Save button reads
+"Save changes", not a bare "Save", per Jack's explicit ask.
+Also unified the bulk selection bar's separate "Reserve" and "Edit reservations" buttons into
+one always-visible "Edit reservations" button that correctly handles a selection mixing
+reserved and unreserved copies. The root bug: `ReservationModal`'s "edit" mode filtered
+`targets` down to only the already-reserved copies in the selection, so a mixed selection had
+no single button that could act on the unreserved ones too. `targets` is now always the full
+selection, with a separate `reservedTargets` derived from it; the modal's subheading now reads
+three ways depending on the mix — "none reserved yet" (offering to reserve all of them), an
+all-reserved case prefilled with the shared person's name (offering to reassign all of them),
+or a mixed count — and the "Remove reservation(s)" action (correctly singular/plural) only
+appears when `reservedTargets.length > 0`. This also resolved a report that "Remove
+reservation" didn't visibly do anything in some cases: the underlying release call and
+modal-close (`removeReservations()` → real API → `onDone()`) were already correct — they were
+just unreachable from a selection the old `targets` filtering couldn't route to the right
+button.
+Two independent, unrelated schema tweaks rode along in the same PR since both were small and
+touched files already in flight: **`Person.name` is now the field unique per library instead
+of `Person.email`** (see the "People directory" note above) — a couple or family sharing one
+inbox no longer blocks adding both as separate People — and **`Shelf.code` is now enforced
+unique per library** (`@@unique([libraryId, code])`, alongside the existing unique-name
+constraint), settable from the "Add shelf" form and each shelf's Rename form in Settings, both
+of which now check for a colliding code before writing and surface the same "already used by"
+wording the duplicate-name check already used.
+Mocked up over several rounds as an interactive Artifact before any code was touched, per the
+usual mockup-first agreement. Verified with a live local Playwright run (18/18 checks):
+duplicate shelf name and duplicate code both rejected, two people sharing an email now allowed,
+duplicate person name rejected, bulk move-to-shelf actually moving two copies, the 0-reserved
+mixed-selection subheading with the Remove button correctly hidden, the all-reserved
+subheading correctly prefilled with the shared person's name, "Remove reservations" (plural)
+actually releasing both and closing the modal, and the book detail page's own "Move shelf"
+button working end to end.
 
 **Password reset & transactional email (Brevo) — key decisions if you touch this again:**
 Came out of buying stacksonline.com and setting it up for email deliverability (SPF, DKIM,
@@ -1370,6 +1414,22 @@ not just the PR they were stated in:
   and the real confirm-link round trip end to end (atomic single-use consumption, sign-in working
   with the new email and failing with the old one). Test accounts cleaned up from the local
   database afterward.
+- **PR #65** (`claude/move-shelf-and-reservations`) — added the ability to move a copy to a
+  different shelf from the bulk selection bar, the book detail page, and a click on any shelf
+  name in the Library page, plus a unified "Edit reservations" button that correctly handles a
+  mixed reserved/unreserved selection (see the "Move a copy's shelf, and a unified 'Edit
+  reservations' button" note under "Data model" above for the full design, including the
+  `Person.name`/`Shelf.code` uniqueness swap that rode along in the same PR). Built from nine
+  rounds of an interactive Artifact mockup (`https://claude.ai/artifact/9EiDuWNV6KbMwabCY5h1h4`)
+  before any code was touched, approved with two final, specific corrections applied during
+  build: the shelf-move modal's Save button reads "Save changes" (not "Save"), and "Remove
+  reservation" needed to actually release the copy and close the modal rather than being a
+  mockup-only interaction — which turned out to already be correctly implemented in the real
+  `reservation-modal.tsx` and just needed the `targets`-filtering bug fixed to become reachable.
+  Rebased onto `main` after PR #62/#63's concurrent library-code URL restructure and PR #64's
+  email-change work all merged first, re-verifying every route/component against its new
+  `[libraryCode]`-prefixed path. Verified with a live local Playwright run (18/18 checks) — see
+  the CHANGELOG's 8.2.0 entry for the full list.
 
 ## Keeping this file current
 
