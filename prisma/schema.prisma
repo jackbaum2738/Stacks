@@ -145,6 +145,7 @@ model Shelf {
   copies    Copy[]
 
   @@unique([libraryId, name])
+  @@unique([libraryId, code])
 }
 
 /// Catalog metadata for a title, shared across every library so a lookup is only ever done once.
@@ -268,11 +269,11 @@ model BookLookupLog {
   @@index([libraryId, createdAt])
 }
 
-/// Someone books get reserved for, in a library-scoped directory (PR: People tab). Only
-/// `name` is required -- email is the sole field that must be unique per library (and can
-/// still be left blank, since a nullable column's NULLs never collide with each other in
-/// Postgres), so unlike email, duplicate names are fully expected (two people can share a
-/// name) and never merged automatically.
+/// Someone books get reserved for, in a library-scoped directory (PR: People tab). `name` is
+/// the field that must be unique per library (reversed from the original design, which made
+/// email the unique field and allowed duplicate names on purpose -- Jack asked for duplicate
+/// names to be blocked instead). Email can still be left blank and no longer has to be
+/// unique -- two people (e.g. a family sharing one inbox) can now share an email address.
 model Person {
   id           String        @id @default(cuid())
   libraryId    String
@@ -282,14 +283,13 @@ model Person {
   location     String?
   birthday     DateTime?
   /// Short "P-XXXXXX" identifier for CSV export/import round-tripping, same idea as
-  /// Copy.code -- see src/lib/person-code.ts. Needed because names alone can't be trusted
-  /// to match a row back to the right person once duplicates are allowed.
+  /// Copy.code -- see src/lib/person-code.ts.
   code         String
   createdAt    DateTime      @default(now())
   library      Library       @relation(fields: [libraryId], references: [id], onDelete: Cascade)
   reservations Reservation[]
 
   @@unique([libraryId, code])
-  @@unique([libraryId, email])
+  @@unique([libraryId, name])
   @@index([libraryId])
 }

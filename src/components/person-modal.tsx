@@ -19,9 +19,9 @@ function formatBirthdayInput(birthday: string | null): string {
 }
 
 /**
- * Add/edit a person. Only Name is required -- email is the sole field that has to be
- * unique per library (and can still be left blank). View Only gets a read-only version
- * with no Save/Remove, matching how every other edit surface treats that role.
+ * Add/edit a person. Name is required and must be unique per library (duplicate names are
+ * blocked); email is optional and no longer has to be unique. View Only gets a read-only
+ * version with no Save/Remove, matching how every other edit surface treats that role.
  */
 export function PersonModal({
   person,
@@ -126,11 +126,11 @@ export function PersonModal({
                 Name <span className="text-accent">*</span>
               </label>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Hans Richter" className={formInputClass} />
+              {error && <p className="mt-1.5 font-mono text-xs text-accent">{error}</p>}
             </div>
             <div>
               <label className={formLabelClass}>Email</label>
-              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="optional, but must be unique" className={formInputClass} />
-              {error && <p className="mt-1.5 font-mono text-xs text-accent">{error}</p>}
+              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="optional" className={formInputClass} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

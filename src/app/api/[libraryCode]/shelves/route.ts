@@ -39,8 +39,16 @@ export async function POST(request: Request, { params }: RouteContext<"/api/[lib
     return NextResponse.json({ error: "A shelf with that name already exists" }, { status: 409 });
   }
 
+  const code = parsed.data.code?.trim() || undefined;
+  if (code) {
+    const codeClash = await prisma.shelf.findFirst({ where: { libraryId: context.library.id, code } });
+    if (codeClash) {
+      return NextResponse.json({ error: `Code "${code}" is already used by "${codeClash.name}"` }, { status: 409 });
+    }
+  }
+
   const shelf = await prisma.shelf.create({
-    data: { libraryId: context.library.id, name: parsed.data.name, code: parsed.data.code },
+    data: { libraryId: context.library.id, name: parsed.data.name, code },
   });
 
   return NextResponse.json({ shelf }, { status: 201 });

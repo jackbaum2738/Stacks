@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BookCover } from "@/components/book-cover";
 import { StatusPill } from "@/components/status-pill";
 import { ReservationModal } from "@/components/reservation-modal";
+import { MoveShelfModal } from "@/components/move-shelf-modal";
 import type { PersonSummary } from "@/components/person-combobox";
 import { DeleteCopiesModal } from "@/components/delete-copies-modal";
 import { LibrarySelectionBar } from "@/components/library-selection-bar";
@@ -78,6 +79,7 @@ export default function LibraryBrowsePage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [reserveModal, setReserveModal] = useState<{ mode: "create" | "edit"; rows: Row[] } | null>(null);
+  const [moveShelfModal, setMoveShelfModal] = useState<Row[] | null>(null);
   const [deleteModal, setDeleteModal] = useState<Row[] | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null);
   const [notePopup, setNotePopup] = useState<{ copyId: string; bookTitle: string; note: string } | null>(null);
@@ -191,6 +193,7 @@ export default function LibraryBrowsePage() {
   function onFinished() {
     setSelected(new Set());
     setReserveModal(null);
+    setMoveShelfModal(null);
     setDeleteModal(null);
     runSearch(query);
   }
@@ -215,7 +218,6 @@ export default function LibraryBrowsePage() {
   }
 
   const selectedRows = useMemo(() => [...selected].map((id) => rowsById.get(id)).filter((r): r is Row => !!r), [selected, rowsById]);
-  const anySelectedReserved = selectedRows.some((r) => r.reservation);
 
   function openRowReserve(row: Row) {
     setReserveModal({ mode: row.reservation ? "edit" : "create", rows: [row] });
@@ -315,10 +317,9 @@ export default function LibraryBrowsePage() {
       {canEdit && selected.size > 0 && (
         <LibrarySelectionBar
           count={selected.size}
-          anyReserved={anySelectedReserved}
           onClear={() => setSelected(new Set())}
-          onReserve={() => setReserveModal({ mode: "create", rows: selectedRows })}
           onEditReservations={() => setReserveModal({ mode: "edit", rows: selectedRows })}
+          onMoveShelf={() => setMoveShelfModal(selectedRows)}
           onDelete={() => setDeleteModal(selectedRows)}
         />
       )}
@@ -399,8 +400,23 @@ export default function LibraryBrowsePage() {
                 <p className="truncate font-sans text-xs text-ink-soft">
                   {row.book.authors.join(", ") || "Unknown author"}
                 </p>
-                <p className="mt-1 font-mono text-[11px] text-ink-faint">
-                  {row.shelf?.name ?? "No shelf"} · {formatDate(row.addedAt)}
+                <p className="mt-1 flex min-w-0 items-center gap-1 font-mono text-[11px] text-ink-faint">
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMoveShelfModal([row]);
+                      }}
+                      title="Move shelf"
+                      className="max-w-[140px] truncate underline decoration-dotted hover:text-ink"
+                    >
+                      {row.shelf?.name ?? "No shelf"}
+                    </button>
+                  ) : (
+                    <span className="max-w-[140px] truncate">{row.shelf?.name ?? "No shelf"}</span>
+                  )}
+                  <span className="flex-shrink-0">· {formatDate(row.addedAt)}</span>
                 </p>
                 {row.reservation && (
                   <p className="mt-1 truncate font-sans text-xs text-reserved-text">
@@ -513,8 +529,22 @@ export default function LibraryBrowsePage() {
                   <td className="max-w-[170px] truncate py-2.5 font-sans text-ink-soft">
                     {row.book.authors.join(", ") || "Unknown author"}
                   </td>
-                  <td className="hidden truncate py-2.5 font-mono text-[13px] text-ink sm:table-cell">
-                    {row.shelf?.name ?? "—"}
+                  <td className="hidden max-w-[160px] truncate py-2.5 font-mono text-[13px] text-ink sm:table-cell">
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMoveShelfModal([row]);
+                        }}
+                        title="Move shelf"
+                        className="max-w-full truncate underline decoration-dotted hover:text-accent"
+                      >
+                        {row.shelf?.name ?? "No shelf"}
+                      </button>
+                    ) : (
+                      row.shelf?.name ?? "—"
+                    )}
                   </td>
                   <td className="hidden py-2.5 font-mono text-[12px] text-ink-soft md:table-cell">
                     {formatDate(row.addedAt)}
@@ -617,8 +647,22 @@ export default function LibraryBrowsePage() {
               <p className="truncate font-sans text-xs text-ink-soft">
                 {row.book.authors.join(", ") || "Unknown author"}
               </p>
-              <div className="flex items-center justify-between font-mono text-[11px] text-ink-faint">
-                <span className="truncate">{row.shelf?.name ?? "No shelf"}</span>
+              <div className="flex items-center justify-between gap-2 font-mono text-[11px] text-ink-faint">
+                {canEdit ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMoveShelfModal([row]);
+                    }}
+                    title="Move shelf"
+                    className="min-w-0 truncate text-left underline decoration-dotted hover:text-ink"
+                  >
+                    {row.shelf?.name ?? "No shelf"}
+                  </button>
+                ) : (
+                  <span className="min-w-0 truncate">{row.shelf?.name ?? "No shelf"}</span>
+                )}
                 <span className="flex-shrink-0">{formatDate(row.addedAt)}</span>
               </div>
               {row.reservation && (
@@ -715,6 +759,9 @@ export default function LibraryBrowsePage() {
           onClose={() => setReserveModal(null)}
           onDone={onFinished}
         />
+      )}
+      {moveShelfModal && (
+        <MoveShelfModal copies={moveShelfModal.map(toModalCopy)} code={code} onClose={() => setMoveShelfModal(null)} onDone={onFinished} />
       )}
       {deleteModal && (
         <DeleteCopiesModal copies={deleteModal.map(toModalCopy)} code={code} onClose={() => setDeleteModal(null)} onDone={onFinished} />

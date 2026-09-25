@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { CreateShelfForm } from "@/components/create-shelf-form";
 import { ShelfManageRow } from "@/components/shelf-manage-row";
 
-type Shelf = { id: string; name: string; copyCount: number };
+type Shelf = { id: string; name: string; code: string | null; copyCount: number };
 
 /**
  * Collapsed-by-default disclosure over the shelf list, with a name/code filter once open --
@@ -19,7 +19,7 @@ export function ShelvesSection({ shelves, code }: { shelves: Shelf[]; code: stri
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
     if (!q) return shelves;
-    return shelves.filter((s) => s.name.toLowerCase().includes(q));
+    return shelves.filter((s) => s.name.toLowerCase().includes(q) || s.code?.toLowerCase().includes(q));
   }, [shelves, filter]);
 
   return (
@@ -51,7 +51,7 @@ export function ShelvesSection({ shelves, code }: { shelves: Shelf[]; code: stri
             <input
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter by name…"
+              placeholder="Filter by name or code…"
               className="mb-2 w-full border-b border-line-strong bg-transparent px-0.5 py-2 font-sans text-sm text-ink placeholder:text-ink-faint focus-visible:border-accent focus-visible:outline-none"
             />
           )}

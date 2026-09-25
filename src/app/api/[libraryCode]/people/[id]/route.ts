@@ -27,13 +27,13 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/[libra
   const { name, phone, location, birthday } = parsed.data;
   const email = parsed.data.email !== undefined ? (parsed.data.email ? parsed.data.email.toLowerCase() : null) : undefined;
 
-  if (email) {
+  if (name !== undefined) {
     const clash = await prisma.person.findFirst({
-      where: { libraryId: context.library.id, email, id: { not: id } },
+      where: { libraryId: context.library.id, name, id: { not: id } },
     });
     if (clash) {
       return NextResponse.json(
-        { error: `This email already belongs to ${clash.name}`, conflictingPersonId: clash.id },
+        { error: `A person named "${clash.name}" already exists`, conflictingPersonId: clash.id },
         { status: 409 }
       );
     }

@@ -81,7 +81,7 @@ export default async function SettingsPage({ params }: PageProps<"/[libraryCode]
           <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Shelves</h2>
           <ShelvesSection
             code={libraryCode}
-            shelves={shelves.map((shelf) => ({ id: shelf.id, name: shelf.name, copyCount: shelf._count.copies }))}
+            shelves={shelves.map((shelf) => ({ id: shelf.id, name: shelf.name, code: shelf.code, copyCount: shelf._count.copies }))}
           />
         </section>
       )}
