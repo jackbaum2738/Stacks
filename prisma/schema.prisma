@@ -33,6 +33,7 @@ model User {
   backupsTaken        Library[]            @relation("LibraryLastBackupBy")
   passwordResetTokens PasswordResetToken[]
   invitesSent         LibraryInvite[]      @relation("LibraryInviteSentBy")
+  emailChangeRequest  EmailChangeRequest?
 }
 
 /// A one-time, short-lived token emailed to a user who requested a password reset. Stores
@@ -51,6 +52,26 @@ model PasswordResetToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// A pending, unverified email change -- the row's mere existence *is* "pending" (same
+/// delete-not-flag pattern as LibraryInvite/Reservation-release, see CLAUDE.md). One row per
+/// user (`userId` unique) since only one change can be in flight; requesting a different new
+/// address while one is already pending replaces this row outright rather than stacking a
+/// second. Stores only a hash of the token, same reasoning as PasswordResetToken -- unlike
+/// LibraryInvite, a resend rotates the token rather than reusing it, so an old link stops
+/// working the moment a new one is issued. `lastSentAt` gates the 60s resend cooldown, but
+/// only for re-sending to the SAME pending address; switching to a genuinely different address
+/// always goes through immediately.
+model EmailChangeRequest {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  newEmail   String
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  lastSentAt DateTime @default(now())
+  expiresAt  DateTime
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// A single household/network member's library of physical books.

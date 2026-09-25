@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formLabelClass, formInputClass } from "@/lib/form-styles";
 import { isPasswordValid, isValidEmailShape } from "@/lib/account-validation";
@@ -11,20 +11,43 @@ import { ReauthModal } from "@/components/reauth-modal";
 type Field = "name" | "username" | "email" | "password";
 type PendingAction = { field: Field; payload: Record<string, string> } | null;
 
+/** Matches the email-change routes' own cooldown -- see src/lib/email-change.ts. */
+const EMAIL_RESEND_COOLDOWN_MS = 60_000;
+
 export function ProfileForm({
   initialName,
   initialUsername,
   initialEmail,
+  initialPendingEmail,
+  initialPendingLastSentAt,
 }: {
   initialName: string;
   initialUsername: string;
   initialEmail: string;
+  initialPendingEmail: string | null;
+  initialPendingLastSentAt: string | null;
 }) {
   const router = useRouter();
 
   const [name, setName] = useState(initialName);
   const [username, setUsername] = useState(initialUsername);
-  const [email, setEmail] = useState(initialEmail);
+  const [email] = useState(initialEmail);
+  const [pendingEmail, setPendingEmail] = useState(initialPendingEmail);
+  const [pendingLastSentAt, setPendingLastSentAt] = useState(initialPendingLastSentAt);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Ticks once a second only while the pending link is on cooldown, same pattern as
+  // OpenInviteRow's resend countdown.
+  useEffect(() => {
+    if (!pendingLastSentAt) return;
+    const remaining = new Date(pendingLastSentAt).getTime() + EMAIL_RESEND_COOLDOWN_MS - Date.now();
+    if (remaining <= 0) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [pendingLastSentAt]);
 
   const [openField, setOpenField] = useState<Field | null>(null);
   const [pending, setPending] = useState<PendingAction>(null);
@@ -72,7 +95,7 @@ export function ProfileForm({
       setUsernameError(null);
     }
     if (field === "email") {
-      setEmailInput("");
+      setEmailInput(pendingEmail ?? "");
       setEmailError(null);
     }
     if (field === "password") {
@@ -151,8 +174,9 @@ export function ProfileForm({
       setUsername(pending.payload.username);
       showToast("Saved.");
     } else if (pending.field === "email") {
-      setEmail(pending.payload.email);
-      showToast("Saved.");
+      setPendingEmail(data.pendingEmail ?? pending.payload.email);
+      setPendingLastSentAt(data.lastSentAt ?? new Date().toISOString());
+      showToast("Verification link sent.");
     } else if (pending.field === "password") {
       showToast("Password changed.");
     }
@@ -167,9 +191,39 @@ export function ProfileForm({
     setPending(null);
   }
 
+  async function resendPendingEmail() {
+    setResendBusy(true);
+    setResendError(null);
+    const res = await fetch("/api/account/email/resend", { method: "POST" });
+    setResendBusy(false);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setResendError(data.error ?? "Couldn't resend — please try again.");
+      return;
+    }
+    setPendingLastSentAt(data.lastSentAt);
+    setNow(Date.now());
+  }
+
+  async function cancelPendingEmail() {
+    setCancelBusy(true);
+    const res = await fetch("/api/account/email", { method: "DELETE" });
+    setCancelBusy(false);
+    if (!res.ok) return;
+    setPendingEmail(null);
+    setPendingLastSentAt(null);
+    setResendError(null);
+  }
+
   const emailShapeOk = isValidEmailShape(emailInput);
   const emailShapeError = emailInput.length > 0 && !emailShapeOk;
-  const emailSaveDisabled = !emailShapeOk;
+  const emailRemainingMs = pendingLastSentAt
+    ? Math.max(0, new Date(pendingLastSentAt).getTime() + EMAIL_RESEND_COOLDOWN_MS - now)
+    : 0;
+  const isResendOfPending = !!pendingEmail && emailInput.trim().toLowerCase() === pendingEmail.toLowerCase();
+  const emailOnCooldown = isResendOfPending && emailRemainingMs > 0;
+  const emailSaveDisabled = !emailShapeOk || emailOnCooldown;
+  const emailSaveLabel = emailOnCooldown ? `Resend in ${Math.ceil(emailRemainingMs / 1000)}s` : "Send verification link";
 
   const pw1Valid = isPasswordValid(pw1);
   const pwMismatch = pw2.length > 0 && pw1 !== pw2;
@@ -276,6 +330,37 @@ export function ProfileForm({
             Change
           </button>
         </div>
+        {pendingEmail && (
+          <div className="mt-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="font-mono text-[13px] text-ink-muted">{pendingEmail}</span>
+              <span className="rounded-[2px] bg-pill-reserved-bg px-[7px] py-[2px] font-mono text-[10px] tracking-[.06em] text-pill-reserved-fg uppercase">
+                Not verified
+              </span>
+            </div>
+            <div className="mt-1.5 flex gap-3.5">
+              <button
+                onClick={resendPendingEmail}
+                disabled={resendBusy || emailRemainingMs > 0}
+                className="font-sans text-[12.5px] font-semibold text-accent-2 hover:underline disabled:opacity-50"
+              >
+                {emailRemainingMs > 0 ? `Resend in ${Math.ceil(emailRemainingMs / 1000)}s` : "Resend link"}
+              </button>
+              <button
+                onClick={cancelPendingEmail}
+                disabled={cancelBusy}
+                className="font-sans text-[12.5px] font-semibold text-ink-faint hover:underline disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+            {resendError && <p className="mt-1 font-mono text-xs text-accent">{resendError}</p>}
+            <p className="mt-1.5 font-sans text-xs text-ink-faint">
+              We sent a verification link to {pendingEmail}. Until it&apos;s clicked, sign-in and everything else keeps using
+              the address above.
+            </p>
+          </div>
+        )}
         {openField === "email" && (
           <div className="mt-3.5 flex flex-col gap-3.5 rounded-r-[2px] border-l-[3px] border-accent-2 bg-[color-mix(in_srgb,var(--accent-2)_10%,var(--surface))] p-4">
             <div>
@@ -289,6 +374,10 @@ export function ProfileForm({
                 onChange={(e) => setEmailInput(e.target.value)}
                 className={formInputClass}
               />
+              <p className="mt-1 font-sans text-xs text-ink-soft">
+                We&apos;ll send a verification link to the new address. Your current email keeps working until the new one is
+                verified.
+              </p>
               {emailShapeError && <p className="mt-1 font-mono text-xs text-accent">Enter a valid email.</p>}
               {emailError && <p className="mt-1 font-mono text-xs text-accent">{emailError}</p>}
             </div>
@@ -298,7 +387,7 @@ export function ProfileForm({
                 onClick={saveEmail}
                 className="rounded-[2px] bg-accent px-4 py-[9px] font-sans text-[13px] font-semibold text-on-accent hover:brightness-95 disabled:opacity-40"
               >
-                Save
+                {emailSaveLabel}
               </button>
               <button onClick={closeInline} className="rounded-[2px] border border-line-strong px-4 py-[9px] font-sans text-[13px] font-semibold text-ink-soft hover:bg-line hover:text-ink">
                 Cancel

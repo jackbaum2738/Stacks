@@ -1,12 +1,15 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getPendingEmailChange } from "@/lib/email-change";
 import { ProfileForm } from "@/components/profile-form";
 import { DeleteAccountSection } from "@/components/delete-account-section";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const pendingEmailChange = await getPendingEmailChange(user.id);
 
   const libraryIds = user.memberships.map((m) => m.libraryId);
   const counts = libraryIds.length
@@ -34,7 +37,13 @@ export default async function ProfilePage() {
   return (
     <div className="mx-auto max-w-[480px] space-y-6">
       <h1 className="font-display text-[32px] font-semibold text-ink">Profile</h1>
-      <ProfileForm initialName={user.name ?? ""} initialUsername={user.username} initialEmail={user.email} />
+      <ProfileForm
+        initialName={user.name ?? ""}
+        initialUsername={user.username}
+        initialEmail={user.email}
+        initialPendingEmail={pendingEmailChange?.newEmail ?? null}
+        initialPendingLastSentAt={pendingEmailChange?.lastSentAt.toISOString() ?? null}
+      />
       <DeleteAccountSection username={user.username} libraries={libraries} />
     </div>
   );
