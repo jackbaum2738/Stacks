@@ -577,6 +577,50 @@ deliberate scope cut, since `prefers-color-scheme` support in email clients is i
 most strip `<style>` blocks anyway; revisit only if Jack asks. (This is also why the email
 always uses the light-background PNG variant, never the dark one.)
 
+**Confirmed email changes (`EmailChangeRequest`) — key decisions if you touch this again:**
+`PATCH /api/account/email` no longer writes `User.email` directly — it only ever issues a
+verification token; the actual column update happens when that link is clicked
+(`consumeEmailChangeToken` in `src/lib/email-change.ts`). `EmailChangeRequest.userId` is unique,
+so only one change is ever in flight per user, and — same delete-not-flag pattern as
+`LibraryInvite`/reservation release (see "Bugs found and fixed") — the row's mere existence *is*
+"pending"; confirming or cancelling both delete it outright. Only a SHA-256 hash of the token is
+ever stored (same reasoning as `PasswordResetToken`), with a 1-hour expiry, and **a resend
+rotates the token rather than reusing it** (unlike `LibraryInvite`, which does reuse its raw
+token) — deliberately more paranoid here since this token can change what address controls the
+account. Two emails go out, to different audiences and with different content: "Verify your
+email" to the *new* address (`src/lib/emails/email-change-verify.ts`) is worded as "you" and
+names the account's username, on the assumption the requester owns that inbox and wants to sign
+in with it — it shows no other email addresses, since this inbox may belong to someone who's
+never used Stacks; "Email change requested" to the *old*/current address
+(`email-change-notice.ts`) is the one email of the pair that names an address (the new one, so
+the owner knows exactly what's being changed to), carries no link of its own since that inbox
+isn't the one being verified, and exists purely as a heads-up plus an escape hatch if the
+request wasn't legitimate. **Resend vs. a genuinely new request are different code paths in the
+same `PATCH` handler**: re-submitting the *same* address that's already pending is treated as a
+resend (60s cooldown, same pattern as `LibraryInvite` resend, and does **not** re-send the
+notice to the old address) while submitting a *different* address bypasses the cooldown
+entirely and re-sends both emails — Jack's explicit call: a real change-of-mind shouldn't be
+throttled by a cooldown meant to stop spamming one already-pending link. The dedicated
+`POST /api/account/email/resend` route (used by the Profile page's plain "Resend link" button)
+needs no password, since it doesn't change what's pending, only re-delivers it — `PATCH` itself
+still requires `currentPassword` via the existing re-auth flow, for both a first request and a
+Change-while-pending resubmission. `isValidEmailShape` (`src/lib/account-validation.ts`) was
+fixed in the same PR to reject a second "@" — the original rule checked for a letter before/
+after the following "." but never actually verified there was only one "@", so something like
+`a@b@c.com` passed everywhere it was used (sign-up, profile, and this new field all share the
+one function, so all three were fixed at once). `/confirm-email` (new top-level page, not under
+`/dashboard`) does the actual consuming on a plain page load — unlike password reset, there's no
+form step here, since clicking the emailed link *is* the confirming action; a missing, expired,
+or already-used token shows the same "Link no longer valid" wording used elsewhere. Mocked up
+first as an Artifact over several rounds before any code was touched: iterations covered
+dropping a redundant "confirm new email" field, splitting one email into two with per-audience
+wording, matching cooldown behavior to whether the address is actually changing, and swapping a
+hand-drawn logo approximation for the real `FullLogo` PNG asset and `renderEmailLayout` shared
+header/footer. Verified with a live local Playwright run covering both the profile-page
+interaction (validation, duplicate-email 409, resend cooldown, change-while-pending, cancel) and
+the real confirm-link round trip (token consumed atomically, a second visit to the same link
+shows "no longer valid", sign-in works with the new email and stops working with the old one).
+
 **ISBN lookup diagnostic log (`BookLookupLog`) — key decisions if you touch this again:** came
 from Jack noticing real scans failing to find book details and wanting to see why, in a
 project-thread session. His first idea was a plain text log file; declined because Stacks runs
@@ -1312,6 +1356,20 @@ not just the PR they were stated in:
   the actual point of the feature — plus the "no access" message for a non-member's library code,
   the switcher UI, and the `/dashboard` lobby redirect. Test accounts/libraries/shelves/copies
   cleaned up from the local database afterward.
+- **PR #64** (`claude/email-change-confirmation`) — added click-to-confirm email changes (see the
+  "Confirmed email changes" note under "Data model" above for the full design). Built from a
+  project-thread request; mocked up first as an interactive Artifact over four rounds of Jack's
+  feedback before any code was touched — dropping a redundant confirm-email field, splitting the
+  single notification into two emails with per-audience wording, dropping the resend cooldown for
+  a genuine address change while keeping it for a same-address resubmission, and using the real
+  `FullLogo` asset instead of a hand-drawn approximation. Also fixed a real, separately-reported
+  bug in the same PR: `isValidEmailShape` never actually rejected a second "@", so sign-up,
+  profile, and this new field all picked up the fix from the one shared function. Verified with a
+  live local Playwright run covering the profile-page interaction (live validation, a 409 for an
+  email already on another account, the resend cooldown, reopening Change while pending, cancel)
+  and the real confirm-link round trip end to end (atomic single-use consumption, sign-in working
+  with the new email and failing with the old one). Test accounts cleaned up from the local
+  database afterward.
 
 ## Keeping this file current
 

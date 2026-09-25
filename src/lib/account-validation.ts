@@ -17,11 +17,12 @@ export function isPasswordValid(password: string): boolean {
   return checks.length && checks.number && checks.special;
 }
 
-/** No quote characters anywhere; an "@"; a letter before the following "."; a letter after it. */
+/** No quote characters anywhere; exactly one "@"; a letter before the following "."; a letter after it. */
 export function isValidEmailShape(email: string): boolean {
   if (email.includes('"')) return false;
   const at = email.indexOf("@");
   if (at <= 0) return false;
+  if (email.indexOf("@", at + 1) !== -1) return false;
   const domain = email.slice(at + 1);
   const dot = domain.indexOf(".");
   if (dot <= 0) return false;
