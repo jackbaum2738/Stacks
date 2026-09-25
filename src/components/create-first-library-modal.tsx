@@ -43,8 +43,8 @@ export function CreateFirstLibraryModal() {
         setError(data.error ?? "Something went wrong");
         return;
       }
-      router.push("/dashboard");
-      router.refresh();
+      const data = await res.json();
+      router.push(`/${data.library.code}`);
     });
   }
 

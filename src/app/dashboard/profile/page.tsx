@@ -27,7 +27,7 @@ export default async function ProfilePage() {
       const memberCount = memberCountByLibrary.get(m.libraryId) ?? 1;
       const outcome: keyof typeof outcomeRank =
         memberCount === 1 ? "delete" : m.role === "OWNER" ? "transfer" : "remove";
-      return { id: m.libraryId, name: m.library.name, role: m.role, memberCount, outcome };
+      return { id: m.libraryId, code: m.library.code, name: m.library.name, role: m.role, memberCount, outcome };
     })
     .sort((a, b) => outcomeRank[a.outcome] - outcomeRank[b.outcome] || a.name.localeCompare(b.name));
 

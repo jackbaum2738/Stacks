@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function CreateShelfForm() {
+export function CreateShelfForm({ code }: { code: string }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +14,7 @@ export function CreateShelfForm() {
     setSubmitting(true);
     setError(null);
 
-    const res = await fetch("/api/shelves", {
+    const res = await fetch(`/api/${code}/shelves`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),

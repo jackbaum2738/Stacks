@@ -32,7 +32,7 @@ interface CopyDetailData {
   reservation: { id: string; person: PersonSummary | null; createdAt: Date } | null;
 }
 
-export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; libraryName: string }) {
+export function CopyDetail({ copy, code, libraryName }: { copy: CopyDetailData; code: string; libraryName: string }) {
   const router = useRouter();
   const { canEdit } = useLibraryRole();
   const [reserveModal, setReserveModal] = useState<"create" | "edit" | null>(null);
@@ -59,7 +59,7 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
           )}
         </div>
 
-        <CopyNotecard copyId={copy.id} initialNote={copy.notes} />
+        <CopyNotecard copyId={copy.id} code={code} initialNote={copy.notes} />
       </div>
 
       <div className="min-w-0">
@@ -145,7 +145,7 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
               Remove from library
             </button>
             <Link
-              href={`/dashboard/copies/${copy.id}/edit`}
+              href={`/${code}/copies/${copy.id}/edit`}
               className="inline-flex items-center gap-1.5 rounded-[2px] border border-line-strong px-[18px] py-[11px] font-sans text-sm font-medium text-ink hover:bg-chip-hover"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
@@ -162,6 +162,7 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
         <ReservationModal
           mode={reserveModal}
           copies={[modalCopy]}
+          code={code}
           onClose={() => setReserveModal(null)}
           onDone={() => setReserveModal(null)}
         />
@@ -169,8 +170,9 @@ export function CopyDetail({ copy, libraryName }: { copy: CopyDetailData; librar
       {canEdit && deleteModal && (
         <DeleteCopiesModal
           copies={[modalCopy]}
+          code={code}
           onClose={() => setDeleteModal(false)}
-          onDone={() => router.push("/dashboard/library")}
+          onDone={() => router.push(`/${code}/library`)}
         />
       )}
     </div>

@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function ShelfManageRow({ shelf }: { shelf: { id: string; name: string; copyCount: number } }) {
+export function ShelfManageRow({
+  shelf,
+  code,
+}: {
+  shelf: { id: string; name: string; copyCount: number };
+  code: string;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(shelf.name);
@@ -15,7 +21,7 @@ export function ShelfManageRow({ shelf }: { shelf: { id: string; name: string; c
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/shelves/${shelf.id}`, {
+    const res = await fetch(`/api/${code}/shelves/${shelf.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
@@ -33,7 +39,7 @@ export function ShelfManageRow({ shelf }: { shelf: { id: string; name: string; c
   async function remove() {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/shelves/${shelf.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/${code}/shelves/${shelf.id}`, { method: "DELETE" });
     setBusy(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));

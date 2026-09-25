@@ -13,7 +13,7 @@ export interface SentInvite {
   lastSentAt: string;
 }
 
-export function SendInviteForm({ onSent }: { onSent: (invite: SentInvite) => void }) {
+export function SendInviteForm({ code, onSent }: { code: string; onSent: (invite: SentInvite) => void }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InvitableRole>("MEMBER");
   const [busy, setBusy] = useState(false);
@@ -23,7 +23,7 @@ export function SendInviteForm({ onSent }: { onSent: (invite: SentInvite) => voi
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/library/invites", {
+    const res = await fetch(`/api/${code}/invites`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, role }),

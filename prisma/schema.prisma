@@ -56,6 +56,11 @@ model PasswordResetToken {
 /// A single household/network member's library of physical books.
 model Library {
   id                 String         @id @default(cuid())
+  /// Random "L-XXXXXX" identifier (src/lib/library-code.ts, same pattern as Person/Copy
+  /// codes) that appears in every URL for this library (e.g. /L-7K3M9Q/library) so a
+  /// shareable link doesn't depend on which library is active in the visitor's session --
+  /// globally unique, unlike Person/Copy codes, since it's the thing routing itself keys off.
+  code               String         @unique
   name               String
   slug               String         @unique
   createdAt          DateTime       @default(now())

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { generateUniqueLibraryCode } from "@/lib/library-code";
 
 export async function uniqueSlug(libraryName: string) {
   const baseSlug = slugify(libraryName) || "library";
@@ -14,11 +15,12 @@ export async function uniqueSlug(libraryName: string) {
 
 /** Creates a new library (with a default shelf) owned by the given user. */
 export async function createLibraryForUser(userId: string, libraryName: string) {
-  const slug = await uniqueSlug(libraryName);
+  const [slug, code] = await Promise.all([uniqueSlug(libraryName), generateUniqueLibraryCode(prisma)]);
   return prisma.library.create({
     data: {
       name: libraryName,
       slug,
+      code,
       shelves: { create: [{ name: "Unsorted" }] },
       memberships: { create: { userId, role: "OWNER" } },
     },

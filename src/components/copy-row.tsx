@@ -16,10 +16,12 @@ interface CopyRowData {
 
 export function CopyRow({
   copy,
+  code,
   showShelf = true,
   onUpdated,
 }: {
   copy: CopyRowData;
+  code: string;
   showShelf?: boolean;
   /** Called after a successful reserve/release/remove, for pages whose data isn't server-rendered (router.refresh() alone won't update those). */
   onUpdated?: () => void;
@@ -36,7 +38,7 @@ export function CopyRow({
     if (!person) return;
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/reservations", {
+    const res = await fetch(`/api/${code}/reservations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ copyId: copy.id, personId: person.id }),
@@ -56,7 +58,7 @@ export function CopyRow({
   async function release() {
     if (!copy.reservation) return;
     setBusy(true);
-    await fetch(`/api/reservations/${copy.reservation.id}`, {
+    await fetch(`/api/${code}/reservations/${copy.reservation.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ release: true }),
@@ -69,7 +71,7 @@ export function CopyRow({
   async function remove() {
     if (!window.confirm(`Remove "${copy.book.title}" from your library?`)) return;
     setBusy(true);
-    await fetch(`/api/copies/${copy.id}`, { method: "DELETE" });
+    await fetch(`/api/${code}/copies/${copy.id}`, { method: "DELETE" });
     setBusy(false);
     router.refresh();
     onUpdated?.();
@@ -140,7 +142,7 @@ export function CopyRow({
 
       {canEdit && showReserveForm && (
         <form onSubmit={reserve} className="flex flex-wrap items-center gap-2 border border-line bg-bg p-3">
-          <PersonCombobox selected={person} onChange={setPerson} required />
+          <PersonCombobox code={code} selected={person} onChange={setPerson} required />
           <button
             type="submit"
             disabled={busy || !person}

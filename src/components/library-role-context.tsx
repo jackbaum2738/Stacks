@@ -6,6 +6,8 @@ import { canEditLibrary, canManageLibrarySettings, isOwner } from "@/lib/permiss
 
 interface LibraryRoleValue {
   role: Role;
+  /** The active library's "L-XXXXXX" code, for building /{code}/... links and /api/{code}/... fetch URLs. */
+  code: string;
   /** Scan/reserve/edit books — false for View Only. */
   canEdit: boolean;
   /** Shelves, invite links, import, member management — Owner/Admin only. */
@@ -15,9 +17,18 @@ interface LibraryRoleValue {
 
 const LibraryRoleContext = createContext<LibraryRoleValue | null>(null);
 
-export function LibraryRoleProvider({ role, children }: { role: Role; children: React.ReactNode }) {
+export function LibraryRoleProvider({
+  role,
+  code,
+  children,
+}: {
+  role: Role;
+  code: string;
+  children: React.ReactNode;
+}) {
   const value: LibraryRoleValue = {
     role,
+    code,
     canEdit: canEditLibrary(role),
     canManage: canManageLibrarySettings(role),
     isOwner: isOwner(role),

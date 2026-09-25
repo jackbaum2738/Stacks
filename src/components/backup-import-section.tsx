@@ -242,10 +242,12 @@ const btnGhost =
   "rounded-[2px] border border-line-strong px-4 py-2 font-sans text-sm font-medium text-ink hover:bg-chip-hover disabled:opacity-50";
 
 export function BackupImportSection({
+  code,
   lastBackup: initialLastBackup,
   canImport,
   canExport,
 }: {
+  code: string;
   lastBackup: { atLabel: string; byName: string } | null;
   canImport: boolean;
   canExport: boolean;
@@ -364,7 +366,7 @@ export function BackupImportSection({
 
   async function handleBackupDownload() {
     setDownloadBusy(true);
-    const res = await fetch("/api/library/export");
+    const res = await fetch(`/api/${code}/export`);
     setDownloadBusy(false);
     if (!res.ok) {
       setError("Couldn't create a backup — please try again.");
@@ -396,7 +398,7 @@ export function BackupImportSection({
     fallbackName: string
   ) {
     setBusy2(true);
-    const res = await fetch(`/api/library/export/${kind}`);
+    const res = await fetch(`/api/${code}/export/${kind}`);
     setBusy2(false);
     if (!res.ok) {
       setError(`Couldn't export ${kind === "books" ? "the library" : "people"} — please try again.`);
@@ -409,7 +411,7 @@ export function BackupImportSection({
   }
 
   async function handleTemplateDownload() {
-    const res = await fetch("/api/library/import-template");
+    const res = await fetch(`/api/${code}/import-template`);
     if (!res.ok) {
       setError("Couldn't create the template — please try again.");
       return;
@@ -507,7 +509,7 @@ export function BackupImportSection({
       let people: PeopleSummary | null = null;
 
       if (parsed.books) {
-        const res = await fetch("/api/library/import", {
+        const res = await fetch(`/api/${code}/import`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rows: buildImportRows(parsed.books), dryRun: true }),
@@ -516,7 +518,7 @@ export function BackupImportSection({
         books = await res.json();
       }
       if (parsed.people) {
-        const res = await fetch("/api/library/import-people", {
+        const res = await fetch(`/api/${code}/import-people`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rows: buildImportRows(parsed.people), dryRun: true }),
@@ -610,7 +612,7 @@ export function BackupImportSection({
         const startedAt = performance.now();
         let res: Response;
         try {
-          res = await fetch("/api/library/import-people", {
+          res = await fetch(`/api/${code}/import-people`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ rows: batch }),
@@ -641,7 +643,7 @@ export function BackupImportSection({
         const startedAt = performance.now();
         let res: Response;
         try {
-          res = await fetch("/api/library/import", {
+          res = await fetch(`/api/${code}/import`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ rows: batch }),

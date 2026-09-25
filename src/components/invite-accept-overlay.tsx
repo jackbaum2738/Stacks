@@ -74,14 +74,14 @@ export function InviteAcceptOverlay({
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/invite/${token}/accept`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
       setBusy(false);
       setError(data.error ?? "Something went wrong");
       return;
     }
-    dismiss();
-    router.refresh();
+    onDismiss?.();
+    router.push(`/${data.libraryCode}`);
   }
 
   if (!token) return null;

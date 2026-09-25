@@ -11,10 +11,12 @@ interface ModalCopy {
 
 export function DeleteCopiesModal({
   copies,
+  code,
   onClose,
   onDone,
 }: {
   copies: ModalCopy[];
+  code: string;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -37,7 +39,7 @@ export function DeleteCopiesModal({
   async function confirm() {
     setBusy(true);
     setError(null);
-    const results = await Promise.allSettled(copies.map((c) => fetch(`/api/copies/${c.id}`, { method: "DELETE" })));
+    const results = await Promise.allSettled(copies.map((c) => fetch(`/api/${code}/copies/${c.id}`, { method: "DELETE" })));
     setBusy(false);
     const failed = results.some((r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok));
     if (failed) {

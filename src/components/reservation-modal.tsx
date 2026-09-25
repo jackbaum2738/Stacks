@@ -25,11 +25,13 @@ function commonPerson(copies: ModalCopy[]): PersonSummary | null {
 export function ReservationModal({
   mode,
   copies,
+  code,
   onClose,
   onDone,
 }: {
   mode: "create" | "edit";
   copies: ModalCopy[];
+  code: string;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -52,12 +54,12 @@ export function ReservationModal({
     const results = await Promise.allSettled(
       targets.map((c) =>
         c.reservation
-          ? fetch(`/api/reservations/${c.reservation.id}`, {
+          ? fetch(`/api/${code}/reservations/${c.reservation.id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ personId: person.id }),
             })
-          : fetch("/api/reservations", {
+          : fetch(`/api/${code}/reservations`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ copyId: c.id, personId: person.id }),
@@ -83,7 +85,7 @@ export function ReservationModal({
       targets
         .filter((c) => c.reservation)
         .map((c) =>
-          fetch(`/api/reservations/${c.reservation!.id}`, {
+          fetch(`/api/${code}/reservations/${c.reservation!.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ release: true }),
@@ -138,6 +140,7 @@ export function ReservationModal({
           </label>
           <PersonCombobox
             id="reservationModalName"
+            code={code}
             selected={person}
             onChange={setPerson}
             required

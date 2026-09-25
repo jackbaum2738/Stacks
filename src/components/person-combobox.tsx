@@ -24,12 +24,14 @@ function personDetail(person: Pick<PersonSummary, "email" | "phone" | "location"
  */
 export function PersonCombobox({
   id,
+  code,
   selected,
   onChange,
   required = false,
   placeholder = "Start typing a name…",
 }: {
   id?: string;
+  code: string;
   selected: PersonSummary | null;
   onChange: (person: PersonSummary | null) => void;
   required?: boolean;
@@ -45,11 +47,11 @@ export function PersonCombobox({
   const [addBusy, setAddBusy] = useState(false);
 
   useEffect(() => {
-    fetch("/api/people")
+    fetch(`/api/${code}/people`)
       .then((res) => res.json())
       .then((data) => setPeople(data.people ?? []))
       .catch(() => {});
-  }, []);
+  }, [code]);
 
   useEffect(() => {
     // One-time sync from the selection prop -- keeps the visible text in step whenever the
@@ -84,7 +86,7 @@ export function PersonCombobox({
     setAddBusy(true);
     setAddError(null);
     setAddConflict(null);
-    const res = await fetch("/api/people", {
+    const res = await fetch(`/api/${code}/people`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
