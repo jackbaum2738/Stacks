@@ -64,9 +64,11 @@ const HEADERS: { key: SortKey; label: string }[] = [
  */
 export function ReservedOverlay({
   initialFilter,
+  code,
   onClose,
 }: {
   initialFilter: string;
+  code: string;
   onClose: (changedCounts: ReservationCountChange[]) => void;
 }) {
   const { canEdit } = useLibraryRole();
@@ -81,7 +83,7 @@ export function ReservedOverlay({
 
   const load = useCallback(() => {
     setLoading(true);
-    return fetch("/api/reservations")
+    return fetch(`/api/${code}/reservations`)
       .then((res) => res.json())
       .then((data) => {
         const rows: ReservationRow[] = data.reservations ?? [];
@@ -89,7 +91,7 @@ export function ReservedOverlay({
         if (!initialCountsRef.current) initialCountsRef.current = countsByPerson(rows);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [code]);
 
   useEffect(() => {
     // One-time fetch on mount.
@@ -130,7 +132,7 @@ export function ReservedOverlay({
 
   async function release(reservation: ReservationRow) {
     setReleasingId(reservation.id);
-    await fetch(`/api/reservations/${reservation.id}`, {
+    await fetch(`/api/${code}/reservations/${reservation.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ release: true }),
@@ -252,6 +254,7 @@ export function ReservedOverlay({
               reservation: { id: editTarget.id, person: editTarget.person },
             },
           ]}
+          code={code}
           onClose={() => setEditTarget(null)}
           onDone={() => {
             setEditTarget(null);

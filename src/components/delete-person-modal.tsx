@@ -16,10 +16,12 @@ interface ModalPerson {
  */
 export function DeletePersonModal({
   person,
+  code,
   onClose,
   onDone,
 }: {
   person: ModalPerson;
+  code: string;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -36,7 +38,7 @@ export function DeletePersonModal({
   async function confirm() {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/people/${person.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/${code}/people/${person.id}`, { method: "DELETE" });
     setBusy(false);
     if (!res.ok) {
       setError("Couldn't remove this person — please try again.");

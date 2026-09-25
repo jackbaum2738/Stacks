@@ -5,7 +5,15 @@ import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "stacks_session";
-const ACTIVE_LIBRARY_COOKIE = "stacks_active_library";
+/**
+ * Purely a convenience hint for where to send a signed-in user from an entry point that
+ * doesn't itself name a library (the /dashboard lobby, a header logo link) -- stores the
+ * library's CODE, never used for authorization. Every actual library page/route resolves
+ * access from the code in its own URL (see getLibraryByCode below), not from any cookie, so
+ * two tabs open on two different library codes can never cross-contaminate -- at worst a
+ * stale/tampered hint here sends someone to the wrong (but still their own) library.
+ */
+export const LAST_LIBRARY_COOKIE = "stacks_last_library";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 function getSecretKey() {
@@ -60,9 +68,8 @@ export async function getSessionUserId(): Promise<string | null> {
 
 /**
  * Current user plus their library memberships, or null if not signed in. Wrapped in React's
- * `cache()` since the dashboard layout and its nested `(library)` gate layout (see that
- * layout's own comment) both need this on every request -- dedupes to one query per request
- * instead of two.
+ * `cache()` since a page and its layout(s) often both need this on every request -- dedupes
+ * to one query per request.
  */
 export const getCurrentUser = cache(async function getCurrentUser() {
   const userId = await getSessionUserId();
@@ -79,27 +86,58 @@ export const getCurrentUser = cache(async function getCurrentUser() {
   });
 });
 
-/** Marks which library a user with multiple memberships is currently working in. */
-export async function setActiveLibraryCookie(libraryId: string) {
+type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+
+/**
+ * Resolves the library named by a URL's "L-XXXXXX" code, checked against the signed-in
+ * user's own memberships. This -- not a cookie -- is what every /{code}/... page and
+ * /api/{code}/... route authorizes against, which is what makes it safe to have two
+ * different libraries open in two different tabs at once: each request's access comes
+ * entirely from the code in its own URL, never from session-wide state a sibling tab could
+ * have changed underneath it.
+ */
+export async function getLibraryByCode(code: string) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { status: "unauthenticated" as const, user: null, membership: null, library: null };
+  }
+
+  const membership = user.memberships.find((m) => m.library.code === code);
+  if (!membership) {
+    return { status: "forbidden" as const, user, membership: null, library: null };
+  }
+
+  return { status: "ok" as const, user, membership, library: membership.library };
+}
+
+/**
+ * Which library code to send a signed-in user to from an entry point that doesn't name one
+ * (the /dashboard lobby, the header logo) -- the last one they visited (LAST_LIBRARY_COOKIE),
+ * falling back to their first membership. Returns null only if they have no memberships at
+ * all. Never used for authorization -- see getLibraryByCode.
+ */
+export async function getDefaultLibraryCode(user: CurrentUser): Promise<string | null> {
+  if (user.memberships.length === 0) return null;
+
   const cookieStore = await cookies();
-  cookieStore.set(ACTIVE_LIBRARY_COOKIE, libraryId, {
+  const hint = cookieStore.get(LAST_LIBRARY_COOKIE)?.value;
+  const hinted = hint ? user.memberships.find((m) => m.library.code === hint) : undefined;
+
+  return (hinted ?? user.memberships[0]).library.code;
+}
+
+/**
+ * Sets the LAST_LIBRARY_COOKIE hint from server-side code that isn't proxy.ts itself (e.g.
+ * accepting an invite lands the new member somewhere they haven't visited via the URL yet,
+ * so there's no request path for proxy.ts to read the code from).
+ */
+export async function setLastLibraryCookie(code: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(LAST_LIBRARY_COOKIE, code, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });
-}
-
-/** The library a signed-in user is currently working in: their chosen active one, or their first membership. */
-export async function getCurrentLibrary() {
-  const user = await getCurrentUser();
-  if (!user || user.memberships.length === 0) return null;
-
-  const cookieStore = await cookies();
-  const activeLibraryId = cookieStore.get(ACTIVE_LIBRARY_COOKIE)?.value;
-  const active = activeLibraryId ? user.memberships.find((m) => m.libraryId === activeLibraryId) : undefined;
-  const membership = active ?? user.memberships[0];
-
-  return { user, membership, library: membership.library };
 }

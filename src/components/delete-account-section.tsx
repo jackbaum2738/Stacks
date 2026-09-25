@@ -7,7 +7,7 @@ import { ReauthModal } from "@/components/reauth-modal";
 import { LibraryLoadingOverlay } from "@/components/library-loading-overlay";
 
 type Outcome = "delete" | "transfer" | "remove";
-type LibraryRow = { id: string; name: string; role: Role; memberCount: number; outcome: Outcome };
+type LibraryRow = { id: string; code: string; name: string; role: Role; memberCount: number; outcome: Outcome };
 
 const ROLE_LABEL: Record<Role, string> = {
   OWNER: "Owner",
@@ -52,16 +52,10 @@ export function DeleteAccountSection({ username, libraries }: { username: string
     setReauthOpen(true);
   }
 
-  function switchAndOpenSettings(libraryId: string, libraryName: string) {
+  function switchAndOpenSettings(libraryCode: string, libraryName: string) {
     setOverlay({ message: `Switching to ${libraryName}…`, hint: "Dusting off the shelves" });
     startTransition(async () => {
-      await fetch("/api/library/switch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ libraryId }),
-      });
-      router.push("/dashboard/settings");
-      router.refresh();
+      router.push(`/${libraryCode}/settings`);
     });
   }
 
@@ -152,7 +146,7 @@ export function DeleteAccountSection({ username, libraries }: { username: string
                           </p>
                           <button
                             type="button"
-                            onClick={() => switchAndOpenSettings(lib.id, lib.name)}
+                            onClick={() => switchAndOpenSettings(lib.code, lib.name)}
                             className="mt-1.5 font-sans text-[12.5px] font-semibold text-accent-2 hover:underline"
                           >
                             Transfer ownership in Settings &rarr;

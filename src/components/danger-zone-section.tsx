@@ -12,11 +12,13 @@ type EmptyCounts = { books: number; reservations: number };
  * share a component and confirmation pattern.
  */
 export function DangerZoneSection({
+  code,
   libraryName,
   canEmpty,
   canDelete,
   emptyCounts,
 }: {
+  code: string;
   libraryName: string;
   canEmpty: boolean;
   canDelete: boolean;
@@ -26,13 +28,13 @@ export function DangerZoneSection({
 
   return (
     <div className="divide-y divide-line-inner border border-line-strong bg-surface">
-      {canEmpty && emptyCounts && <EmptyLibraryAction libraryName={libraryName} counts={emptyCounts} />}
-      {canDelete && <DeleteLibraryAction libraryName={libraryName} />}
+      {canEmpty && emptyCounts && <EmptyLibraryAction code={code} libraryName={libraryName} counts={emptyCounts} />}
+      {canDelete && <DeleteLibraryAction code={code} libraryName={libraryName} />}
     </div>
   );
 }
 
-function EmptyLibraryAction({ libraryName, counts }: { libraryName: string; counts: EmptyCounts }) {
+function EmptyLibraryAction({ code, libraryName, counts }: { code: string; libraryName: string; counts: EmptyCounts }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
@@ -44,7 +46,7 @@ function EmptyLibraryAction({ libraryName, counts }: { libraryName: string; coun
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/library/empty", {
+    const res = await fetch(`/api/${code}/empty`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ confirmName }),
@@ -121,7 +123,7 @@ function EmptyLibraryAction({ libraryName, counts }: { libraryName: string; coun
   );
 }
 
-function DeleteLibraryAction({ libraryName }: { libraryName: string }) {
+function DeleteLibraryAction({ code, libraryName }: { code: string; libraryName: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
@@ -132,7 +134,7 @@ function DeleteLibraryAction({ libraryName }: { libraryName: string }) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await fetch("/api/library", {
+      const res = await fetch(`/api/${code}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirmName }),
@@ -143,7 +145,6 @@ function DeleteLibraryAction({ libraryName }: { libraryName: string }) {
         return;
       }
       router.push("/dashboard");
-      router.refresh();
     });
   }
 

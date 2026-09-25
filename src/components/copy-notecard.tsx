@@ -12,7 +12,15 @@ function autoGrow(el: HTMLTextAreaElement | null) {
 }
 
 /** A manila-style notecard for a copy's free-text note (e.g. "recommended by the Sorensens"). */
-export function CopyNotecard({ copyId, initialNote }: { copyId: string; initialNote: string | null }) {
+export function CopyNotecard({
+  copyId,
+  code,
+  initialNote,
+}: {
+  copyId: string;
+  code: string;
+  initialNote: string | null;
+}) {
   const { canEdit } = useLibraryRole();
   const [note, setNote] = useState(initialNote);
   const [editing, setEditing] = useState(false);
@@ -32,7 +40,7 @@ export function CopyNotecard({ copyId, initialNote }: { copyId: string; initialN
   async function save() {
     const value = draft.trim();
     setBusy(true);
-    const res = await fetch(`/api/copies/${copyId}`, {
+    const res = await fetch(`/api/${code}/copies/${copyId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notes: value || null }),
@@ -45,7 +53,7 @@ export function CopyNotecard({ copyId, initialNote }: { copyId: string; initialN
 
   async function remove() {
     setBusy(true);
-    const res = await fetch(`/api/copies/${copyId}`, {
+    const res = await fetch(`/api/${code}/copies/${copyId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notes: null }),

@@ -47,8 +47,9 @@ it didn't, for a while).
   `directUrl` is split from the pooled `DATABASE_URL`: pooled (Neon `-pooler`) for
   the app, direct/unpooled for `prisma migrate`.
 - **Custom auth** — bcryptjs for password hashing, `jose` for JWT session cookies.
-  No NextAuth. A separate "active library" cookie tracks which library is
-  currently selected (a user can belong to more than one).
+  No NextAuth. Which library is "active" is resolved from the URL itself (a `/{code}/...`
+  path segment), not a cookie — see "Library-code URL routing" under "Data model" below;
+  the note this replaced described a since-removed `stacks_active_library` cookie.
 - **Tailwind CSS v4**, dark mode via CSS custom properties re-defined under
   `@media (prefers-color-scheme: dark)`, plus a Settings → Appearance switcher
   (PR #16) that can override the OS preference: it sets `data-theme="light"` /
@@ -146,6 +147,58 @@ pointing at it. `Copy` has a `status` (AVAILABLE/RESERVED/REMOVED), an optional
 it's per-`Copy`, never per-`Book`). Sharing a library between people uses a random
 `Library.inviteCode` link, not email (no transactional email provider is set up —
 see CHANGELOG 2.0.0).
+
+**Library-code URL routing (PR #63, 2026-09-25) — key decisions if you touch this again:**
+`Library.code` (`L-XXXXXX`, unique, generated at creation and backfilled for pre-existing
+rows) is the public identifier the whole dashboard is now addressed by: every library page
+lives at `/{code}/...` (e.g. `/L-7K3M9Q/library`) instead of the old `/dashboard/...`, and
+every library-scoped API route lives at `/api/{code}/...` instead of `/api/library/...`,
+`/api/copies/...`, `/api/people/...`, `/api/reservations/...`, `/api/shelves/...`, or
+`/api/search`. This replaced a design where "which library is active" lived in a single
+`stacks_active_library` cookie shared by every tab — switching libraries in one tab
+silently changed what every other open tab pointed at. Jack's explicit ask: he wanted
+multiple libraries open in different browser tabs at once, which a shared cookie can never
+support regardless of how carefully it's synced, so the fix had to put the library identity
+in something tab-scoped by nature — the URL — not patch the cookie approach further.
+- **`getLibraryByCode(code)`** (`src/lib/auth.ts`) is the sole authorization path for every
+  `/{code}/...` page: it checks the code against the signed-in user's own memberships and
+  returns a discriminated union — `unauthenticated` (redirect to login), `forbidden` (the
+  code doesn't exist, or isn't one of your memberships), or `ok` (with the resolved
+  membership/library). `forbidden` renders a plain "You don't have access to this library"
+  message rather than silently redirecting into a different library — a stale or mistyped
+  code has to be obvious, never a silent bounce. `requireLibraryContext(libraryCode, options)`
+  (`src/lib/api-context.ts`) is the equivalent for API routes, taking the code from the
+  route's own `[libraryCode]` param — **never a cookie**. Don't reintroduce a cookie-based
+  fallback for either; that's exactly the shared-mutable-state this PR removed.
+- **The old `stacks_active_library` cookie and `POST /api/library/switch` are gone
+  entirely**, along with the cookie-based `getCurrentLibrary()` they backed. In their place,
+  `stacks_last_library` (`LAST_LIBRARY_COOKIE`) stores the last-visited library's *code* and
+  is purely advisory — set by `proxy.ts` on every `/{code}/...` visit, read only by
+  `getDefaultLibraryCode(user)` to pick which library the bare `/dashboard` lobby and the
+  Profile page's header chrome should point at next. It never authorizes anything; a stale
+  or tampered value can misdirect that one redirect at worst, not grant access to a library
+  you don't belong to.
+- **No backward-compatible redirects from old `/dashboard/...` links** — dropped per Jack's
+  explicit instruction ("get rid of the old links — nothing is bookmarked"). `/dashboard`
+  itself still exists as a lobby, not a library page: it redirects a member straight to
+  `/{their default library's code}` and still hosts the zero-membership create-library/
+  invite-accept gate for an account with no library yet; `/dashboard/profile` is unchanged
+  and library-independent, reachable with or without a membership.
+- Every component that fetches or links to library-scoped data reads a `code` prop (or
+  reads it from `LibraryRoleProvider`/`useLibraryRole()`, which now carries
+  `{ role, code, canEdit, canManage, isOwner }`) rather than assuming one ambient active
+  library — this is deliberate, not incidental plumbing: it's what makes each tab's fetches
+  land on that tab's own library regardless of what any other open tab is doing.
+  `LibrarySwitcher.selectLibrary` is a plain `router.push(`/${code}`)`; creating a library,
+  accepting an invite, or deleting/emptying the current library each land on the right
+  library's own code (or the `/dashboard` lobby) instead of a bare `router.refresh()`.
+- Verified with a live local Playwright run: two independent browser contexts registered
+  separately, each created its own library, and scanned a different book onto a different
+  shelf at the same time — confirming each library's Settings page showed only its own
+  shelf with zero cross-contamination between the concurrently-running tabs (the actual
+  point of the feature); a signed-in user hitting another library's code got the "no
+  access" message rather than being pulled into it; and the bare `/dashboard` lobby still
+  redirected correctly. Test accounts/libraries/shelves/copies cleaned up afterward.
 
 **People directory (PR: People tab).** `Reservation.reservedFor`/`contact` (plain strings)
 were replaced by `Reservation.personId` pointing at a library-scoped `Person`
@@ -1240,6 +1293,25 @@ not just the PR they were stated in:
   hint appears while it runs, and — the actual point of the change — shelves created before
   emptying are still there afterward. Test accounts/libraries cleaned up from the local database
   afterward.
+- **PR #63** (`claude/library-code-urls`) — moved the whole dashboard from a cookie-selected
+  "active library" to a real per-library URL (see "Library-code URL routing" under "Data model"
+  above for the full design). Came from Jack asking what it would take to put a library code in
+  the URL itself so multiple libraries could be open in different browser tabs at once; he
+  explicitly told Claude to drop any backward-compatible-redirect plan for the old
+  `/dashboard/...` links ("nothing is bookmarked") once that tradeoff was raised, and confirmed
+  the approach with an example URL (`stacksonline.com/L-7K3M9Q/library`) before any code was
+  written. Pure routing/plumbing with no new visual UI, so no mockup round was needed — a case
+  the "mockup first for non-trivial UI/UX" agreement doesn't cover, since nothing about how any
+  page *looks* changed. Every dashboard page moved from `/dashboard/...` to `/{code}/...` and
+  every library-scoped API route moved from `/api/library/...`, `/api/copies/...`, etc. to
+  `/api/{code}/...`; ~20 client components were threaded with a `code` prop so their fetches and
+  navigation links target the right library regardless of what any other open tab is doing.
+  Verified with a live local Playwright run (13/13 checks): two separate browser contexts each
+  registered, created their own library, and scanned a different book onto a different shelf at
+  the same time, confirming zero cross-contamination between the two concurrently-running tabs —
+  the actual point of the feature — plus the "no access" message for a non-member's library code,
+  the switcher UI, and the `/dashboard` lobby redirect. Test accounts/libraries/shelves/copies
+  cleaned up from the local database afterward.
 
 ## Keeping this file current
 

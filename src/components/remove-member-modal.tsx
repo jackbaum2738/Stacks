@@ -4,10 +4,12 @@ import { useState } from "react";
 
 export function RemoveMemberModal({
   member,
+  code,
   onClose,
   onDone,
 }: {
   member: { id: string; name: string };
+  code: string;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -17,7 +19,7 @@ export function RemoveMemberModal({
   async function confirm() {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/library/members/${member.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/${code}/members/${member.id}`, { method: "DELETE" });
     setBusy(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));

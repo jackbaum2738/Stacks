@@ -7,7 +7,7 @@ import { useLibraryRole } from "@/components/library-role-context";
 
 const PRIMARY_LINKS = [
   {
-    href: "/dashboard/scan",
+    path: "/scan",
     label: "Scan",
     requiresEdit: true,
     icon: (
@@ -21,7 +21,7 @@ const PRIMARY_LINKS = [
     ),
   },
   {
-    href: "/dashboard/library",
+    path: "/library",
     label: "Library",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -31,7 +31,7 @@ const PRIMARY_LINKS = [
     ),
   },
   {
-    href: "/dashboard/people",
+    path: "/people",
     label: "People",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -44,7 +44,7 @@ const PRIMARY_LINKS = [
 
 const MORE_LINKS = [
   {
-    href: "/dashboard",
+    path: "",
     label: "Overview",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -56,7 +56,7 @@ const MORE_LINKS = [
     ),
   },
   {
-    href: "/dashboard/shelves",
+    path: "/shelves",
     label: "Shelves",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -67,7 +67,7 @@ const MORE_LINKS = [
     ),
   },
   {
-    href: "/dashboard/settings",
+    path: "/settings",
     label: "Settings",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -78,17 +78,17 @@ const MORE_LINKS = [
   },
 ];
 
-function isActive(pathname: string, href: string) {
-  return href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+function isActive(pathname: string, href: string, isRoot: boolean) {
+  return isRoot ? pathname === href : pathname.startsWith(href);
 }
 
-export function MobileNav() {
+export function MobileNav({ code }: { code: string }) {
   const pathname = usePathname();
   const { canEdit } = useLibraryRole();
   const [open, setOpen] = useState(false);
 
   const primaryLinks = PRIMARY_LINKS.filter((link) => !link.requiresEdit || canEdit);
-  const onMorePage = MORE_LINKS.some((link) => isActive(pathname, link.href));
+  const onMorePage = MORE_LINKS.some((link) => isActive(pathname, `/${code}${link.path}`, link.path === ""));
 
   return (
     <>
@@ -108,11 +108,12 @@ export function MobileNav() {
       >
         <div className="mx-auto mt-2 mb-1 h-1 w-8 rounded-full bg-line-strong" />
         {MORE_LINKS.map((link) => {
-          const active = isActive(pathname, link.href);
+          const href = `/${code}${link.path}`;
+          const active = isActive(pathname, href, link.path === "");
           return (
             <Link
-              key={link.href}
-              href={link.href}
+              key={link.path}
+              href={href}
               role="menuitem"
               onClick={() => setOpen(false)}
               className={`flex items-center gap-3 border-b border-line-inner px-4 py-3 font-sans text-[13.5px] font-semibold last:border-b-0 ${
@@ -134,11 +135,12 @@ export function MobileNav() {
       >
         <div className="flex">
           {primaryLinks.map((link) => {
-            const active = isActive(pathname, link.href);
+            const href = `/${code}${link.path}`;
+            const active = isActive(pathname, href, false);
             return (
               <Link
-                key={link.href}
-                href={link.href}
+                key={link.path}
+                href={href}
                 className={`flex flex-1 flex-col items-center gap-0.5 py-1.5 font-sans text-[10px] font-semibold ${
                   active ? "text-accent" : "text-ink-soft"
                 }`}

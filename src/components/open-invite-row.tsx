@@ -10,10 +10,12 @@ const RESEND_COOLDOWN_MS = 60_000;
 
 export function OpenInviteRow({
   invite,
+  code,
   onCancelled,
   onResent,
 }: {
   invite: SentInvite;
+  code: string;
   onCancelled: (id: string) => void;
   onResent: (id: string, lastSentAt: string) => void;
 }) {
@@ -34,7 +36,7 @@ export function OpenInviteRow({
   async function cancel() {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/library/invites/${invite.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/${code}/invites/${invite.id}`, { method: "DELETE" });
     setBusy(false);
     if (!res.ok) {
       setError("Couldn't cancel — please try again.");
@@ -46,7 +48,7 @@ export function OpenInviteRow({
   async function resend() {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/library/invites/${invite.id}/resend`, { method: "POST" });
+    const res = await fetch(`/api/${code}/invites/${invite.id}/resend`, { method: "POST" });
     setBusy(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));

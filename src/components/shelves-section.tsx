@@ -12,7 +12,7 @@ type Shelf = { id: string; name: string; copyCount: number };
  * the page, pushing Members/Backup/Danger zone down every time. Mocked up in an Artifact
  * (project thread, 2026-09-22) before building.
  */
-export function ShelvesSection({ shelves }: { shelves: Shelf[] }) {
+export function ShelvesSection({ shelves, code }: { shelves: Shelf[]; code: string }) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
 
@@ -24,7 +24,7 @@ export function ShelvesSection({ shelves }: { shelves: Shelf[] }) {
 
   return (
     <div className="space-y-3">
-      <CreateShelfForm />
+      <CreateShelfForm code={code} />
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -62,7 +62,7 @@ export function ShelvesSection({ shelves }: { shelves: Shelf[] }) {
           ) : (
             <ul className="max-h-[300px] divide-y divide-line-inner overflow-y-auto">
               {filtered.map((shelf) => (
-                <ShelfManageRow key={shelf.id} shelf={shelf} />
+                <ShelfManageRow key={shelf.id} shelf={shelf} code={code} />
               ))}
             </ul>
           )}

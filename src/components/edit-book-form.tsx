@@ -26,12 +26,14 @@ interface LookupResult {
 
 export function EditBookForm({
   copyId,
+  code,
   book,
   bookCrossingId: initialBookCrossingId,
   unresolved: initiallyUnresolved,
   manualLookupAttempts: initialManualLookupAttempts,
 }: {
   copyId: string;
+  code: string;
   book: EditableBook;
   bookCrossingId: string | null;
   unresolved: boolean;
@@ -64,7 +66,7 @@ export function EditBookForm({
   async function runLookup() {
     setLookupBusy(true);
     setLookupOutcome(null);
-    const res = await fetch(`/api/copies/${copyId}/book/lookup`, { method: "POST" });
+    const res = await fetch(`/api/${code}/copies/${copyId}/book/lookup`, { method: "POST" });
     const data: LookupResult = await res.json().catch(() => ({ found: false }));
     setLookupBusy(false);
 
@@ -99,7 +101,7 @@ export function EditBookForm({
     setBusy(true);
     setError(null);
 
-    const res = await fetch(`/api/copies/${copyId}/book`, {
+    const res = await fetch(`/api/${code}/copies/${copyId}/book`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -123,7 +125,7 @@ export function EditBookForm({
       return;
     }
 
-    router.push(`/dashboard/copies/${copyId}`);
+    router.push(`/${code}/copies/${copyId}`);
     router.refresh();
   }
 
@@ -293,7 +295,7 @@ export function EditBookForm({
           {busy ? "Saving…" : "Save changes"}
         </button>
         <Link
-          href={`/dashboard/copies/${copyId}`}
+          href={`/${code}/copies/${copyId}`}
           className="inline-flex items-center rounded-[2px] border border-line-strong px-[18px] py-[11px] font-sans text-sm font-medium text-ink hover:bg-chip-hover"
         >
           Cancel

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, setActiveLibraryCookie } from "@/lib/auth";
+import { getCurrentUser, setLastLibraryCookie } from "@/lib/auth";
 
 /**
  * Confirms joining a library from an emailed invite -- the second step Jack asked for, always
@@ -31,7 +31,7 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/invite/[to
     prisma.libraryInvite.delete({ where: { id: invite.id } }),
   ]);
 
-  await setActiveLibraryCookie(invite.libraryId);
+  await setLastLibraryCookie(invite.library.code);
 
-  return NextResponse.json({ libraryName: invite.library.name });
+  return NextResponse.json({ libraryName: invite.library.name, libraryCode: invite.library.code });
 }

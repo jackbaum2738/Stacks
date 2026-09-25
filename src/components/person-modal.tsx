@@ -26,12 +26,14 @@ function formatBirthdayInput(birthday: string | null): string {
 export function PersonModal({
   person,
   canEdit,
+  code,
   onClose,
   onSaved,
   onDeleted,
 }: {
   person: PersonRecord | null; // null = "add person"
   canEdit: boolean;
+  code: string;
   onClose: () => void;
   onSaved: (person: PersonRecord) => void;
   onDeleted: (id: string) => void;
@@ -59,7 +61,7 @@ export function PersonModal({
       birthday: birthday.trim(),
     };
 
-    const res = await fetch(person ? `/api/people/${person.id}` : "/api/people", {
+    const res = await fetch(person ? `/api/${code}/people/${person.id}` : `/api/${code}/people`, {
       method: person ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -178,6 +180,7 @@ export function PersonModal({
       {confirmingDelete && person && (
         <DeletePersonModal
           person={person}
+          code={code}
           onClose={() => setConfirmingDelete(false)}
           onDone={() => {
             setConfirmingDelete(false);

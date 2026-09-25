@@ -31,13 +31,14 @@ function initialStaged(members: Member[]): Record<string, StagedValue> {
 
 /** PATCHes every listed membership to its staged role. Returns which ids succeeded. */
 async function saveRoleChanges(
+  code: string,
   ids: string[],
   staged: Record<string, StagedValue>
 ): Promise<{ succeededIds: string[]; failedCount: number }> {
   const results = await Promise.all(
     ids.map(async (id) => {
       try {
-        const res = await fetch(`/api/library/members/${id}`, {
+        const res = await fetch(`/api/${code}/members/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ role: staged[id] }),
@@ -59,10 +60,12 @@ function MemberList({
   initialMembers,
   canManage,
   isOwnerViewer,
+  code,
 }: {
   initialMembers: Member[];
   canManage: boolean;
   isOwnerViewer: boolean;
+  code: string;
 }) {
   const router = useRouter();
   const [members, setMembers] = useState(initialMembers);
@@ -95,7 +98,7 @@ function MemberList({
     }
     setSaving(true);
     setSaveError(null);
-    const { succeededIds, failedCount } = await saveRoleChanges(dirtyIds, staged);
+    const { succeededIds, failedCount } = await saveRoleChanges(code, dirtyIds, staged);
     if (succeededIds.length) {
       setMembers((prev) => prev.map((m) => (succeededIds.includes(m.id) ? { ...m, role: staged[m.id] as Role } : m)));
     }
@@ -114,7 +117,7 @@ function MemberList({
     setSaving(true);
     setSaveError(null);
 
-    const res = await fetch("/api/library/transfer-ownership", {
+    const res = await fetch(`/api/${code}/transfer-ownership`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ membershipId: stagedOwnerId }),
@@ -144,7 +147,7 @@ function MemberList({
     const otherIds = dirtyIds.filter((id) => id !== stagedOwnerId);
     let failedCount = 0;
     if (otherIds.length) {
-      const result = await saveRoleChanges(otherIds, staged);
+      const result = await saveRoleChanges(code, otherIds, staged);
       failedCount = result.failedCount;
       if (result.succeededIds.length) {
         setMembers((prev) =>
@@ -230,6 +233,7 @@ function MemberList({
       {removeTarget && (
         <RemoveMemberModal
           member={{ id: removeTarget.id, name: removeTarget.user.name || removeTarget.user.email }}
+          code={code}
           onClose={() => setRemoveTarget(null)}
           onDone={handleRemoveDone}
         />
@@ -263,12 +267,14 @@ export function MembersSection({
   isOwnerViewer,
   selfUserId,
   initialInvites,
+  code,
 }: {
   members: MemberListItem[];
   canManage: boolean;
   isOwnerViewer: boolean;
   selfUserId: string;
   initialInvites: SentInvite[];
+  code: string;
 }) {
   const [tab, setTab] = useState<"members" | "invites">("members");
   const [invites, setInvites] = useState<SentInvite[]>(initialInvites);
@@ -280,7 +286,9 @@ export function MembersSection({
     isSelf: m.userId === selfUserId,
   }));
 
-  const memberList = <MemberList initialMembers={initialMembers} canManage={canManage} isOwnerViewer={isOwnerViewer} />;
+  const memberList = (
+    <MemberList initialMembers={initialMembers} canManage={canManage} isOwnerViewer={isOwnerViewer} code={code} />
+  );
 
   if (!canManage) return memberList;
 
@@ -311,7 +319,7 @@ export function MembersSection({
         memberList
       ) : (
         <div className="space-y-4 border border-line bg-surface p-4">
-          <SendInviteForm onSent={(invite) => setInvites((prev) => [invite, ...prev])} />
+          <SendInviteForm code={code} onSent={(invite) => setInvites((prev) => [invite, ...prev])} />
           {invites.length === 0 ? (
             <p className="font-sans text-sm text-ink-soft">No invitations.</p>
           ) : (
@@ -320,6 +328,7 @@ export function MembersSection({
                 <OpenInviteRow
                   key={invite.id}
                   invite={invite}
+                  code={code}
                   onCancelled={(id) => setInvites((prev) => prev.filter((i) => i.id !== id))}
                   onResent={(id, lastSentAt) =>
                     setInvites((prev) => prev.map((i) => (i.id === id ? { ...i, lastSentAt } : i)))

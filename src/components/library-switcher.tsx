@@ -8,10 +8,10 @@ const NEW_LIBRARY_ID = "__new__";
 
 export function LibrarySwitcher({
   libraries,
-  activeId,
+  activeCode,
 }: {
-  libraries: { id: string; name: string }[];
-  activeId: string;
+  libraries: { code: string; name: string }[];
+  activeCode: string;
 }) {
   const router = useRouter();
   const listboxId = useId();
@@ -31,9 +31,9 @@ export function LibrarySwitcher({
   const typeaheadTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // The keyboard-navigable sequence: every library, then the "+ New library" action.
-  const navIds = [...libraries.map((lib) => lib.id), NEW_LIBRARY_ID];
+  const navIds = [...libraries.map((lib) => lib.code), NEW_LIBRARY_ID];
 
-  const active = libraries.find((lib) => lib.id === activeId) ?? libraries[0];
+  const active = libraries.find((lib) => lib.code === activeCode) ?? libraries[0];
 
   useEffect(() => {
     if (!open) return;
@@ -50,7 +50,7 @@ export function LibrarySwitcher({
 
   function openMenu() {
     setOpen(true);
-    setHighlighted(activeId);
+    setHighlighted(activeCode);
   }
 
   function closeMenu(returnFocus: boolean) {
@@ -59,19 +59,13 @@ export function LibrarySwitcher({
     if (returnFocus) triggerRef.current?.focus();
   }
 
-  function selectLibrary(id: string) {
+  function selectLibrary(code: string) {
     closeMenu(true);
-    if (id === activeId) return;
-    const target = libraries.find((lib) => lib.id === id);
+    if (code === activeCode) return;
+    const target = libraries.find((lib) => lib.code === code);
     setOverlay({ message: `Switching to ${target?.name ?? "library"}…`, hint: "Dusting off the shelves" });
-    startTransition(async () => {
-      await fetch("/api/library/switch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ libraryId: id }),
-      });
-      router.push("/dashboard");
-      router.refresh();
+    startTransition(() => {
+      router.push(`/${code}`);
     });
   }
 
@@ -91,16 +85,15 @@ export function LibrarySwitcher({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         setError(data.error ?? "Something went wrong");
         setOverlay(null);
         return;
       }
       setCreating(false);
       setNewName("");
-      router.push("/dashboard");
-      router.refresh();
+      router.push(`/${data.library.code}`);
     });
   }
 
@@ -151,7 +144,7 @@ export function LibrarySwitcher({
         typeaheadRef.current = "";
       }, 600);
       const match = libraries.find((lib) => lib.name.toLowerCase().startsWith(typeaheadRef.current));
-      if (match) setHighlighted(match.id);
+      if (match) setHighlighted(match.code);
     }
   }
 
@@ -214,20 +207,20 @@ export function LibrarySwitcher({
         >
           {libraries.map((lib) => (
             <li
-              key={lib.id}
-              id={`${listboxId}-${lib.id}`}
+              key={lib.code}
+              id={`${listboxId}-${lib.code}`}
               ref={(el) => {
-                itemRefs.current[lib.id] = el;
+                itemRefs.current[lib.code] = el;
               }}
               role="option"
-              aria-selected={lib.id === activeId}
-              onMouseEnter={() => setHighlighted(lib.id)}
-              onClick={() => selectLibrary(lib.id)}
+              aria-selected={lib.code === activeCode}
+              onMouseEnter={() => setHighlighted(lib.code)}
+              onClick={() => selectLibrary(lib.code)}
               className={`flex cursor-pointer items-center gap-2 rounded-[2px] px-2.5 py-1.5 font-sans text-sm text-ink hover:bg-chip-hover ${
-                lib.id === activeId ? "bg-chip-hover" : ""
-              } ${lib.id === highlighted ? "outline outline-1 -outline-offset-1 outline-line-inner" : ""}`}
+                lib.code === activeCode ? "bg-chip-hover" : ""
+              } ${lib.code === highlighted ? "outline outline-1 -outline-offset-1 outline-line-inner" : ""}`}
             >
-              <span className={`w-3.5 shrink-0 text-center text-xs text-accent-2 ${lib.id === activeId ? "" : "invisible"}`}>✓</span>
+              <span className={`w-3.5 shrink-0 text-center text-xs text-accent-2 ${lib.code === activeCode ? "" : "invisible"}`}>✓</span>
               <span className="min-w-0 flex-1 truncate">{lib.name}</span>
             </li>
           ))}
