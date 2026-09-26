@@ -21,6 +21,11 @@ export default async function CopyDetailPage(props: PageProps<"/[libraryCode]/co
   if (!found) notFound();
 
   const copy = { ...found, book: applyBookOverride(found.book, found.book.overrides[0]) };
+  const shelves = await prisma.shelf.findMany({
+    where: { libraryId: context.library.id },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, code: true },
+  });
 
   return (
     <div className="space-y-6">
@@ -33,7 +38,7 @@ export default async function CopyDetailPage(props: PageProps<"/[libraryCode]/co
         </svg>
         Library
       </Link>
-      <CopyDetail copy={copy} code={libraryCode} libraryName={context.library.name} />
+      <CopyDetail copy={copy} code={libraryCode} libraryName={context.library.name} shelves={shelves} />
     </div>
   );
 }

@@ -8,7 +8,8 @@ import { StatusPill } from "@/components/status-pill";
 import { CopyButton } from "@/components/copy-button";
 import { CopyNotecard } from "@/components/copy-notecard";
 import { ReservationModal } from "@/components/reservation-modal";
-import { MoveShelfModal } from "@/components/move-shelf-modal";
+import { ShelfPickerButton } from "@/components/shelf-picker-button";
+import type { ShelfSummary } from "@/components/shelf-combobox";
 import { DeleteCopiesModal } from "@/components/delete-copies-modal";
 import { formatDate } from "@/lib/format-date";
 import { useLibraryRole } from "@/components/library-role-context";
@@ -33,24 +34,34 @@ interface CopyDetailData {
   reservation: { id: string; person: PersonSummary | null; createdAt: Date } | null;
 }
 
-export function CopyDetail({ copy, code, libraryName }: { copy: CopyDetailData; code: string; libraryName: string }) {
+export function CopyDetail({
+  copy,
+  code,
+  libraryName,
+  shelves,
+}: {
+  copy: CopyDetailData;
+  code: string;
+  libraryName: string;
+  shelves: ShelfSummary[];
+}) {
   const router = useRouter();
   const { canEdit } = useLibraryRole();
   const [reserveModal, setReserveModal] = useState<"create" | "edit" | null>(null);
-  const [moveShelfModal, setMoveShelfModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
+  const [shelf, setShelf] = useState(copy.shelf);
 
   const modalCopy = { id: copy.id, book: { title: copy.book.title }, reservation: copy.reservation };
-  const shelfLabel = copy.shelf?.code ?? copy.shelf?.name ?? "—";
+  const shelfLabel = shelf?.code ?? shelf?.name ?? "—";
 
   return (
     <div className="paper-shadow-lg grid gap-[56px] border border-line bg-surface p-8 sm:grid-cols-[200px_1fr]">
       <div>
         <BookCover src={copy.book.coverUrl} alt={copy.book.title} className="aspect-[2/3] w-full max-w-[200px]" />
         <div className="mt-[11px] space-y-1.5 font-mono text-[11px] tracking-[.08em] text-ink-soft uppercase">
-          <p>Shelf {shelfLabel}</p>
+          <p>Shelf: {shelfLabel}</p>
           <p className="flex items-center">
-            ISBN {copy.book.isbn13}
+            ISBN: {copy.book.isbn13}
             <CopyButton value={copy.book.isbn13} label="ISBN" />
           </p>
           {copy.bookCrossingId && (
@@ -67,7 +78,7 @@ export function CopyDetail({ copy, code, libraryName }: { copy: CopyDetailData; 
       <div className="min-w-0">
         <div className="mb-[18px] flex items-center justify-between border-b border-line pb-[10px] font-mono text-[11px] tracking-[.14em] text-ink-soft uppercase">
           <span>{libraryName}</span>
-          <span>Shelf {shelfLabel}</span>
+          <span>Shelf: {shelfLabel}</span>
         </div>
 
         <h1 className="font-display text-[40px] leading-[1.08] font-semibold text-balance text-ink">
@@ -95,7 +106,21 @@ export function CopyDetail({ copy, code, libraryName }: { copy: CopyDetailData; 
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 border-t border-b border-line py-[14px] text-sm">
           <dt className="font-mono text-[11px] tracking-[.10em] text-ink-faint uppercase">Shelf</dt>
-          <dd className="font-sans text-ink">{copy.shelf?.name ?? "No shelf"}</dd>
+          <dd className="font-sans text-ink">
+            {canEdit ? (
+              <ShelfPickerButton
+                code={code}
+                copyId={copy.id}
+                shelfId={shelf?.id ?? null}
+                shelfName={shelf?.name ?? null}
+                shelves={shelves}
+                onMoved={(s) => setShelf({ id: s.id, name: s.name, code: s.code })}
+                triggerClassName="-mx-1.5"
+              />
+            ) : (
+              shelf?.name ?? "No shelf"
+            )}
+          </dd>
           <dt className="font-mono text-[11px] tracking-[.10em] text-ink-faint uppercase">Date added</dt>
           <dd className="font-sans text-ink">{formatDate(copy.addedAt)}</dd>
           {copy.reservation && (
@@ -129,24 +154,12 @@ export function CopyDetail({ copy, code, libraryName }: { copy: CopyDetailData; 
             <button
               type="button"
               onClick={() => setReserveModal(copy.reservation ? "edit" : "create")}
-              className="inline-flex items-center gap-1.5 rounded-[2px] bg-ink px-[18px] py-[11px] font-sans text-sm font-medium text-surface hover:brightness-95"
+              className="inline-flex items-center gap-1.5 rounded-[2px] bg-accent px-[18px] py-[11px] font-sans text-sm font-medium text-on-accent hover:brightness-95"
             >
               <svg viewBox="0 0 24 24" fill={copy.reservation ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="h-[15px] w-[15px]">
                 <path d="M7 4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16l-5-3.2L7 20V4z" />
               </svg>
               {copy.reservation ? "Edit reservation" : "Reserve"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMoveShelfModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-[2px] border border-line-strong px-[18px] py-[11px] font-sans text-sm font-medium text-ink hover:bg-chip-hover"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                <rect x="3" y="4" width="18" height="16" rx="1" />
-                <path d="M3 9h18" />
-                <path d="M8 14l3 3 5-6" />
-              </svg>
-              Move shelf
             </button>
             <button
               type="button"
@@ -179,14 +192,6 @@ export function CopyDetail({ copy, code, libraryName }: { copy: CopyDetailData; 
           code={code}
           onClose={() => setReserveModal(null)}
           onDone={() => setReserveModal(null)}
-        />
-      )}
-      {canEdit && moveShelfModal && (
-        <MoveShelfModal
-          copies={[modalCopy]}
-          code={code}
-          onClose={() => setMoveShelfModal(false)}
-          onDone={() => setMoveShelfModal(false)}
         />
       )}
       {canEdit && deleteModal && (

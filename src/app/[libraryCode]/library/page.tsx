@@ -6,6 +6,8 @@ import { BookCover } from "@/components/book-cover";
 import { StatusPill } from "@/components/status-pill";
 import { ReservationModal } from "@/components/reservation-modal";
 import { MoveShelfModal } from "@/components/move-shelf-modal";
+import { ShelfPickerButton } from "@/components/shelf-picker-button";
+import type { ShelfSummary } from "@/components/shelf-combobox";
 import type { PersonSummary } from "@/components/person-combobox";
 import { DeleteCopiesModal } from "@/components/delete-copies-modal";
 import { LibrarySelectionBar } from "@/components/library-selection-bar";
@@ -21,6 +23,7 @@ interface BookResult {
   coverUrl: string | null;
   copies: {
     id: string;
+    code: string;
     status: "AVAILABLE" | "RESERVED" | "REMOVED";
     addedAt: string;
     notes: string | null;
@@ -31,6 +34,7 @@ interface BookResult {
 
 interface Row {
   id: string;
+  code: string;
   status: "AVAILABLE" | "RESERVED" | "REMOVED";
   addedAt: string;
   notes: string | null;
@@ -51,19 +55,25 @@ function toModalCopy(row: Row) {
 }
 
 function compareRows(a: Row, b: Row, key: SortKey, dir: 1 | -1): number {
-  switch (key) {
-    case "title":
-      return collator.compare(a.book.title, b.book.title) * dir;
-    case "author":
-      return collator.compare(a.book.authors.join(", "), b.book.authors.join(", ")) * dir;
-    case "shelf":
-      return collator.compare(a.shelf?.name ?? "", b.shelf?.name ?? "") * dir;
-    case "added":
-      return (new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()) * dir;
-    case "status":
-      if (a.status !== b.status) return (a.status === "RESERVED" ? 1 : -1) * dir;
-      return collator.compare(a.reservation?.person?.name ?? "", b.reservation?.person?.name ?? "") * dir;
-  }
+  const primary = (() => {
+    switch (key) {
+      case "title":
+        return collator.compare(a.book.title, b.book.title) * dir;
+      case "author":
+        return collator.compare(a.book.authors.join(", "), b.book.authors.join(", ")) * dir;
+      case "shelf":
+        return collator.compare(a.shelf?.name ?? "", b.shelf?.name ?? "") * dir;
+      case "added":
+        return (new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()) * dir;
+      case "status":
+        if (a.status !== b.status) return (a.status === "RESERVED" ? 1 : -1) * dir;
+        return collator.compare(a.reservation?.person?.name ?? "", b.reservation?.person?.name ?? "") * dir;
+    }
+  })();
+  // Break ties (e.g. several copies of the same book added on the same date) by Copy ID,
+  // always ascending -- otherwise identical rows have no defined relative order and the
+  // browser's sort can (and did) return a different arrangement on every page load.
+  return primary !== 0 ? primary : collator.compare(a.code, b.code);
 }
 
 export default function LibraryBrowsePage() {
@@ -83,6 +93,23 @@ export default function LibraryBrowsePage() {
   const [deleteModal, setDeleteModal] = useState<Row[] | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null);
   const [notePopup, setNotePopup] = useState<{ copyId: string; bookTitle: string; note: string } | null>(null);
+  const [shelves, setShelves] = useState<ShelfSummary[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/${code}/shelves`)
+      .then((res) => res.json())
+      .then((data) => setShelves((data.shelves ?? []).map((s: ShelfSummary) => ({ id: s.id, name: s.name, code: s.code }))))
+      .catch(() => {});
+  }, [code]);
+
+  function onCopyMoved(copyId: string, shelf: ShelfSummary) {
+    setBooks((prev) =>
+      prev.map((b) => ({
+        ...b,
+        copies: b.copies.map((c) => (c.id === copyId ? { ...c, shelf: { id: shelf.id, name: shelf.name } } : c)),
+      }))
+    );
+  }
 
   const runSearch = useCallback(
     (q: string) => {
@@ -250,10 +277,10 @@ export default function LibraryBrowsePage() {
   const trimmedQuery = query.trim();
   const headers: { key: SortKey; label: string; className?: string }[] = [
     { key: "title", label: "Title" },
-    { key: "author", label: "Author" },
-    { key: "shelf", label: "Shelf", className: "hidden sm:table-cell" },
-    { key: "added", label: "Date added", className: "hidden md:table-cell" },
-    { key: "status", label: "Status" },
+    { key: "author", label: "Author", className: "w-[170px]" },
+    { key: "shelf", label: "Shelf", className: "hidden w-[150px] sm:table-cell" },
+    { key: "added", label: "Date added", className: "hidden w-[130px] md:table-cell" },
+    { key: "status", label: "Status", className: "w-[130px]" },
   ];
 
   return (
@@ -400,24 +427,22 @@ export default function LibraryBrowsePage() {
                 <p className="truncate font-sans text-xs text-ink-soft">
                   {row.book.authors.join(", ") || "Unknown author"}
                 </p>
-                <p className="mt-1 flex min-w-0 items-center gap-1 font-mono text-[11px] text-ink-faint">
+                <div className="mt-1 flex min-w-0 items-center gap-1 font-mono text-[11px] text-ink-faint">
                   {canEdit ? (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMoveShelfModal([row]);
-                      }}
-                      title="Move shelf"
-                      className="max-w-[140px] truncate underline decoration-dotted hover:text-ink"
-                    >
-                      {row.shelf?.name ?? "No shelf"}
-                    </button>
+                    <ShelfPickerButton
+                      code={code}
+                      copyId={row.id}
+                      shelfId={row.shelf?.id ?? null}
+                      shelfName={row.shelf?.name ?? null}
+                      shelves={shelves}
+                      onMoved={(shelf) => onCopyMoved(row.id, shelf)}
+                      triggerClassName="-mx-1.5 max-w-[140px]"
+                    />
                   ) : (
                     <span className="max-w-[140px] truncate">{row.shelf?.name ?? "No shelf"}</span>
                   )}
                   <span className="flex-shrink-0">· {formatDate(row.addedAt)}</span>
-                </p>
+                </div>
                 {row.reservation && (
                   <p className="mt-1 truncate font-sans text-xs text-reserved-text">
                     Reserved — {row.reservation.person?.name ?? "someone no longer in your directory"}
@@ -460,7 +485,7 @@ export default function LibraryBrowsePage() {
 
       {!loading && rows.length > 0 && viewMode === "list" && (
         <div className="hidden overflow-x-auto border border-line bg-surface sm:block">
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full table-fixed border-collapse text-sm">
             <thead>
               <tr className="border-b-2 border-ink text-left">
                 {canEdit && <th className="w-[42px] py-2 pl-4"></th>}
@@ -523,30 +548,28 @@ export default function LibraryBrowsePage() {
                       )}
                     </div>
                   </td>
-                  <td className="max-w-[240px] truncate py-2.5 font-display text-[16px] font-medium text-ink">
+                  <td className="truncate py-2.5 font-display text-[16px] font-medium text-ink">
                     {row.book.title}
                   </td>
-                  <td className="max-w-[170px] truncate py-2.5 font-sans text-ink-soft">
+                  <td className="truncate py-2.5 font-sans text-ink-soft">
                     {row.book.authors.join(", ") || "Unknown author"}
                   </td>
-                  <td className="hidden max-w-[160px] truncate py-2.5 font-mono text-[13px] text-ink sm:table-cell">
+                  <td className="hidden py-2.5 font-mono text-[13px] text-ink sm:table-cell">
                     {canEdit ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMoveShelfModal([row]);
-                        }}
-                        title="Move shelf"
-                        className="max-w-full truncate underline decoration-dotted hover:text-accent"
-                      >
-                        {row.shelf?.name ?? "No shelf"}
-                      </button>
+                      <ShelfPickerButton
+                        code={code}
+                        copyId={row.id}
+                        shelfId={row.shelf?.id ?? null}
+                        shelfName={row.shelf?.name ?? null}
+                        shelves={shelves}
+                        onMoved={(shelf) => onCopyMoved(row.id, shelf)}
+                        triggerClassName="-mx-1.5 max-w-full"
+                      />
                     ) : (
-                      row.shelf?.name ?? "—"
+                      <span className="truncate">{row.shelf?.name ?? "—"}</span>
                     )}
                   </td>
-                  <td className="hidden py-2.5 font-mono text-[12px] text-ink-soft md:table-cell">
+                  <td className="hidden py-2.5 font-mono text-[12px] whitespace-nowrap text-ink-soft md:table-cell">
                     {formatDate(row.addedAt)}
                   </td>
                   <td className="py-2.5">
@@ -649,17 +672,15 @@ export default function LibraryBrowsePage() {
               </p>
               <div className="flex items-center justify-between gap-2 font-mono text-[11px] text-ink-faint">
                 {canEdit ? (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMoveShelfModal([row]);
-                    }}
-                    title="Move shelf"
-                    className="min-w-0 truncate text-left underline decoration-dotted hover:text-ink"
-                  >
-                    {row.shelf?.name ?? "No shelf"}
-                  </button>
+                  <ShelfPickerButton
+                    code={code}
+                    copyId={row.id}
+                    shelfId={row.shelf?.id ?? null}
+                    shelfName={row.shelf?.name ?? null}
+                    shelves={shelves}
+                    onMoved={(shelf) => onCopyMoved(row.id, shelf)}
+                    triggerClassName="-mx-1.5 min-w-0"
+                  />
                 ) : (
                   <span className="min-w-0 truncate">{row.shelf?.name ?? "No shelf"}</span>
                 )}

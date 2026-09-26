@@ -44,14 +44,16 @@ export function PersonModal({
   const [location, setLocation] = useState(person?.location ?? "");
   const [birthday, setBirthday] = useState(formatBirthdayInput(person?.birthday ?? null));
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function save() {
     const trimmedName = name.trim();
     if (!trimmedName) return;
     setBusy(true);
-    setError(null);
+    setNameError(null);
+    setEmailError(null);
 
     const body = {
       name: trimmedName,
@@ -69,7 +71,9 @@ export function PersonModal({
     const data = await res.json();
     setBusy(false);
     if (!res.ok) {
-      setError(data.error ?? "Couldn't save this person");
+      const message = data.error ?? "Couldn't save this person";
+      if (data.field === "email") setEmailError(message);
+      else setNameError(message);
       return;
     }
     onSaved(data.person);
@@ -126,11 +130,12 @@ export function PersonModal({
                 Name <span className="text-accent">*</span>
               </label>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Hans Richter" className={formInputClass} />
-              {error && <p className="mt-1.5 font-mono text-xs text-accent">{error}</p>}
+              {nameError && <p className="mt-1.5 font-mono text-xs text-accent">{nameError}</p>}
             </div>
             <div>
               <label className={formLabelClass}>Email</label>
               <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="optional" className={formInputClass} />
+              {emailError && <p className="mt-1.5 font-mono text-xs text-accent">{emailError}</p>}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
