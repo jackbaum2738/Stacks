@@ -4,6 +4,11 @@ STACKS CHANGELOG
 Versioning: x.0.0 = major (new features) | 1.x.0 = minor (small additions/changes, batched) | 1.0.x = patch (tiny fixes/tweaks)
 
 
+8.2.1 -- 2026-09-25
+--------------------
+- Recorded two new backlog ideas in IDEAS.md: a welcome email on sign-up (reusing the existing `renderEmailLayout` transactional-email pattern) and an admin dashboard at stacksonline.com/admin/dashboard for viewing and editing data across libraries, still needing a decision between an in-app `/admin` route with a new super-admin role vs. off-the-shelf tooling (Prisma Studio, the Neon console, AdminJS/Retool) pointed at the same database. No code changes.
+
+
 8.2.0 -- 2026-09-25
 --------------------
 - Added the ability to move a copy to a different shelf without going through the full "Edit details" form: a "Move to shelf" button in the Library page's bulk selection bar (works across a mixed selection of any size), a standalone "Move shelf" button on the book detail page next to Reserve, and the shelf name itself in the Library page's list rows/table cells/grid tiles is now a clickable underlined link that opens the same modal for just that one copy. `MoveShelfModal` (`src/components/move-shelf-modal.tsx`) reuses the existing `ShelfCombobox` (same barcode-scan-friendly exact-match-on-Enter resolution already used on the Scan page) and PATCHes each selected copy's existing `PATCH /api/{code}/copies/{id}` `shelfId` field via `Promise.allSettled` -- no new API route needed. Its Save button reads "Save changes" rather than a bare "Save".

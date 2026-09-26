@@ -84,3 +84,29 @@ model" section). Needs its own pass: at minimum a Settings field + `PATCH /api/l
 (Owner/Admin, same tier as other settings mutations), and a decision on whether
 `Library.slug` (currently only used in backup export filenames) should regenerate on rename
 or stay frozen from creation.
+
+## Welcome email on sign-up
+
+Registering a new account doesn't send anything -- the only transactional emails that exist
+today are password reset, library invites, and the email-change verification/notice pair
+(see CLAUDE.md's "Data model" for all three). A "Welcome to Stacks" email on `POST
+/api/auth/register` would fit the same `src/lib/emails/` pattern and reuse the shared
+`renderEmailLayout` header/footer (see the "Every transactional email is hand-written..."
+note in CLAUDE.md) rather than being a new one-off design. Worth deciding what it should
+actually contain beyond a greeting -- a link into the app, a short "how Stacks works"
+pointer for a brand-new, possibly non-technical user in Jack's dad's network -- before
+building it, same as every other email so far went through a mockup round first.
+
+## Admin dashboard (stacksonline.com/admin/dashboard)
+
+A backend view into the data Stacks stores across its libraries -- something beyond what any
+single library's own Settings page exposes -- with read access at minimum and write where it
+makes sense (e.g. the account-enumeration and abuse questions this raises need answering
+first for anything destructive). Raised by Jack on 2026-09-25, flagged as needing more
+discussion before building -- see the project thread for a rundown of the options (an in-app
+`/admin` route gated by some notion of a super-admin role that doesn't exist yet vs.
+off-the-shelf tooling like Prisma Studio, the Neon console, or a third-party admin builder
+such as AdminJS or Retool pointed at the same Postgres database) and their tradeoffs. Ties
+into the still-open "delete your own account" work and the wider-rollout plans (see the
+"Monetisation" idea above) -- the bigger Stacks' user base gets, the more a real admin surface
+matters, and the more that surface itself becomes something to secure carefully.
