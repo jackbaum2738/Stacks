@@ -37,20 +37,44 @@ export function buildWelcomeEmail(params: { username: string; origin: string }):
   for (let i = 0; i < TIPS.length; i += 2) {
     const pair = TIPS.slice(i, i + 2);
     const cells = pair
-      .map(
-        (tip) => `
+      .map((tip, idx) => {
+        // Rotation/box-shadow/absolute positioning (what makes the approved mockup's notes
+        // look tilted and "stuck on") aren't reliable across email clients -- Outlook in
+        // particular ignores CSS transform outright -- so the sticky-note cue here is built
+        // from plain table rows/borders instead: a tape strip above the card and a
+        // border-triangle folded corner at its bottom-right, both supported everywhere.
+        const tapeAlign = idx === 0 ? "left" : "right";
+        return `
 <td width="50%" valign="top" style="width:50%;padding:0;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${c.manila};border:1px solid ${c.manilaLine};border-radius:2px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
-<td style="padding:16px 16px 18px 16px;">
+<td align="${tapeAlign}" style="padding:0 0 0 0;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td width="40" height="14" style="width:40px;height:14px;background-color:rgba(255,255,255,0.45);border:1px solid rgba(185,154,83,0.5);font-size:0;line-height:0;">&nbsp;</td>
+</tr></table>
+</td>
+</tr>
+<tr>
+<td style="background-color:${c.manila};border:1px solid ${c.manilaLine};border-radius:2px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="padding:14px 16px 18px 16px;">
 <div style="font-family:${f.mono};font-size:10.5px;letter-spacing:0.05em;text-transform:uppercase;color:#4a3a17;opacity:0.75;margin:0 0 6px 0;">Tip</div>
 <div style="font-family:${f.display};font-weight:700;font-size:15.5px;color:#4a3a17;margin:0 0 6px 0;">${escapeHtml(tip.title)}</div>
 <div style="font-family:${f.body};font-size:13px;line-height:1.5;color:#4a3a17;">${escapeHtml(tip.body)}</div>
 </td>
 </tr>
+<tr>
+<td align="right" style="padding:0;">
+<div style="width:0;height:0;border-style:solid;border-width:0 0 14px 14px;border-color:transparent transparent ${c.manilaLine} transparent;font-size:0;line-height:0;">&nbsp;</div>
+</td>
+</tr>
 </table>
-</td>`,
-      )
+</td>
+</tr>
+</table>
+</td>`;
+      })
       .join(`<td width="16" style="width:16px;line-height:0;font-size:0;">&nbsp;</td>`);
     tipRows.push(`<tr>${cells}</tr><tr><td colspan="3" height="16" style="line-height:16px;font-size:0;">&nbsp;</td></tr>`);
   }
