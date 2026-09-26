@@ -637,33 +637,77 @@ names the account's username, on the assumption the requester owns that inbox an
 in with it — it shows no other email addresses, since this inbox may belong to someone who's
 never used Stacks; "Email change requested" to the *old*/current address
 (`email-change-notice.ts`) is the one email of the pair that names an address (the new one, so
-the owner knows exactly what's being changed to), carries no link of its own since that inbox
-isn't the one being verified, and exists purely as a heads-up plus an escape hatch if the
-request wasn't legitimate. **Resend vs. a genuinely new request are different code paths in the
-same `PATCH` handler**: re-submitting the *same* address that's already pending is treated as a
-resend (60s cooldown, same pattern as `LibraryInvite` resend, and does **not** re-send the
-notice to the old address) while submitting a *different* address bypasses the cooldown
-entirely and re-sends both emails — Jack's explicit call: a real change-of-mind shouldn't be
-throttled by a cooldown meant to stop spamming one already-pending link. The dedicated
-`POST /api/account/email/resend` route (used by the Profile page's plain "Resend link" button)
-needs no password, since it doesn't change what's pending, only re-delivers it — `PATCH` itself
-still requires `currentPassword` via the existing re-auth flow, for both a first request and a
-Change-while-pending resubmission. `isValidEmailShape` (`src/lib/account-validation.ts`) was
-fixed in the same PR to reject a second "@" — the original rule checked for a letter before/
-after the following "." but never actually verified there was only one "@", so something like
-`a@b@c.com` passed everywhere it was used (sign-up, profile, and this new field all share the
-one function, so all three were fixed at once). `/confirm-email` (new top-level page, not under
-`/dashboard`) does the actual consuming on a plain page load — unlike password reset, there's no
-form step here, since clicking the emailed link *is* the confirming action; a missing, expired,
-or already-used token shows the same "Link no longer valid" wording used elsewhere. Mocked up
-first as an Artifact over several rounds before any code was touched: iterations covered
-dropping a redundant "confirm new email" field, splitting one email into two with per-audience
-wording, matching cooldown behavior to whether the address is actually changing, and swapping a
-hand-drawn logo approximation for the real `FullLogo` PNG asset and `renderEmailLayout` shared
-header/footer. Verified with a live local Playwright run covering both the profile-page
-interaction (validation, duplicate-email 409, resend cooldown, change-while-pending, cancel) and
-the real confirm-link round trip (token consumed atomically, a second visit to the same link
-shows "no longer valid", sign-in works with the new email and stops working with the old one).
+the owner knows exactly what's being changed to) and carries its own one-click "click here to
+cancel it directly" link, since that inbox can't verify the change but can shut it down. **Resend
+vs. a genuinely new request are different code paths in the same `PATCH` handler**: re-submitting
+the *same* address that's already pending is treated as a resend (60s cooldown, same pattern as
+`LibraryInvite` resend, and does **not** re-send the notice to the old address) while submitting
+a *different* address bypasses the cooldown entirely and re-sends both emails — Jack's explicit
+call: a real change-of-mind shouldn't be throttled by a cooldown meant to stop spamming one
+already-pending link. The dedicated `POST /api/account/email/resend` route (used by the Profile
+page's plain "Resend link" button, and — since 8.2.0 — by the inline "New email" form itself
+whenever the typed address matches the one already pending) needs no password at all, since it
+doesn't change what's pending, only re-delivers it; `PATCH` itself still requires
+`currentPassword` via the existing re-auth flow, but only for a genuinely new/different address
+now (see below). `isValidEmailShape` (`src/lib/account-validation.ts`) was fixed in the same PR
+to reject a second "@" — the original rule checked for a letter before/after the following "."
+but never actually verified there was only one "@", so something like `a@b@c.com` passed
+everywhere it was used (sign-up, profile, and this new field all share the one function, so all
+three were fixed at once). `/confirm-email` (new top-level page, not under `/dashboard`) does the
+actual consuming on a plain page load — unlike password reset, there's no form step here, since
+clicking the emailed link *is* the confirming action; a missing, expired, or already-used token
+shows the same "Link no longer valid" wording used elsewhere. Mocked up first as an Artifact over
+several rounds before any code was touched: iterations covered dropping a redundant "confirm new
+email" field, splitting one email into two with per-audience wording, matching cooldown behavior
+to whether the address is actually changing, and swapping a hand-drawn logo approximation for the
+real `FullLogo` PNG asset and `renderEmailLayout` shared header/footer. Verified with a live local
+Playwright run covering both the profile-page interaction (validation, duplicate-email 409,
+resend cooldown, change-while-pending, cancel) and the real confirm-link round trip (token
+consumed atomically, a second visit to the same link shows "no longer valid", sign-in works with
+the new email and stops working with the old one).
+
+**Four follow-ups from a project thread right after the above shipped (8.2.0) — key decisions if
+you touch this again:** first, the duplicate-email and same-as-current-email checks now run
+*before* the re-auth (password) step, mirroring the username field's existing
+`GET /api/account/username/available` pre-check — a new `GET /api/account/email/available` route
+does the same job here, and also reports whether the typed address matches the one already
+pending so the client knows to treat it as a resend. Second, when it *is* a resend of the exact
+pending address, the Profile form now calls `POST /api/account/email/resend` directly and skips
+`openReauth()` entirely — no password prompt at all for a resend, since (per Jack's explicit ask)
+it doesn't change anything sensitive enough to justify asking again; `PATCH`'s own
+`isResendOfSamePending` branch is kept only as a defensive fallback and is no longer exercised by
+the profile page's normal flow. Third, the notice email's "if this wasn't you" line changed from
+a dead-end "please get in touch" to a real, one-click "click here to cancel it directly" link (an
+inline hyperlink on the words "click here", not a pasted-URL block — Jack's explicit preference
+after seeing the first mockup draft). Fourth, that link needs no sign-in:
+`GET /cancel-email-change?token=...` (new page, same shape/pattern as `/confirm-email`) deletes
+the pending row outright and shows "Change cancelled" (naming the address that was stopped) or
+"Link no longer valid" — **both states use the same accent-red "Go to profile" button**, per
+Jack's explicit correction after the first mockup styled the invalid-link one as an outlined
+"ghost" button instead. The body copy on cancellation suggests changing your password if the
+request wasn't the account owner's, rather than adding a second button — there's no dedicated
+change-password page to send a second button to, since it's just an inline panel on the same
+Profile page the first button already goes to.
+**The cancel link uses its own token** — `EmailChangeRequest.cancelTokenHash`, a second unique
+column, independent of `tokenHash` — so the notice email (sent only to the old address) can only
+ever cancel the request, never complete it; `cancelEmailChangeRequestByToken` in
+`src/lib/email-change.ts` looks it up and deletes the row with no expiry check, since the row's
+mere existence is still "pending" regardless of whether the separate 1-hour confirm-token expiry
+has passed. **The cancel token deliberately does not rotate on a plain resend** — only the
+confirm token does (`issueEmailChangeToken` takes a `rotateCancelToken` option; the resend route
+passes `false`, `PATCH`'s genuinely-new-request path passes the default `true`) — because the
+notice carrying the cancel link is sent exactly once, on a first/genuinely-new request; rotating
+the cancel token on every resend would silently invalidate a cancel link already sitting in the
+old address's inbox. This exact bug shipped in an early draft of this PR and was only caught by a
+dedicated Playwright check (send, fast-forward past cooldown via a direct DB update, resend,
+confirm the *original* cancel link still works) — worth remembering as a general pattern:
+whenever a resend path re-derives one secret while intentionally not re-sending a message that
+carries a *different* secret, check that the second secret isn't being rotated out from under it.
+Mocked up as an Artifact rendered from the real email template (not redrawn), two feedback
+rounds before merge (the click-here link, then the invalid-link button color). Verified with
+three live local Playwright runs: the pre-check flow, the full cancel-link round trip (distinct
+tokens, no sign-in required to cancel, the matching confirm link also dies, the original email
+still signs in), and the cancel-token-stability fix specifically.
 
 **ISBN lookup diagnostic log (`BookLookupLog`) — key decisions if you touch this again:** came
 from Jack noticing real scans failing to find book details and wanting to see why, in a
@@ -1430,6 +1474,24 @@ not just the PR they were stated in:
   email-change work all merged first, re-verifying every route/component against its new
   `[libraryCode]`-prefixed path. Verified with a live local Playwright run (18/18 checks) — see
   the CHANGELOG's 8.2.0 entry for the full list.
+- **PR #66** (`claude/project-thread-niomw9`, merged) — recorded a welcome email on sign-up and
+  an admin dashboard as new `IDEAS.md` backlog entries. No code changes.
+- **PR #67** (`claude/email-change-refinements`) — four follow-ups to PR #64 from the same
+  project thread, all in one PR since they're small and touch the same files (see the "Four
+  follow-ups" note under "Data model" above for the full design): duplicate/same-current-email
+  checks moved before the password step (mirroring the username field's pre-check), a
+  same-pending-address resubmission now skips the password prompt entirely, the old-address
+  notice email got a real one-click cancel link instead of a dead-end "get in touch" line, and a
+  new `/cancel-email-change` page lands that link with no sign-in required. Mocked up as an
+  Artifact rendered from the real email template rather than redrawn, so Jack's feedback (swap
+  the pasted URL for an inline "click here" link; match the invalid-link button's color to the
+  cancelled-state button) landed on the actual shipping copy and styles. Caught and fixed a real
+  bug before merge: the first draft rotated the cancel token on every resend even though the
+  notice carrying that link is only ever sent once, which would have silently broken a cancel
+  link already sitting in the old address's inbox — found by a dedicated Playwright check, not by
+  inspection. Rebased onto `main` after PR #65/#66 merged first. Verified with three live local
+  Playwright runs (pre-check flow, full cancel-link round trip, cancel-token stability across a
+  resend). Test accounts cleaned up from the local database afterward.
 
 ## Keeping this file current
 

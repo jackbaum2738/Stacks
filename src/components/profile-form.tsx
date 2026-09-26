@@ -75,6 +75,7 @@ export function ProfileForm({
   // Email
   const [emailInput, setEmailInput] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailChecking, setEmailChecking] = useState(false);
 
   // Password
   const [pw1, setPw1] = useState("");
@@ -136,7 +137,31 @@ export function ProfileForm({
     openReauth();
   }
 
-  function saveEmail() {
+  // Same pre-check pattern as username: catch an already-current or already-taken address
+  // before ever opening the re-auth (password) step. When the address matches the one already
+  // pending, this is just a resend -- no password needed for that (see performResend below).
+  async function saveEmail() {
+    setEmailError(null);
+    setEmailChecking(true);
+    const res = await fetch(`/api/account/email/available?email=${encodeURIComponent(emailInput)}`);
+    const data = await res.json().catch(() => ({ available: false }));
+    setEmailChecking(false);
+    if (!res.ok || !data.available) {
+      setEmailError(data.error ?? "That email can't be used.");
+      return;
+    }
+    if (data.isResendOfPending) {
+      const result = await performResend();
+      if (!result.ok) {
+        setEmailError(result.error ?? "Couldn't resend — please try again.");
+        return;
+      }
+      setPendingLastSentAt(result.lastSentAt ?? new Date().toISOString());
+      setNow(Date.now());
+      showToast("Verification link sent.");
+      closeInline();
+      return;
+    }
     setPending({ field: "email", payload: { email: emailInput } });
     openReauth();
   }
@@ -191,17 +216,25 @@ export function ProfileForm({
     setPending(null);
   }
 
+  // Shared by the standalone "Resend link" button and the inline "New email" form's own
+  // resend-of-the-same-address path -- both hit the same no-password route.
+  async function performResend(): Promise<{ ok: boolean; error?: string; lastSentAt?: string }> {
+    const res = await fetch("/api/account/email/resend", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error ?? "Couldn't resend — please try again." };
+    return { ok: true, lastSentAt: data.lastSentAt };
+  }
+
   async function resendPendingEmail() {
     setResendBusy(true);
     setResendError(null);
-    const res = await fetch("/api/account/email/resend", { method: "POST" });
+    const result = await performResend();
     setResendBusy(false);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setResendError(data.error ?? "Couldn't resend — please try again.");
+    if (!result.ok) {
+      setResendError(result.error ?? "Couldn't resend — please try again.");
       return;
     }
-    setPendingLastSentAt(data.lastSentAt);
+    setPendingLastSentAt(result.lastSentAt ?? new Date().toISOString());
     setNow(Date.now());
   }
 
@@ -222,8 +255,8 @@ export function ProfileForm({
     : 0;
   const isResendOfPending = !!pendingEmail && emailInput.trim().toLowerCase() === pendingEmail.toLowerCase();
   const emailOnCooldown = isResendOfPending && emailRemainingMs > 0;
-  const emailSaveDisabled = !emailShapeOk || emailOnCooldown;
-  const emailSaveLabel = emailOnCooldown ? `Resend in ${Math.ceil(emailRemainingMs / 1000)}s` : "Send verification link";
+  const emailSaveDisabled = !emailShapeOk || emailOnCooldown || emailChecking;
+  const emailSaveLabel = emailChecking ? "Checking…" : emailOnCooldown ? `Resend in ${Math.ceil(emailRemainingMs / 1000)}s` : "Send verification link";
 
   const pw1Valid = isPasswordValid(pw1);
   const pwMismatch = pw2.length > 0 && pw1 !== pw2;
@@ -371,7 +404,10 @@ export function ProfileForm({
                 id="email-input"
                 type="email"
                 value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
+                onChange={(e) => {
+                  setEmailInput(e.target.value);
+                  setEmailError(null);
+                }}
                 className={formInputClass}
               />
               <p className="mt-1 font-sans text-xs text-ink-soft">

@@ -12,22 +12,44 @@ function hashEmailChangeToken(token: string): string {
 }
 
 /**
- * Starts (or replaces) the pending email change for a user and returns the raw token to email
- * out -- only its hash is ever stored, so a database leak alone can't be replayed into
- * hijacking someone's account. Always rotates the token, even when the target address is
- * unchanged, so an old link stops working the moment a new one is issued.
+ * Starts (or replaces) the pending email change for a user and returns the raw confirm token
+ * (and, when rotated, the raw cancel token) to email out -- only their hashes are ever stored,
+ * so a database leak alone can't be replayed into hijacking someone's account. The confirm
+ * token always rotates, so an old confirm link stops working the moment a new one is issued.
+ * The cancel token is deliberately NOT rotated on a plain resend (`rotateCancelToken: false`):
+ * the notice email carrying the cancel link is only ever sent once, on a genuinely new request
+ * (see the route), so rotating it on every resend would silently invalidate a cancel link
+ * already sitting in the old address's inbox. `cancelToken` is only returned when it was
+ * actually (re)issued -- callers that pass `rotateCancelToken: false` never send a notice email
+ * and so never need it.
  */
-export async function issueEmailChangeToken(userId: string, newEmail: string): Promise<string> {
+export async function issueEmailChangeToken(
+  userId: string,
+  newEmail: string,
+  options: { rotateCancelToken: boolean } = { rotateCancelToken: true }
+): Promise<{ token: string; cancelToken?: string }> {
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashEmailChangeToken(token);
   const expiresAt = new Date(Date.now() + TOKEN_TTL_MS);
 
+  if (!options.rotateCancelToken) {
+    const updated = await prisma.emailChangeRequest.updateMany({
+      where: { userId },
+      data: { newEmail, tokenHash, expiresAt, lastSentAt: new Date() },
+    });
+    if (updated.count > 0) return { token };
+    // No existing pending row to keep the cancel token stable on (shouldn't happen for a real
+    // resend, since one requires a pending row) -- fall through and issue a fresh one instead.
+  }
+
+  const cancelToken = randomBytes(32).toString("base64url");
+  const cancelTokenHash = hashEmailChangeToken(cancelToken);
   await prisma.emailChangeRequest.upsert({
     where: { userId },
-    create: { userId, newEmail, tokenHash, expiresAt },
-    update: { newEmail, tokenHash, expiresAt, lastSentAt: new Date() },
+    create: { userId, newEmail, tokenHash, cancelTokenHash, expiresAt },
+    update: { newEmail, tokenHash, cancelTokenHash, expiresAt, lastSentAt: new Date() },
   });
-  return token;
+  return { token, cancelToken };
 }
 
 export async function getPendingEmailChange(userId: string) {
@@ -36,6 +58,24 @@ export async function getPendingEmailChange(userId: string) {
 
 export async function cancelEmailChangeRequest(userId: string): Promise<void> {
   await prisma.emailChangeRequest.deleteMany({ where: { userId } });
+}
+
+/**
+ * Cancels a pending email change by its cancel token -- used by the link in the notice email
+ * sent to the OLD address, so that inbox can shut down a change it didn't ask for without
+ * signing in. No expiry check: the row's mere existence is "pending" (see CLAUDE.md), so a
+ * cancel link stays good for as long as the request itself is still sitting there, even past
+ * the 1-hour window the confirm token itself is capped to. Returns the address that would have
+ * been switched to, so the landing page can say what it stopped, or null if there was nothing
+ * to cancel (already confirmed, already cancelled, or superseded by a newer request).
+ */
+export async function cancelEmailChangeRequestByToken(cancelToken: string): Promise<{ newEmail: string } | null> {
+  const record = await prisma.emailChangeRequest.findUnique({
+    where: { cancelTokenHash: hashEmailChangeToken(cancelToken) },
+  });
+  if (!record) return null;
+  await prisma.emailChangeRequest.delete({ where: { id: record.id } });
+  return { newEmail: record.newEmail };
 }
 
 /**
