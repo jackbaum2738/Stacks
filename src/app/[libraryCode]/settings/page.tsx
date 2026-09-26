@@ -7,6 +7,7 @@ import { DangerZoneSection } from "@/components/danger-zone-section";
 import { BackupImportSection } from "@/components/backup-import-section";
 import { canEditLibrary, canManageLibrarySettings, isOwner } from "@/lib/permissions";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { LibraryNameHeader } from "@/components/library-name-header";
 
 export default async function SettingsPage({ params }: PageProps<"/[libraryCode]/settings">) {
   const { libraryCode } = await params;
@@ -58,10 +59,7 @@ export default async function SettingsPage({ params }: PageProps<"/[libraryCode]
 
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="font-display text-[32px] font-semibold text-ink">Settings</h1>
-        <p className="font-mono text-[11px] tracking-[.10em] text-ink-soft uppercase">{context.library.name}</p>
-      </div>
+      <LibraryNameHeader code={libraryCode} initialName={context.library.name} isOwner={ownerIsMe} />
 
       <section className="space-y-3">
         <h2 className="font-mono text-[11px] tracking-[.16em] text-ink-soft uppercase">Appearance</h2>
