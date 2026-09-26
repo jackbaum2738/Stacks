@@ -85,18 +85,6 @@ model" section). Needs its own pass: at minimum a Settings field + `PATCH /api/l
 `Library.slug` (currently only used in backup export filenames) should regenerate on rename
 or stay frozen from creation.
 
-## Welcome email on sign-up
-
-Registering a new account doesn't send anything -- the only transactional emails that exist
-today are password reset, library invites, and the email-change verification/notice pair
-(see CLAUDE.md's "Data model" for all three). A "Welcome to Stacks" email on `POST
-/api/auth/register` would fit the same `src/lib/emails/` pattern and reuse the shared
-`renderEmailLayout` header/footer (see the "Every transactional email is hand-written..."
-note in CLAUDE.md) rather than being a new one-off design. Worth deciding what it should
-actually contain beyond a greeting -- a link into the app, a short "how Stacks works"
-pointer for a brand-new, possibly non-technical user in Jack's dad's network -- before
-building it, same as every other email so far went through a mockup round first.
-
 ## Admin dashboard (stacksonline.com/admin/dashboard)
 
 A backend view into the data Stacks stores across its libraries -- something beyond what any
