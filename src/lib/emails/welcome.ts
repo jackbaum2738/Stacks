@@ -33,51 +33,16 @@ export function buildWelcomeEmail(params: { username: string; origin: string }):
   const safeUsername = escapeHtml(username);
   const dashboardUrl = `${origin}/dashboard`;
 
-  const tipRows: string[] = [];
-  for (let i = 0; i < TIPS.length; i += 2) {
-    const pair = TIPS.slice(i, i + 2);
-    const cells = pair
-      .map((tip, idx) => {
-        // Rotation/box-shadow/absolute positioning (what makes the approved mockup's notes
-        // look tilted and "stuck on") aren't reliable across email clients -- Outlook in
-        // particular ignores CSS transform outright -- so the sticky-note cue here is built
-        // from plain table rows/borders instead: a tape strip above the card and a
-        // border-triangle folded corner at its bottom-right, both supported everywhere.
-        const tapeAlign = idx === 0 ? "left" : "right";
-        return `
-<td width="50%" valign="top" style="width:50%;padding:0;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-<tr>
-<td align="${tapeAlign}" style="padding:0 0 0 0;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td width="40" height="14" style="width:40px;height:14px;background-color:rgba(255,255,255,0.45);border:1px solid rgba(185,154,83,0.5);font-size:0;line-height:0;">&nbsp;</td>
-</tr></table>
-</td>
-</tr>
-<tr>
-<td style="background-color:${c.manila};border:1px solid ${c.manilaLine};border-radius:2px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-<tr>
-<td style="padding:14px 16px 18px 16px;">
-<div style="font-family:${f.mono};font-size:10.5px;letter-spacing:0.05em;text-transform:uppercase;color:#4a3a17;opacity:0.75;margin:0 0 6px 0;">Tip</div>
-<div style="font-family:${f.display};font-weight:700;font-size:15.5px;color:#4a3a17;margin:0 0 6px 0;">${escapeHtml(tip.title)}</div>
-<div style="font-family:${f.body};font-size:13px;line-height:1.5;color:#4a3a17;">${escapeHtml(tip.body)}</div>
-</td>
-</tr>
-<tr>
-<td align="right" style="padding:0;">
-<div style="width:0;height:0;border-style:solid;border-width:0 0 14px 14px;border-color:transparent transparent ${c.manilaLine} transparent;font-size:0;line-height:0;">&nbsp;</div>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-</td>`;
-      })
-      .join(`<td width="16" style="width:16px;line-height:0;font-size:0;">&nbsp;</td>`);
-    tipRows.push(`<tr>${cells}</tr><tr><td colspan="3" height="16" style="line-height:16px;font-size:0;">&nbsp;</td></tr>`);
-  }
+  // The tilted, shadowed, taped-on sticky-note look Jack approved on the Claude Design canvas
+  // relies on CSS (transform, box-shadow, absolute positioning) email clients don't render
+  // reliably -- Outlook in particular ignores transform outright, which a table-based
+  // approximation confirmed still looked flat and unconvincing in a real inbox. Rather than
+  // keep approximating it in HTML, the grid is a single pre-rendered image
+  // (public/welcome-email-tips.png, built from the same markup/CSS as the approved canvas) --
+  // the same fix used for the logo lockup, which hit the identical class of problem (see
+  // CLAUDE.md's "Full logo asset" note). The alt text repeats every tip as plain text for
+  // clients that block images.
+  const tipsAlt = TIPS.map((tip) => `${tip.title}: ${tip.body}`).join(" — ");
 
   const bodyHtml = `
 <h1 style="margin:0 0 18px 0;font-family:${f.display};font-weight:700;font-size:28px;line-height:1.25;color:${c.ink};text-align:center;">
@@ -92,9 +57,9 @@ Welcome to Stacks! You&#39;ve now got a proper home for your whole library — e
 <p style="margin:0 0 26px 0;font-family:${f.body};font-size:15px;line-height:1.65;color:${c.inkMuted};">
 We want you getting the most out of it from day one, so here&#39;s a couple of tips worth knowing before you dive in.
 </p>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px 0;">
-${tipRows.join("\n")}
-</table>
+<div style="margin:0 0 22px 0;text-align:center;">
+<img src="${origin}/welcome-email-tips.png" width="480" height="355" alt="${escapeHtml(tipsAlt)}" style="display:block;width:100%;max-width:480px;height:auto;border:0;margin:0 auto;" />
+</div>
 <p style="margin:0 0 14px 0;font-family:${f.body};font-size:14px;line-height:1.5;color:${c.inkMuted};text-align:center;">
 Ready to take a look?
 </p>
