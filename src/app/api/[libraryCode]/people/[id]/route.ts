@@ -18,7 +18,8 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/[libra
 
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+    const issue = parsed.error.issues[0];
+    return NextResponse.json({ error: issue?.message ?? "Invalid input", field: issue?.path[0] }, { status: 400 });
   }
 
   const person = await prisma.person.findFirst({ where: { id, libraryId: context.library.id } });
@@ -33,7 +34,7 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/[libra
     });
     if (clash) {
       return NextResponse.json(
-        { error: `A person named "${clash.name}" already exists`, conflictingPersonId: clash.id },
+        { error: `A person named "${clash.name}" already exists`, field: "name", conflictingPersonId: clash.id },
         { status: 409 }
       );
     }

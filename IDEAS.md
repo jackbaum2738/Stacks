@@ -97,6 +97,23 @@ actually contain beyond a greeting -- a link into the app, a short "how Stacks w
 pointer for a brand-new, possibly non-technical user in Jack's dad's network -- before
 building it, same as every other email so far went through a mockup round first.
 
+## Remaining solid-black button holdouts
+
+The button-color rule confirmed with Jack (project thread, 2026-09-26 -- see CHANGELOG
+8.3.0) is: solid red (`bg-accent`) for the primary/confirming action on a screen, bordered
+black text for secondary/neutral, bordered red text for a caution/reversible-but-undoing
+action. Three flagged instances (book detail Reserve, Settings "Add shelf", Settings
+shelf-edit Save) were switched from solid black to solid red as part of that PR. A few more
+solid-black (`bg-ink`) buttons don't match the rule but weren't touched since they weren't
+what Jack flagged: the login page's "Sign in" button, the old Shelf-detail page's per-row
+Reserve button (`copy-row.tsx` -- the page that intentionally still uses the older, simpler
+`CopyRow` component per the "Scope notes" section of CLAUDE.md), the note-save buttons
+(`copy-notecard.tsx`, `note-popup.tsx`), the library switcher's "Create" button
+(`library-switcher.tsx`), and the invite-accept overlay's "Join" button
+(`invite-accept-overlay.tsx`). Worth a single follow-up pass to bring all of these onto
+`bg-accent` for consistency, once Jack confirms he wants the same treatment rather than
+just the three call sites he originally flagged.
+
 ## Admin dashboard (stacksonline.com/admin/dashboard)
 
 A backend view into the data Stacks stores across its libraries -- something beyond what any

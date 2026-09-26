@@ -70,7 +70,7 @@ export function ShelfManageRow({
           <button
             type="submit"
             disabled={busy}
-            className="rounded-[2px] bg-ink px-3 py-1.5 font-sans text-sm font-medium text-surface hover:brightness-95"
+            className="rounded-[2px] bg-accent px-3 py-1.5 font-sans text-sm font-medium text-on-accent hover:brightness-95"
           >
             Save
           </button>
@@ -103,7 +103,7 @@ export function ShelfManageRow({
             disabled={busy}
             className="rounded-[2px] border border-line-strong px-3 py-1.5 font-sans text-sm font-medium text-ink hover:bg-chip-hover"
           >
-            Rename
+            Edit
           </button>
           <button
             type="button"

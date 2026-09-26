@@ -577,6 +577,37 @@ subheading correctly prefilled with the shared person's name, "Remove reservatio
 actually releasing both and closing the modal, and the book detail page's own "Move shelf"
 button working end to end.
 
+**Superseded by a floating shelf picker, no modal (project thread, 2026-09-26, PR #67) — the
+per-row/tile/detail-page underline-and-modal treatment above didn't survive one round of
+feedback.** `ShelfPickerButton` (`src/components/shelf-picker-button.tsx`) replaces it
+everywhere a single copy's shelf is edited: a plain name-plus-chevron trigger (no underline)
+that opens a small `position: fixed` search-and-select panel positioned off the trigger's own
+`getBoundingClientRect()`, closing on outside click/scroll/resize/Escape, and PATCHing
+`shelfId` immediately on pick — no modal, no separate Save/Cancel. `MoveShelfModal` is now
+used **only** for the bulk selection-bar action (it can act on many copies at once, where a
+modal still makes sense); every single-copy site (Library page list rows, grid tiles, mobile
+rows, and the book detail page's `<dl>` Shelf value, which also lost its separate "Move shelf"
+button) uses `ShelfPickerButton` instead. Give the trigger `max-width: 100%` in a table cell,
+never `width: 100%` — a first draft used `w-full` so a long shelf name would truncate
+correctly, but that made the *entire* table cell part of the button's click target, silently
+swallowing the row's "click anywhere to open this book" navigation for the whole column
+instead of just the shelf name itself; caught by a live Playwright run whose row-click was
+landing dead center in the Shelf column. Also independently caught and reverted in the same
+PR: an early draft added `onClick={(e) => e.stopPropagation()}` directly on the Shelf `<td>`,
+which has the same "whole column stops navigation" effect for a different reason — the
+button's own internal `stopPropagation` is already sufficient; don't add a second one on the
+cell.
+The bulk `MoveShelfModal` also changed shape in the same PR: its shelf list is now embedded
+and always visible on open (matching `ShelfCombobox`'s barcode-friendly exact-match-on-Enter
+resolution, reimplemented locally rather than reusing `ShelfCombobox` itself, since that
+component's dropdown is focus-triggered-only and changing that would have altered the Scan
+station's behavior too) instead of a dropdown that only appeared once focused/typed into.
+Same PR also fixed the Library table's column widths (`table-layout: fixed` with an explicit
+width on every column, instead of `max-w-*` inside auto layout — the Author-ellipsis and
+squashed-Date-added complaints were both this, see the "General lesson" on table padding
+below), added a Copy-ID sort tiebreak to `compareRows` so same-day duplicate copies of one
+book stop reordering on every reload, and picked up a button-color rule (see PR #67 below).
+
 **Password reset & transactional email (Brevo) — key decisions if you touch this again:**
 Came out of buying stacksonline.com and setting it up for email deliverability (SPF, DKIM,
 DMARC, a branded `mail` subdomain) in a project-thread session — see that thread for the full
@@ -737,6 +768,20 @@ not just the PR they were stated in:
 6. **Investigate root causes, don't paper over symptoms.** E.g. the searchParams
    staleness bug and the ISBN-lookup production timeout (below) were both root-
    caused via live testing rather than guessed at and patched blindly.
+7. **Button color rule** (confirmed with Jack, project thread, 2026-09-26, PR #67):
+   solid red (`bg-accent`, `text-on-accent`) is the primary/confirming action on a
+   screen — Save, Add, Create, Send, Reserve, and so on — and is already the
+   dominant pattern across the app. A bordered, black-text button (no fill) is
+   secondary/neutral (Cancel, Edit details, Resend). A bordered, red-text button
+   (no fill) is a caution/reversible-but-undoing action (Remove from library,
+   Release reservation, Cancel invite) — filled-vs-outline reads as
+   confirm-vs-caution, so a red Reserve next to an outline-red "Remove from
+   library" isn't confusing, it's the rule working correctly. Solid black
+   (`bg-ink`) is not a second intentional "primary" style; treat any new
+   solid-black button as a bug against this rule rather than copying it. A
+   handful of solid-black holdouts predating this rule are listed in IDEAS.md's
+   "Remaining solid-black button holdouts" as an optional cleanup, not fixed
+   automatically just because they were found.
 
 ## Local dev environment notes (this sandbox)
 
@@ -1430,6 +1475,20 @@ not just the PR they were stated in:
   email-change work all merged first, re-verifying every route/component against its new
   `[libraryCode]`-prefixed path. Verified with a live local Playwright run (18/18 checks) — see
   the CHANGELOG's 8.2.0 entry for the full list.
+- **PR #67** (`claude/library-polish-and-shelf-picker`) — a 12-item feedback batch on PR #65's
+  move-shelf/reservations work, plus one separately-reported People-form bug (see the
+  "Superseded by a floating shelf picker, no modal" note under "Data model" above for the shelf
+  picker's full design, and "Button color rule" under "Working agreements" for the color
+  convention). No new mockup round was needed — this is direct feedback on the round-9 mockup
+  Artifact already approved for PR #65, re-read in full to confirm the exact floating-picker
+  and embedded-list-modal markup/JS it specified rather than re-deriving the interaction from
+  scratch. Caught and fixed a real regression introduced while building `ShelfPickerButton`
+  itself, before it ever reached Jack: an early draft's `w-full` trigger and a redundant
+  `<td>`-level `stopPropagation` both silently made the whole Shelf column swallow the Library
+  table's row-click-to-open-book navigation, found via a live Playwright run whose row click
+  kept landing in that column and never navigating. Verified with a live local Playwright run
+  (21/21 checks) — see the CHANGELOG's 8.3.0 entry for the full list, including the fixed
+  column widths, the Copy-ID sort tiebreak, and the People-form field-specific error fix.
 
 ## Keeping this file current
 
