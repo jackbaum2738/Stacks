@@ -63,7 +63,9 @@ export async function PATCH(request: Request) {
   }
 
   const origin = new URL(request.url).origin;
-  const token = await issueEmailChangeToken(user.id, email);
+  const { token, cancelToken } = await issueEmailChangeToken(user.id, email, {
+    rotateCancelToken: !isResendOfSamePending,
+  });
   const confirmUrl = `${origin}/confirm-email?token=${token}`;
 
   const verifyEmail = buildEmailChangeVerifyEmail({ username: user.username, confirmUrl, origin });
@@ -77,7 +79,8 @@ export async function PATCH(request: Request) {
   // A resend of the same pending link doesn't re-notify the old address -- only a genuinely
   // new (or first) request does.
   if (!isResendOfSamePending) {
-    const noticeEmail = buildEmailChangeNoticeEmail({ username: user.username, newEmail: email, origin });
+    const cancelUrl = `${origin}/cancel-email-change?token=${cancelToken}`;
+    const noticeEmail = buildEmailChangeNoticeEmail({ username: user.username, newEmail: email, cancelUrl, origin });
     await sendTransactionalEmail({
       to: { email: user.email, name: user.name ?? undefined },
       subject: noticeEmail.subject,

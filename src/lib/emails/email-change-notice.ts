@@ -4,19 +4,24 @@ import { emailColors, emailFonts, escapeHtml, renderEmailLayout } from "./shared
  * Builds the "email change requested" notice -- sent only to the OLD (current) address, once
  * per genuinely new request (never re-sent on a plain resend of the verification link). This
  * is the one email of the pair that names an address, since the account owner needs to know
- * exactly what's being changed to; it carries no confirmation link of its own, since this inbox
- * isn't the one being verified -- just a heads-up plus an escape hatch if it wasn't them.
+ * exactly what's being changed to. It carries its own link -- `cancelUrl`, from a second,
+ * independent token that can only cancel the request, never confirm it (see
+ * cancelEmailChangeRequestByToken in src/lib/email-change.ts) -- so someone who didn't request
+ * this can shut it down straight from this inbox without having to sign in and hunt for the
+ * setting themselves.
  */
 export function buildEmailChangeNoticeEmail(params: {
   username: string;
   newEmail: string;
+  cancelUrl: string;
   origin: string;
 }): { subject: string; html: string; text: string } {
-  const { username, newEmail, origin } = params;
+  const { username, newEmail, cancelUrl, origin } = params;
   const c = emailColors;
   const f = emailFonts;
   const safeUsername = escapeHtml(username);
   const safeNewEmail = escapeHtml(newEmail);
+  const safeCancelUrl = escapeHtml(cancelUrl);
 
   const bodyHtml = `
 <h1 style="margin:0 0 16px 0;font-family:${f.display};font-size:28px;line-height:1.25;font-weight:700;color:${c.ink};">
@@ -33,7 +38,7 @@ The change won't take effect until that address is verified. If this was you, th
 </p>
 <div style="border-top:1px solid ${c.line};margin:0 0 22px 0;"></div>
 <p style="margin:0;font-family:${f.body};font-size:13px;line-height:1.55;color:${c.inkFaint};">
-<strong style="color:${c.ink};">If this wasn't you</strong>, please get in touch so we can secure your account.
+<strong style="color:${c.ink};">If this wasn't you</strong>, sign in and cancel it from your profile, or <a href="${safeCancelUrl}" style="color:${c.accent2};font-weight:700;">click here</a> to cancel it directly.
 </p>`;
 
   const html = renderEmailLayout({
@@ -50,7 +55,8 @@ The change won't take effect until that address is verified. If this was you, th
     "",
     "The change won't take effect until that address is verified. If this was you, there's nothing else to do.",
     "",
-    "If this wasn't you, please get in touch so we can secure your account.",
+    "If this wasn't you, sign in and cancel it from your profile, or cancel it directly:",
+    cancelUrl,
     "",
     `Stacks · ${origin.replace(/^https?:\/\//, "")} · ${origin}/privacy`,
   ].join("\n");
