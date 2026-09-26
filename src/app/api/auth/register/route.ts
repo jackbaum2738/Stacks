@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionCookie } from "@/lib/auth";
 import { isPasswordValid, isValidEmailShape, isValidUsername, normalizeUsername } from "@/lib/account-validation";
+import { sendTransactionalEmail } from "@/lib/brevo";
+import { buildWelcomeEmail } from "@/lib/emails/welcome";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -61,6 +63,15 @@ export async function POST(request: Request) {
   const user = await prisma.user.create({ data: { name, username, email, passwordHash } });
 
   await createSessionCookie(user.id);
+
+  const origin = new URL(request.url).origin;
+  const welcomeEmail = buildWelcomeEmail({ username: user.username, origin });
+  await sendTransactionalEmail({
+    to: { email: user.email, name: user.name ?? undefined },
+    subject: welcomeEmail.subject,
+    html: welcomeEmail.html,
+    text: welcomeEmail.text,
+  });
 
   return NextResponse.json({ ok: true });
 }

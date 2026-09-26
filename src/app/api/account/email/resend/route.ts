@@ -27,7 +27,10 @@ export async function POST(request: Request) {
   }
 
   const origin = new URL(request.url).origin;
-  const token = await issueEmailChangeToken(user.id, pending.newEmail);
+  // Never re-notifies the old address, so the cancel token (only ever mailed in that notice)
+  // must stay stable here -- otherwise a plain resend would silently kill a cancel link already
+  // sitting in that inbox. See src/lib/email-change.ts.
+  const { token } = await issueEmailChangeToken(user.id, pending.newEmail, { rotateCancelToken: false });
   const confirmUrl = `${origin}/confirm-email?token=${token}`;
 
   const verifyEmail = buildEmailChangeVerifyEmail({ username: user.username, confirmUrl, origin });

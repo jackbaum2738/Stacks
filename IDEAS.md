@@ -85,22 +85,10 @@ model" section). Needs its own pass: at minimum a Settings field + `PATCH /api/l
 `Library.slug` (currently only used in backup export filenames) should regenerate on rename
 or stay frozen from creation.
 
-## Welcome email on sign-up
-
-Registering a new account doesn't send anything -- the only transactional emails that exist
-today are password reset, library invites, and the email-change verification/notice pair
-(see CLAUDE.md's "Data model" for all three). A "Welcome to Stacks" email on `POST
-/api/auth/register` would fit the same `src/lib/emails/` pattern and reuse the shared
-`renderEmailLayout` header/footer (see the "Every transactional email is hand-written..."
-note in CLAUDE.md) rather than being a new one-off design. Worth deciding what it should
-actually contain beyond a greeting -- a link into the app, a short "how Stacks works"
-pointer for a brand-new, possibly non-technical user in Jack's dad's network -- before
-building it, same as every other email so far went through a mockup round first.
-
 ## Remaining solid-black button holdouts
 
 The button-color rule confirmed with Jack (project thread, 2026-09-26 -- see CHANGELOG
-8.3.0) is: solid red (`bg-accent`) for the primary/confirming action on a screen, bordered
+8.4.0) is: solid red (`bg-accent`) for the primary/confirming action on a screen, bordered
 black text for secondary/neutral, bordered red text for a caution/reversible-but-undoing
 action. Three flagged instances (book detail Reserve, Settings "Add shelf", Settings
 shelf-edit Save) were switched from solid black to solid red as part of that PR. A few more
@@ -113,7 +101,6 @@ Reserve button (`copy-row.tsx` -- the page that intentionally still uses the old
 (`invite-accept-overlay.tsx`). Worth a single follow-up pass to bring all of these onto
 `bg-accent` for consistency, once Jack confirms he wants the same treatment rather than
 just the three call sites he originally flagged.
-
 ## Admin dashboard (stacksonline.com/admin/dashboard)
 
 A backend view into the data Stacks stores across its libraries -- something beyond what any
